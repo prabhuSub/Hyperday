@@ -343,7 +343,9 @@ struct TimerLabel: View {
             } else if let next = state.nextStart, next > Date.now {
                 HStack(spacing: 4) {
                     timer(Date.now...next, down: true)
-                    Text("until \(state.nextTitle ?? "next")")
+                    // Just "free": the next block's name is already on the line below. A long name here
+                    // made the fixed-size top row wider than the card and pushed it off both edges.
+                    Text("free")
                         .lineLimit(1)
                 }
             }
