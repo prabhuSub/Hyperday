@@ -230,10 +230,10 @@ final class BlockStore: ObservableObject {
             key.hasPrefix("plan-") ? liveIDs.contains(key) : true
         }
         // Calendar overrides ("cal-<event>-<timestamp>") older than 2 years go; never clear everything.
-        let cutoff = Date.now.addingTimeInterval(-2 * 365 * 86_400).timeIntervalSince1970
+        let calCutoff = cutoff.timeIntervalSince1970
         overrides = overrides.filter { key, _ in
             guard key.hasPrefix("cal-"), let ts = key.split(separator: "-").last.flatMap({ Double($0) }) else { return true }
-            return ts > cutoff
+            return ts > calCutoff
         }
         if planBlocks.count != before || overrides.count != overridesBefore { save() }
     }

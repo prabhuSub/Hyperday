@@ -36,7 +36,16 @@ build() {
 
 echo "› Building…"
 LOG=$(mktemp)
-try_build() { build "$@" 2>&1 | tee "$LOG"; }   # pipefail: returns xcodebuild's status
+try_build() {
+  build "$@" 2>&1 | tee "$LOG" && return 0
+  # A Swift compile error is a code problem, not signing: stop here, never fall back (the
+  # compiler's command line mentions HealthKit, which used to trigger the HealthKit fallback).
+  if grep -qE '\.swift:[0-9]+:[0-9]+: error:' "$LOG"; then
+    echo "✗ Build failed: code error above (nothing changed in signing)."
+    rm -f "$LOG"; exit 1
+  fi
+  return 1
+}
 
 if [[ -f .no-app-group || -n "${NO_APP_GROUP:-}" ]]; then
   try_build CODE_SIGN_ENTITLEMENTS= || { rm -f "$LOG"; exit 1; }
@@ -49,7 +58,7 @@ elif [[ -f .no-healthkit ]] && ! try_build CODE_SIGN_ENTITLEMENTS=Hyperday.entit
     rm -f "$LOG"; exit 1
   fi
 elif [[ ! -f .no-healthkit ]] && ! try_build; then
-  if grep -qiE "healthkit|sign in with apple|applesignin" "$LOG"; then
+  if grep -qiE "(entitlement|provisioning profile|capabilit).*(healthkit|sign in with apple|applesignin)|(healthkit|applesignin).*(entitlement|provisioning profile|capabilit)" "$LOG"; then
     echo "› Signing refused HealthKit / Sign in with Apple. Building without them…"
     touch .no-healthkit
     if ! try_build CODE_SIGN_ENTITLEMENTS=Hyperday.entitlements; then
