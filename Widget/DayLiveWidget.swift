@@ -26,47 +26,14 @@ struct DayLiveActivityWidget: Widget {
             DynamicIsland {
                 // Same layout as the Lock Screen card: [mark] ······ 1:26:10 left on top (beside the camera),
                 // then title + category icon, then bar + button.
-                DynamicIslandExpandedRegion(.leading) {
-                    AppMark(size: 22)
-                        .padding(.leading, 6)
-                        .frame(maxHeight: .infinity, alignment: .center)
-                }
-                DynamicIslandExpandedRegion(.trailing) {
-                    TimerLabel(state: context.state, size: 18)
-                        .foregroundStyle(context.state.overSince != nil ? DayLiveStyle.stepYellow : .white)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)   // "Paused · 1:23:45 left" must fit beside the camera
-                        .padding(.trailing, 6)
-                        .frame(maxHeight: .infinity, alignment: .center)
-                }
+                // v24: long-press shows the same "day as a journey" card as the Lock Screen.
                 DynamicIslandExpandedRegion(.bottom) {
                     if context.state.closed == true {
                         DayClosedCard(state: context.state, compact: true)
+                    } else if context.state.driving == true {
+                        DriveCard(state: context.state)
                     } else {
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack(alignment: .center, spacing: 12) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                CardTitle(state: context.state, size: 20)
-                                if let also = context.state.also {
-                                    Text(also)
-                                        .font(.system(size: 13))
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(1)
-                                }
-                            }
-                            Spacer(minLength: 0)
-                            SourceIcon(source: context.state.source, size: 36,
-                                       tint: context.state.source == .free ? nil : context.state.accentColor,
-                                       iconName: context.state.iconName)
-                        }
-                        HStack(spacing: 12) {
-                            DayBar(state: context.state)
-                            PauseButton(state: context.state)
-                            BlockActionButton(state: context.state)
-                        }
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.top, 4)
+                        LockScreenCard(state: context.state, isStale: context.isStale, inIsland: true)
                     }
                 }
             } compactLeading: {

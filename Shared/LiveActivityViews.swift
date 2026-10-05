@@ -38,6 +38,7 @@ extension DayActivityAttributes.ContentState {
 struct LockScreenCard: View {
     let state: DayActivityAttributes.ContentState
     var isStale: Bool = false
+    var inIsland = false   // v24: same card in the expanded Dynamic Island (no outer padding, no edge ticks)
 
     /// v20: the card goes stale 5 minutes before the end; iOS redraws it in heads-up yellow.
     private var headsUp: Bool {
@@ -187,10 +188,10 @@ struct LockScreenCard: View {
             }
         }
         .foregroundStyle(.white)
-        .padding(.leading, 16)
-        .padding(.trailing, 14)
-        .padding(.vertical, 13)
-        .background { EdgeTicks(state: state, headsUp: headsUp) }   // v23: progress ticks around the card
+        .padding(.leading, inIsland ? 4 : 16)
+        .padding(.trailing, inIsland ? 4 : 14)
+        .padding(.vertical, inIsland ? 2 : 13)
+        .background { if !inIsland { EdgeTicks(state: state, headsUp: headsUp) } }   // v23: ticks around the card
     }
 }
 
@@ -652,7 +653,8 @@ struct WatchCard: View {
                 .font(.system(size: 16, weight: .bold))
                 .lineLimit(1)
             HStack(spacing: 6) {
-                DayBar(state: watchBar, height: 4)
+                JourneyTrack(state: state, knob: state.paused == true ? Color(white: 0.6) : state.accentColor)   // v24 journey
+                    .frame(height: 14)
                 PauseButton(state: state)
                     .scaleEffect(0.85)
                 BlockActionButton(state: state)
