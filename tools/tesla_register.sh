@@ -7,7 +7,9 @@ ENV=.tesla-keys/client.env
 if [[ ! -f $ENV ]]; then
   echo "Create $ENV with two lines:"; echo "  TESLA_CLIENT_ID=..."; echo "  TESLA_CLIENT_SECRET=..."; exit 1
 fi
-source $ENV
+# Read the values literally (the secret can contain "$", which `source` would expand).
+TESLA_CLIENT_ID=$(sed -n 's/^TESLA_CLIENT_ID=//p' $ENV | tr -d '\r')
+TESLA_CLIENT_SECRET=$(sed -n 's/^TESLA_CLIENT_SECRET=//p' $ENV | tr -d '\r')
 AUD=https://fleet-api.prd.na.vn.cloud.tesla.com   # North America
 TOKEN=$(curl -s -X POST https://fleet-auth.prd.vn.cloud.tesla.com/oauth2/v3/token \
   -H 'Content-Type: application/x-www-form-urlencoded' \
