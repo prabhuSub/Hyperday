@@ -128,11 +128,15 @@ final class BlockStore: ObservableObject {
     func update(id: String, title: String, start: Date, minutes: Int) {
         let clean = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let i = planBlocks.firstIndex(where: { $0.id == id }), !clean.isEmpty, minutes > 0 else { return }
+        let newEnd = start.addingTimeInterval(TimeInterval(minutes * 60))
+        // Only a change of time resets Done / Start / Pause; fixing a typo keeps them.
+        let timesChanged = abs(planBlocks[i].start.timeIntervalSince(start)) >= 60
+            || abs(planBlocks[i].end.timeIntervalSince(newEnd)) >= 60
         planBlocks[i].title = clean
         planBlocks[i].start = start
-        planBlocks[i].end = start.addingTimeInterval(TimeInterval(minutes * 60))
+        planBlocks[i].end = newEnd
         planBlocks.sort { $0.start < $1.start }
-        overrides[id] = nil
+        if timesChanged { overrides[id] = nil }
         save()
     }
 

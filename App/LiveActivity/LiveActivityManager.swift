@@ -75,15 +75,26 @@ final class LiveActivityManager: ObservableObject {
     }
 
     /// Recompute the day and push it to the Live Activity. Safe to call often.
+    private var refreshTask: Task<Void, Never>?
+
     func refresh() async {
-        // Coalesce overlapping calls (launch + scene change + intent) without dropping the latest one.
-        guard !isRefreshing else { pendingRefresh = true; return }
+        // Coalesce overlapping calls (launch + scene change + intent). A caller that arrives mid-pass sets the
+        // flag and waits: the running loop does one more pass that includes its change, so a Lock Screen tap
+        // is on screen before the intent returns. All on the main actor, so the flag check and the reset
+        // of `refreshTask` happen in the same turn (no missed pass).
+        pendingRefresh = true
+        if let running = refreshTask { await running.value; return }
         isRefreshing = true
-        repeat {
-            pendingRefresh = false
-            await performRefresh()
-        } while pendingRefresh
-        isRefreshing = false
+        let task = Task { @MainActor in
+            while pendingRefresh {
+                pendingRefresh = false
+                await performRefresh()
+            }
+            refreshTask = nil
+            isRefreshing = false
+        }
+        refreshTask = task
+        await task.value
     }
 
     /// v9 Day Close: unfinished blocks you planned today (calendar events can't be carried over).
@@ -213,7 +224,8 @@ final class LiveActivityManager: ObservableObject {
         let running = Self.liveActivities()
         let inForeground = UIApplication.shared.applicationState == .active
 
-        let dayIsOver = !closed && !snap.all.isEmpty && !snap.hasAnythingLeft
+        let closePending = DayCloseSettings.showOnLockScreen && closeAt > now
+        let dayIsOver = !closed && !closePending && !snap.all.isEmpty && !snap.hasAnythingLeft
         let force = forceStart
         forceStart = false
 
@@ -230,8 +242,10 @@ final class LiveActivityManager: ObservableObject {
                 request(content)
             } else {
                 await activity.update(content)
+                lastError = nil
             }
-        } else if force || (autoStart && (snap.hasAnythingLeft || closed)) {
+        } else if force || (autoStart && inForeground && (snap.hasAnythingLeft || closed)) {
+            // (A background request always fails, so only auto-start while the app is open.)
             // Auto-start only when there's something to show; "Go Live" always starts.
             await Self.endAll()
             request(content)
@@ -240,7 +254,7 @@ final class LiveActivityManager: ObservableObject {
         isRunning = !Self.liveActivities().isEmpty
         writeWidgetDay(snap, now: now)
         writeCalendarCounts(now: now)
-        BackgroundRefresh.schedule(at: staleAt ?? boundary)
+        BackgroundRefresh.schedule(at: boundary ?? staleAt)
     }
 
     /// Hand today's blocks to the Home Screen widgets (only when they changed, to save reloads).
@@ -256,7 +270,7 @@ final class LiveActivityManager: ObservableObject {
                 nextStep: steps.first { !$0.done }?.title
             )
         }
-        let day = WidgetDay(day: now, blocks: blocks)
+        let day = WidgetDay(day: Calendar.current.startOfDay(for: now), blocks: blocks)   // not `now`: it never matched
         guard day != lastWidgetDay else { return }
         lastWidgetDay = day
         if WidgetShared.save(day) {

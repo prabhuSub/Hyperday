@@ -104,7 +104,7 @@ struct CalendarTabView: View {
         .onReceive(NotificationCenter.default.publisher(for: .EKEventStoreChanged)) { _ in cache.eventsVersion += 1 }
         .sheet(item: $editing) { block in
             BlockEditorSheet(
-                block: block,
+                block: store.planBlocks.first { $0.id == block.id } ?? block,   // raw plan, not timer-adjusted
                 steps: store.steps(for: block.id),
                 categoryIDs: store.manualCategoryIDs(for: block.id)
             ) {

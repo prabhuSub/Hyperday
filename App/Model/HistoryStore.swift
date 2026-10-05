@@ -106,11 +106,16 @@ final class HistoryStore: ObservableObject {
     func recordToday(raw: [Block], now: Date) {
         let bs = BlockStore.shared
         let cs = CategoryStore.shared
-        let entries: [HistoryEntry] = raw.filter { $0.start <= now }.map { b in
+        // Times as the timer saw them (Start, pause, overtime, Done), not the raw plan.
+        let applied = Dictionary(DayEngine.apply(bs.overrides, to: raw, now: now).map { ($0.id, $0) },
+                                 uniquingKeysWith: { a, _ in a })
+        let entries: [HistoryEntry] = raw.compactMap { b -> HistoryEntry? in
+            let a = applied[b.id] ?? b
+            guard a.start <= now else { return nil }
             let o = bs.overrides[b.id]
             let st = bs.steps(for: b.id)
-            let start = min(b.start, o?.start ?? b.start)
-            let end = min(b.end, o?.end ?? b.end, now)
+            let start = a.start
+            let end = min(a.end, now)
             let allSteps = !st.isEmpty && st.allSatisfy(\.done)
             let cats = cs.categories(for: b).map(\.id)
             return HistoryEntry(

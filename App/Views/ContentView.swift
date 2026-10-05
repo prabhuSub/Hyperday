@@ -71,7 +71,7 @@ struct TodayView: View {
         }
         .sheet(item: $editing) { block in
             BlockEditorSheet(
-                block: block,
+                block: store.planBlocks.first { $0.id == block.id } ?? block,   // raw plan, not timer-adjusted
                 steps: store.steps(for: block.id),
                 categoryIDs: store.manualCategoryIDs(for: block.id)
             ) {
@@ -178,9 +178,12 @@ struct TodayView: View {
             LiveTimerPill(range: c.end...c.end.addingTimeInterval(24 * 3600), down: false, prefix: "+",
                           fill: Color(red: 1, green: 0.84, blue: 0.04), text: .black)
         } else if let c = snap.current, c.end > now {
-            LiveTimerPill(range: Date.now...c.end, down: true, fill: DayLiveStyle.doneGreen, text: .white)
+            // One clock for check and range (the 30s `now` can be behind Date.now → inverted range crash).
+            let t = min(Date.now, c.end)
+            LiveTimerPill(range: t...c.end, down: true, fill: DayLiveStyle.doneGreen, text: .white)
         } else if snap.current == nil, let n = snap.next, n.start > now {
-            LiveTimerPill(range: Date.now...n.start, down: true, fill: .white.opacity(0.18), text: .white)
+            let t = min(Date.now, n.start)
+            LiveTimerPill(range: t...n.start, down: true, fill: .white.opacity(0.18), text: .white)
         }
     }
 
