@@ -72,8 +72,9 @@ TABS = ["today", "calendar", "stats", "settings"]
 
 
 def tab_svg(body: str) -> str:
-    # Tab bar (v21, icons only, no labels): 32pt canvas, glyph cropped tight; the stroke scales with it.
-    return ('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="2 2 20 20" fill="none" '
+    # Tab bar (icons only): 36pt canvas, glyph cropped tighter so it fills it; everything (stroke too)
+    # scales together, so the icon just gets bigger without changing its look.
+    return ('<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="2.5 2.5 19 19" fill="none" '
             'stroke="#000" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">' + body + '</svg>')
 
 
