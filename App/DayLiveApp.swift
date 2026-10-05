@@ -67,6 +67,7 @@ struct DayLiveApp: App {
                 HistoryStore.shared.retryLoadIfNeeded()
                 CategoryStore.shared.retryLoadIfNeeded()
                 RealityStore.shared.retryLoadIfNeeded()
+                BackupStore.shared.backUpIfDue()   // weekly copy to Files › Hyperday › Backups
                 Task {
                     await RealityStore.shared.refreshWorkouts()
                     await LiveActivityManager.shared.refresh()

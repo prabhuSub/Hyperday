@@ -42,6 +42,8 @@ targets:
           - CFBundleURLName: com.prabhu.daylive
             CFBundleURLSchemes: [hyperday]
         UIBackgroundModes: [fetch]
+        UIFileSharingEnabled: true              # Backups show in Files › On My iPhone › Hyperday
+        LSSupportsOpeningDocumentsInPlace: true
         BGTaskSchedulerPermittedIdentifiers: [com.prabhu.daylive.refresh]
     settings:
       base:

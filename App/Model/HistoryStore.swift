@@ -244,6 +244,8 @@ final class HistoryStore: ObservableObject {
     }
 
     /// Called when the app becomes active: a file that was locked at launch can be read now.
+    func reloadFromDisk() { load(); publishHeat() }   // after a restore
+
     func retryLoadIfNeeded() {
         guard loadBlocked else { return }
         load()

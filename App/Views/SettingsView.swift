@@ -48,6 +48,7 @@ struct SettingsView: View {
 
                     DayCloseSettingsCard()
                     RealitySettingsCard()
+                    BackupCard()
                     focusCard
 
                     VStack(alignment: .leading, spacing: 10) {
@@ -444,5 +445,109 @@ struct CalendarColorSheet: View {
     private func choose(_ hex: String) {
         store.calendarColors[pick.name] = hex
         Task { await LiveActivityManager.shared.refresh() }
+    }
+}
+
+
+/// v25 Settings › Backup (mockup V25Backup).
+struct BackupCard: View {
+    @ObservedObject private var backups = BackupStore.shared
+    @State private var restoring = false
+    @State private var message: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Caps("Backup").padding(.bottom, 8)
+            Toggle("Weekly backup", isOn: $backups.weekly)
+                .font(.system(size: 14, weight: .semibold))
+                .tint(DayLiveStyle.doneGreen)
+                .padding(.bottom, 8)
+            line("Last backup", backups.lastBackup.map { $0.formatted(.dateTime.weekday(.abbreviated).hour().minute()) } ?? "Never",
+                 color: backups.lastBackup == nil ? Theme.muted : DayLiveStyle.doneGreen)
+            line("Kept", "\(backups.items.count) of 8")
+            line("Size", ByteCountFormatter.string(fromByteCount: Int64(backups.items.first?.bytes ?? 0), countStyle: .file))
+            HStack(spacing: 10) {
+                Button("Back up now") {
+                    message = backups.backUpNow() ? "Backed up." : "Nothing to back up yet."
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                Button("Restore…") { backups.reloadList(); restoring = true }
+                    .buttonStyle(SecondaryButtonStyle())
+                    .disabled(backups.items.isEmpty)
+            }
+            .padding(.top, 12)
+            if let message {
+                Text(message).font(.system(size: 12, weight: .semibold)).foregroundStyle(DayLiveStyle.doneGreen).padding(.top, 6)
+            }
+            Text("Saved in Files › On My iPhone › Hyperday › Backups. Plans, history, categories, places and settings — not your calendar (that stays in Calendar). AirDrop or save to iCloud Drive from Files for an off-phone copy.")
+                .font(.system(size: 11.5))
+                .foregroundStyle(Theme.muted)
+                .padding(.top, 10)
+        }
+        .cardBox()
+        .sheet(isPresented: $restoring) {
+            RestoreSheet { message = $0 }
+                .presentationDetents([.medium, .large])
+        }
+    }
+
+    private func line(_ a: String, _ b: String, color: Color = Theme.muted) -> some View {
+        HStack {
+            Text(a).font(.system(size: 14)).foregroundStyle(Theme.text)
+            Spacer()
+            Text(b).font(.system(size: 14, weight: .semibold)).foregroundStyle(color)
+        }
+        .padding(.vertical, 9)
+        .overlay(alignment: .top) { Rectangle().fill(Theme.border).frame(height: 1) }
+    }
+}
+
+private struct RestoreSheet: View {
+    @ObservedObject private var backups = BackupStore.shared
+    @Environment(\.dismiss) private var dismiss
+    @State private var picked: BackupStore.Item?
+    let done: (String) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Restore a backup").font(.system(size: 20, weight: .heavy)).foregroundStyle(Theme.text)
+            Text("Your current data is backed up first, so you can undo.")
+                .font(.system(size: 12)).foregroundStyle(Theme.muted).padding(.top, 4).padding(.bottom, 10)
+            ScrollView {
+                VStack(spacing: 0) {
+                    ForEach(backups.items) { item in
+                        Button { picked = item } label: {
+                            HStack {
+                                Image(systemName: picked == item ? "largecircle.fill.circle" : "circle")
+                                    .foregroundStyle(picked == item ? Theme.blue : Theme.faint)
+                                Text(item.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute()))
+                                    .foregroundStyle(Theme.text)
+                                Spacer()
+                                Text(ByteCountFormatter.string(fromByteCount: Int64(item.bytes), countStyle: .file))
+                                    .foregroundStyle(Theme.muted)
+                            }
+                            .font(.system(size: 14))
+                            .padding(.vertical, 11)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .overlay(alignment: .top) { Rectangle().fill(Theme.border).frame(height: 1) }
+                    }
+                }
+            }
+            HStack(spacing: 10) {
+                Button("Cancel") { dismiss() }.buttonStyle(SecondaryButtonStyle())
+                Button("Restore") {
+                    guard let picked else { return }
+                    done(backups.restore(picked) ? "Restored. Your previous data was backed up first." : "That backup couldn't be read.")
+                    dismiss()
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(picked == nil)
+            }
+            .padding(.top, 12)
+        }
+        .padding(20)
+        .background(Theme.section)
     }
 }

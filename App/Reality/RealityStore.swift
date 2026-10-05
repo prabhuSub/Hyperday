@@ -156,6 +156,7 @@ final class RealityStore: ObservableObject {
     private var loadBlocked = false
 
     func retryLoadIfNeeded() { if loadBlocked { load() } }
+    func reloadFromDisk() { load() }   // after a restore
 
     private func load() {
         let s: Snapshot
