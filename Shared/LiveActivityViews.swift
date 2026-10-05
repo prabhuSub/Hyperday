@@ -29,6 +29,40 @@ extension Color {
 }
 
 extension DayActivityAttributes.ContentState {
+    /// v28: without a push server the app can't always wake at the exact minute a block starts, so the
+    /// card switches itself. In free time the card goes stale at the next block's start; when iOS redraws
+    /// it then, draw the next block as running (it carries the next block's title, end, color and icon).
+    func selfSwitched(isStale: Bool, now: Date = .now) -> (state: Self, isStale: Bool) {
+        guard isStale, closed != true, driving != true, paused != true,
+              source == .free, let start = nextStart, start <= now, let end = nextEnd, end > now
+        else { return (self, isStale) }
+        var s = self
+        s.title = nextTitle ?? "Next"
+        s.source = .plan
+        s.accentHex = nextHex
+        s.iconName = nextIcon
+        s.currentStart = start
+        s.currentEnd = end
+        s.freeStart = nil
+        s.nextStart = nil
+        s.nextTitle = nil
+        s.overSince = nil
+        s.action = nil          // the buttons need the real block id; they come back at the next refresh
+        s.actionBlockID = nil
+        s.canPause = nil
+        s.headsUp = nil
+        s.headsUpAt = nil
+        if let later = laterTitle, let ls = laterStart {
+            s.label = "Next · \(later) at \(ls.formatted(date: .omitted, time: .shortened))"
+            s.nextHex = laterHex
+        } else {
+            s.label = "Nothing else today"
+            s.nextHex = nil
+        }
+        s.laterTitle = nil
+        return (s, false)
+    }
+
     /// Category color of the live block (bar + icon); green when nothing is live.
     var accentColor: Color { accentHex.map { Color(hex: $0) } ?? DayLiveStyle.accent }
 }
@@ -792,6 +826,8 @@ struct ActivityFamilyCard: View {
     var isStale: Bool = false
 
     var body: some View {
+        let live = self.state.selfSwitched(isStale: self.isStale)
+        let state = live.state, isStale = live.isStale
         if state.closed == true {
             DayClosedCard(state: state, compact: family == .small)
         } else if state.driving == true && family != .small {
@@ -1091,10 +1127,11 @@ struct IslandTimer: View {
     static func coarse(until date: Date, now: Date = .now) -> String? {
         let secs = date.timeIntervalSince(now)
         guard secs >= 3600 else { return nil }
-        let hours = Int((secs / 3600).rounded(.up))
-        if hours < 24 { return "\(hours)h" }
+        // Rounded DOWN with "+": stays true even if iOS doesn't redraw for a while ("2h+" at 2h59 … 2h00).
+        let hours = Int(secs / 3600)
+        if hours < 24 { return "\(hours)h+" }
         let d = hours / 24, h = hours % 24
-        return h == 0 ? "\(d)d" : "\(d)d \(h)h"
+        return h == 0 ? "\(d)d+" : "\(d)d \(h)h+"
     }
 
     /// Minutes:seconds only (1:18:20 shows as 78:20), so the Island stays as narrow as Apple's own timers.

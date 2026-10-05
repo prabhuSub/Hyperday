@@ -278,11 +278,8 @@ final class LiveActivityManager: ObservableObject {
             state.boundaryAt = boundary
             if state.paused == true { staleAt = nil }               // end keeps moving while paused
             else if let h = state.headsUpAt { staleAt = [staleAt, h].compactMap { $0 }.min() }
-            // v21: waiting for the next block more than an hour out, the Island shows "20h" / "1d 4h".
-            // Go stale an hour before so iOS redraws it as a live mm:ss countdown, no wake-up needed.
-            else if snap.current == nil, let n = state.nextStart, n.addingTimeInterval(-3600) > now {
-                staleAt = [staleAt, n.addingTimeInterval(-3600)].compactMap { $0 }.min()
-            }
+            // v28: in free time the one stale redraw is kept for the next block's start (the card switches
+            // itself to that block then); the Island's "2h+" is rounded down so it stays true meanwhile.
         }
         if !closed, let since = RealityStore.shared.driveStartedAt {
             state = await driveState(from: snap, since: since, now: now)

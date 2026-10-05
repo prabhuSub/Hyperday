@@ -23,38 +23,40 @@ struct DayLiveActivityWidget: Widget {
                 .activityBackgroundTint(DayLiveStyle.cardTint.opacity(DayLiveStyle.glassOpacity))
                 .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
-            DynamicIsland {
+            let live = context.state.selfSwitched(isStale: context.isStale)
+            let st = live.state
+            return DynamicIsland {
                 // Same layout as the Lock Screen card: [mark] ······ 1:26:10 left on top (beside the camera),
                 // then title + category icon, then bar + button.
                 // v24: long-press shows the same "day as a journey" card as the Lock Screen.
                 DynamicIslandExpandedRegion(.bottom) {
-                    if context.state.closed == true {
-                        DayClosedCard(state: context.state, compact: true)
-                    } else if context.state.driving == true {
-                        DriveCard(state: context.state)
+                    if st.closed == true {
+                        DayClosedCard(state: st, compact: true)
+                    } else if st.driving == true {
+                        DriveCard(state: st)
                     } else {
-                        LockScreenCard(state: context.state, isStale: context.isStale, inIsland: true)
+                        LockScreenCard(state: st, isStale: live.isStale, inIsland: true)
                     }
                 }
             } compactLeading: {
-                if context.state.closed == true || context.state.driving == true {
-                    SourceIcon(source: context.state.source, size: 22,
-                               tint: context.state.source == .free ? nil : context.state.accentColor,
-                               iconName: context.state.iconName)
+                if st.closed == true || st.driving == true {
+                    SourceIcon(source: st.source, size: 22,
+                               tint: st.source == .free ? nil : st.accentColor,
+                               iconName: st.iconName)
                 } else {
-                    IslandRingIcon(state: context.state, size: 22)
+                    IslandRingIcon(state: st, size: 22)
                 }
             } compactTrailing: {
-                if context.state.closed == true || context.state.driving == true {
-                    DayRing(progress: context.state.dayProgress, accent: context.state.accentColor)
+                if st.closed == true || st.driving == true {
+                    DayRing(progress: st.dayProgress, accent: st.accentColor)
                         .frame(width: 20, height: 20)
                 } else {
-                    IslandTimer(state: context.state)
+                    IslandTimer(state: st)
                 }
             } minimal: {
-                IslandRingIcon(state: context.state, size: 20)
+                IslandRingIcon(state: st, size: 20)
             }
-            .keylineTint(context.state.accentColor)
+            .keylineTint(st.accentColor)
         }
         .supplementalActivityFamilies([.small])   // Apple Watch Smart Stack (watchOS 11 / iOS 18)
     }
