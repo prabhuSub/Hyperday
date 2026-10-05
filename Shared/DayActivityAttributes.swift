@@ -61,6 +61,11 @@ struct DayActivityAttributes: ActivityAttributes {
         // v21: when the content really changes. The card can also go stale earlier on purpose
         // (heads-up, or the Island switching from "20h" to a live timer), which isn't "out of date".
         var boundaryAt: Date?
+        // v23: the end-of-block band ("Standup in 4:59 · Room 3B") in the next block's color.
+        var headsNextTitle: String?
+        var headsNextStart: Date?
+        var headsNextPlace: String?
+        var headsNextHex: String?
         // v16: start of the live block, so the Island ring fills across this block.
         var currentStart: Date?
     }

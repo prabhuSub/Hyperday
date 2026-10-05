@@ -127,6 +127,7 @@ struct LockScreenCard: View {
                         .lineLimit(1)
                 } else if let score {
                     Text(score)
+                        .contentTransition(.numericText())   // v23: numbers roll when they change
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.75))
                         .lineLimit(1)
@@ -139,6 +140,9 @@ struct LockScreenCard: View {
                     CardTitle(state: state, size: 23)
                     if state.paused == true {
                         pill("Paused — the end moves later with it")
+                    } else if headsUp, let title = state.headsNextTitle, let start = state.headsNextStart {
+                        HeadsUpBand(title: title, start: start, place: state.headsNextPlace,
+                                    color: state.headsNextHex.map { Color(hex: $0) } ?? DayLiveStyle.stepYellow)
                     } else if headsUp, let h = state.headsUp {
                         Text(h)
                             .font(.system(size: 13, weight: .semibold))
@@ -167,6 +171,108 @@ struct LockScreenCard: View {
         .padding(.leading, 16)
         .padding(.trailing, 14)
         .padding(.vertical, 13)
+        .background { EdgeTicks(state: state, headsUp: headsUp) }   // v23: progress ticks around the card
+    }
+}
+
+/// v23 #5: clock-like ticks around the card's edge, lit up to how far this block (or free gap) has run.
+/// A Live Activity can't animate a custom shape on its own, so the lit count is worked out each time
+/// iOS draws the card: on every update, tap and background refresh, and at the heads-up redraw.
+struct EdgeTicks: View {
+    let state: DayActivityAttributes.ContentState
+    var headsUp = false
+    var count = 72
+    var radius: CGFloat = 22
+
+    private var progress: Double? {
+        let now = Date.now
+        if state.closed == true || state.driving == true { return nil }
+        if state.overSince != nil { return 1 }
+        if let end = state.currentEnd, let start = state.currentStart, end > start {
+            if state.paused == true, let left = state.pausedLeft {
+                return 1 - left / end.timeIntervalSince(start)
+            }
+            return now.timeIntervalSince(start) / end.timeIntervalSince(start)
+        }
+        if let a = state.freeStart, let b = state.nextStart, b > a {
+            return now.timeIntervalSince(a) / b.timeIntervalSince(a)
+        }
+        return nil
+    }
+
+    private var color: Color {
+        if state.paused == true { return Color(white: 0.6) }
+        if state.overSince != nil || headsUp { return DayLiveStyle.stepYellow }
+        if state.source == .free { return DayLiveStyle.doneGreen }
+        return state.accentColor
+    }
+
+    var body: some View {
+        if let p = progress {
+            let lit = Int((min(max(p, 0), 1) * Double(count)).rounded())
+            Canvas { ctx, size in
+                for i in 0..<count {
+                    let (pt, n) = Self.point(Double(i) / Double(count), in: size, r: radius, inset: 3)
+                    var path = Path()
+                    path.move(to: pt)
+                    path.addLine(to: CGPoint(x: pt.x + n.dx * 5, y: pt.y + n.dy * 5))
+                    ctx.stroke(path, with: .color(i < lit ? color : Color.white.opacity(0.13)),
+                               style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
+                }
+            }
+            .allowsHitTesting(false)
+        }
+    }
+
+    /// Point at fraction `t` of the way round a rounded rect (clockwise from top centre), plus the inward normal.
+    static func point(_ t: Double, in size: CGSize, r: CGFloat, inset: CGFloat) -> (CGPoint, CGVector) {
+        let w = size.width - inset * 2, h = size.height - inset * 2
+        let rr = min(r - inset, min(w, h) / 2)
+        let sw = w - 2 * rr, sh = h - 2 * rr, arc = CGFloat.pi / 2 * rr
+        let total = 2 * sw + 2 * sh + 4 * arc
+        var d = CGFloat(t) * total + sw / 2          // start at top centre
+        d = d.truncatingRemainder(dividingBy: total)
+        let x0 = inset, y0 = inset
+        func corner(_ cx: CGFloat, _ cy: CGFloat, _ a0: CGFloat, _ s: CGFloat) -> (CGPoint, CGVector) {
+            let a = a0 + s / rr
+            return (CGPoint(x: cx + rr * cos(a), y: cy + rr * sin(a)), CGVector(dx: -cos(a), dy: -sin(a)))
+        }
+        if d < sw { return (CGPoint(x: x0 + rr + d, y: y0), CGVector(dx: 0, dy: 1)) }; d -= sw
+        if d < arc { return corner(x0 + w - rr, y0 + rr, -.pi / 2, d) }; d -= arc
+        if d < sh { return (CGPoint(x: x0 + w, y: y0 + rr + d), CGVector(dx: -1, dy: 0)) }; d -= sh
+        if d < arc { return corner(x0 + w - rr, y0 + h - rr, 0, d) }; d -= arc
+        if d < sw { return (CGPoint(x: x0 + w - rr - d, y: y0 + h), CGVector(dx: 0, dy: -1)) }; d -= sw
+        if d < arc { return corner(x0 + rr, y0 + h - rr, .pi / 2, d) }; d -= arc
+        if d < sh { return (CGPoint(x: x0, y: y0 + h - rr - d), CGVector(dx: 1, dy: 0)) }; d -= sh
+        return corner(x0 + rr, y0 + rr, .pi, d)
+    }
+}
+
+/// v23 #4: "Standup in 4:59 · Room 3B" on a band in the next block's color (last 5 minutes).
+struct HeadsUpBand: View {
+    let title: String
+    let start: Date
+    let place: String?
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(title).lineLimit(1)
+            if start > Date.now {
+                Text("in")
+                Text(timerInterval: Date.now...start, countsDown: true).monospacedDigit().fixedSize()
+            } else {
+                Text("now")
+            }
+            Spacer(minLength: 4)
+            if let place { Text(place).lineLimit(1).opacity(0.85) }
+        }
+        .font(.system(size: 13, weight: .heavy))
+        .foregroundStyle(color)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 3)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(color.opacity(0.2), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
     }
 }
 
@@ -311,6 +417,10 @@ struct TimerLabel: View {
     let state: DayActivityAttributes.ContentState
     var size: CGFloat = 14
 
+    private func unit(_ s: String) -> some View {
+        Text(s).font(.system(size: size * 0.6, weight: .heavy)).kerning(0.6).opacity(0.85).lineLimit(1)
+    }
+
     /// 1930 s -> "32:10", 4210 s -> "1:10:10"
     static func clock(_ t: Double) -> String {
         let s = Int(t.rounded()), h = s / 3600, m = (s % 3600) / 60, sec = s % 60
@@ -331,31 +441,34 @@ struct TimerLabel: View {
 
     var body: some View {
         Group {
+            // v23: big number, small unit ("47:12 LEFT").
             if state.paused == true, let left = state.pausedLeft {
                 // v20: frozen while paused.
-                Text("Paused · \(Self.clock(left)) left")
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(Self.clock(left))
+                    unit("PAUSED")
+                }
             } else if let over = state.overSince {
-                HStack(spacing: 0) {
+                HStack(alignment: .firstTextBaseline, spacing: 0) {
                     Text("+")
                     timer(over...over.addingTimeInterval(24 * 3600), down: false)
-                    Text(" over")
+                    unit(" OVER")
                 }
             } else if let end = state.currentEnd, end > Date.now {
-                HStack(spacing: 4) {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
                     timer(Date.now...end, down: true)
-                    Text("left")
+                    unit("LEFT")
                 }
             } else if let next = state.nextStart, next > Date.now {
-                HStack(spacing: 4) {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
                     timer(Date.now...next, down: true)
                     // Just "free": the next block's name is already on the line below. A long name here
                     // made the fixed-size top row wider than the card and pushed it off both edges.
-                    Text("free")
-                        .lineLimit(1)
+                    unit("FREE")
                 }
             }
         }
-        .font(.system(size: size, weight: .bold).monospacedDigit())
+        .font(.system(size: size, weight: .heavy).monospacedDigit())
         .lineLimit(1)
     }
 }
@@ -711,41 +824,30 @@ struct IslandRingIcon: View {
 
     private static let overYellow = Color(red: 1, green: 0.84, blue: 0.04)
 
+    /// v23: the block's icon in a soft capsule of its color (the timer beside it uses the same color).
+    /// Free time = a solid green F (kept from v22). Minimal view = this capsule alone.
     var body: some View {
         let phase = IslandPhase(state)
-        ZStack {
+        let col = color(phase)
+        Group {
             switch phase {
-            case .running(let r):
-                ProgressView(timerInterval: r, countsDown: false) { EmptyView() } currentValueLabel: { EmptyView() }
-                    .progressViewStyle(.circular)
-                    .tint(ringColor(phase))
             case .free:
-                Circle().fill(DayLiveStyle.doneGreen)   // free time: a solid green F, no ring
-            case .over:
-                Circle().stroke(Self.overYellow, lineWidth: 2.5)
-            case .upNext, .idle, .paused:
-                Circle().stroke(.white.opacity(0.22), lineWidth: 2.5)
+                Circle().fill(DayLiveStyle.doneGreen)
+                    .overlay(Text("F").font(.system(size: size * 0.5, weight: .black)).foregroundStyle(.white))
+                    .frame(width: size, height: size)
+            default:
+                Capsule().fill(col.opacity(0.24))
+                    .overlay(HDIcon(state.iconName ?? "event", size: size * 0.55).foregroundStyle(col))
+                    .frame(width: size * 1.4, height: size)
             }
-            glyph(phase)
-        }
-        .frame(width: size, height: size)
-    }
-
-    @ViewBuilder private func glyph(_ phase: IslandPhase) -> some View {
-        switch phase {
-        case .free:
-            Text("F").font(.system(size: size * 0.5, weight: .black)).foregroundStyle(.white)
-        case .upNext, .idle, .paused:
-            HDIcon(state.iconName ?? "event", size: size * 0.48).foregroundStyle(.white.opacity(0.7))
-        default:
-            HDIcon(state.iconName ?? "edit", size: size * 0.48).foregroundStyle(ringColor(phase))
         }
     }
 
-    private func ringColor(_ phase: IslandPhase) -> Color {
+    private func color(_ phase: IslandPhase) -> Color {
         switch phase {
         case .over: return Self.overYellow
         case .free: return DayLiveStyle.doneGreen
+        case .upNext, .idle, .paused: return Color(white: 0.7)
         default: return state.accentColor
         }
     }
@@ -763,7 +865,7 @@ struct IslandTimer: View {
                 sized(r, down: true).foregroundStyle(state.accentColor)
             case .free(let r):
                 if let c = Self.coarse(until: r.upperBound) {
-                    Text(c).foregroundStyle(DayLiveStyle.doneGreen)
+                    Self.bigSmall(c).foregroundStyle(DayLiveStyle.doneGreen)
                 } else {
                     sized(Date.now...r.upperBound, down: true).foregroundStyle(DayLiveStyle.doneGreen)
                 }
@@ -776,7 +878,7 @@ struct IslandTimer: View {
             case .upNext(let next):
                 HStack(spacing: 3) {
                     Text("in")
-                    if let c = Self.coarse(until: next) { Text(c) } else { sized(Date.now...next, down: true) }
+                    if let c = Self.coarse(until: next) { Self.bigSmall(c) } else { sized(Date.now...next, down: true) }
                 }
                 .foregroundStyle(.white.opacity(0.85))
             case .paused(let left):
@@ -785,7 +887,14 @@ struct IslandTimer: View {
                 DayRing(progress: state.dayProgress, accent: state.accentColor).frame(width: 20, height: 20)
             }
         }
-        .font(.system(size: 15, weight: .semibold).monospacedDigit())
+        .font(.system(size: 17, weight: .heavy).monospacedDigit())   // v23: bigger, same color as the icon
+    }
+
+    /// "1d 4h" → big digits, small letters (v23 #3).
+    static func bigSmall(_ s: String) -> Text {
+        s.reduce(Text("")) { acc, ch in
+            acc + Text(String(ch)).font(.system(size: ch.isNumber ? 17 : 11, weight: .heavy))
+        }
     }
 
     /// v21: an hour or more away → "2h" … "23h", then "1d" / "1d 4h". Hours round UP, so it never

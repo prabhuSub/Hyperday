@@ -1,5 +1,6 @@
 import Combine
 import ActivityKit
+import UserNotifications
 import BackgroundTasks
 import Foundation
 import UIKit
@@ -165,6 +166,10 @@ final class LiveActivityManager: ObservableObject {
             if let n = snap.next {
                 let place = n.location.flatMap { $0.split(separator: "\n").first.map(String.init) }
                 s.headsUp = "Next: \(n.title) \(n.start.shortTime)" + (place.map { " · \($0)" } ?? "")
+                s.headsNextTitle = n.title
+                s.headsNextStart = n.start
+                s.headsNextPlace = place
+                s.headsNextHex = CategoryStore.shared.displayColorHex(for: n)
             } else {
                 s.headsUp = "Wrap up · nothing after this"
             }
@@ -253,6 +258,7 @@ final class LiveActivityManager: ObservableObject {
         }
 
         isRunning = !Self.liveActivities().isEmpty
+        MeetingAlerts.schedule(snap.all, now: now)
         writeWidgetDay(snap, now: now)
         writeCalendarCounts(now: now)
         BackgroundRefresh.schedule(at: boundary ?? staleAt)
@@ -361,5 +367,45 @@ enum BackgroundRefresh {
         let request = BGAppRefreshTaskRequest(identifier: id)
         request.earliestBeginDate = date ?? Date.now.addingTimeInterval(30 * 60)
         try? BGTaskScheduler.shared.submit(request)
+    }
+}
+
+
+/// v23 #11: "Standup in 5 min · Room 3B" five minutes before each calendar meeting.
+/// A scheduled local notification fires on time even when the app is asleep (a Live Activity alert
+/// would need the app awake or a push server). Only calendar events, never your own blocks.
+enum MeetingAlerts {
+    private static let prefix = "hd-meet-"
+
+    @MainActor
+    static func schedule(_ blocks: [Block], now: Date) {
+        let center = UNUserNotificationCenter.current()
+        guard UserDefaults.standard.object(forKey: "meetingAlerts") as? Bool ?? true else {
+            center.getPendingNotificationRequests { reqs in
+                center.removePendingNotificationRequests(withIdentifiers: reqs.map(\.identifier).filter { $0.hasPrefix(prefix) })
+            }
+            return
+        }
+        let upcoming = blocks
+            .filter { $0.source == .calendar && !$0.declined && $0.start.addingTimeInterval(-300) > now }
+            .sorted { $0.start < $1.start }
+            .prefix(12)
+        let requests: [UNNotificationRequest] = upcoming.map { b in
+            let c = UNMutableNotificationContent()
+            c.title = "\(b.title) in 5 min"
+            c.body = [b.location?.split(separator: "\n").first.map(String.init), b.calendarName]
+                .compactMap { $0 }.joined(separator: " · ")
+            c.sound = .default
+            c.interruptionLevel = .active
+            let comps = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second],
+                                                        from: b.start.addingTimeInterval(-300))
+            return UNNotificationRequest(identifier: prefix + b.id, content: c,
+                                         trigger: UNCalendarNotificationTrigger(dateMatching: comps, repeats: false))
+        }
+        center.getPendingNotificationRequests { reqs in
+            let old = reqs.map(\.identifier).filter { $0.hasPrefix(prefix) }
+            center.removePendingNotificationRequests(withIdentifiers: old)
+            for r in requests { center.add(r) }
+        }
     }
 }

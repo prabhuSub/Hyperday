@@ -85,7 +85,7 @@ struct DayLiveActivityWidget: Widget {
                     IslandTimer(state: context.state)
                 }
             } minimal: {
-                IslandRingIcon(state: context.state, size: 22)
+                IslandRingIcon(state: context.state, size: 20)
             }
             .keylineTint(context.state.accentColor)
         }
