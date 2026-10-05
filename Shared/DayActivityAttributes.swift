@@ -83,6 +83,8 @@ struct DayActivityAttributes: ActivityAttributes {
         var laterTitle: String?
         var laterStart: Date?
         var laterHex: String?
+        var nextEnd: Date?           // C: capsule widths follow real durations
+        var laterEnd: Date?
         var focusByHour: [Double]?   // minutes of focus in each hour
         // v16: start of the live block, so the Island ring fills across this block.
         var currentStart: Date?

@@ -68,6 +68,12 @@ struct SettingsView: View {
                             }
                         }
                         .buttonStyle(SecondaryButtonStyle())
+                        // Check every card style without waiting for the right moment of the day.
+                        Button("Preview all card styles") { Task { await activity.previewStyles() } }
+                            .buttonStyle(SecondaryButtonStyle())
+                        Text("Tap, then lock the phone: Running → Last 5 min → Free → Day closed, 7 seconds each. Then your real day comes back.")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Theme.muted)
                     }
                     .cardBox()
 

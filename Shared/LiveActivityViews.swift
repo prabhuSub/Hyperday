@@ -263,19 +263,44 @@ struct PhasesStrip: View {
             ? String(state.label.dropFirst(7).split(separator: " at ").first ?? "") : "Next"
         let nextCol = state.nextHex.map { Color(hex: $0) } ?? Color(white: 0.5)
         let hasLater = state.laterTitle != nil
+        let fr = widths()
         GeometryReader { g in
             let gap: CGFloat = 6
             let w = g.size.width - gap * (hasLater ? 2 : 1)
             HStack(alignment: .top, spacing: gap) {
-                phase("Now · Free", DayLiveStyle.doneGreen, "", knob: true).frame(width: w * (hasLater ? 0.4 : 0.6))
-                phase(next, nextCol, t(state.nextStart)).frame(width: w * (hasLater ? 0.3 : 0.4))
+                phase("Free · \(freeLeft)", DayLiveStyle.doneGreen, "", knob: true).frame(width: w * fr[0])
+                phase(next, nextCol, t(state.nextStart)).frame(width: w * fr[1])
                 if let later = state.laterTitle {
                     phase(later, state.laterHex.map { Color(hex: $0) } ?? Color(white: 0.5), t(state.laterStart))
-                        .frame(width: w * 0.3)
+                        .frame(width: w * fr[2])
                 }
             }
         }
         .frame(height: 44)
+    }
+
+    /// "5m" / "1h 20m" of free time left (worked out when iOS draws the card).
+    private var freeLeft: String {
+        let m = max(0, Int(((state.nextStart ?? .now).timeIntervalSince(.now) / 60).rounded(.up)))
+        return m >= 60 ? "\(m / 60)h \(m % 60)m" : "\(m)m"
+    }
+
+    /// Capsule widths follow real time: free left vs the next block vs the later one,
+    /// each at least 22% so its label fits. 5 free minutes before a 1-hour meeting → a short Free capsule.
+    private func widths() -> [CGFloat] {
+        let now = Date.now
+        let free = max(60, (state.nextStart ?? now).timeIntervalSince(now))
+        let next = max(60, (state.nextEnd ?? state.nextStart?.addingTimeInterval(1800) ?? now).timeIntervalSince(state.nextStart ?? now))
+        var parts = [free, next]
+        if state.laterTitle != nil {
+            parts.append(max(60, (state.laterEnd ?? state.laterStart?.addingTimeInterval(1800) ?? now).timeIntervalSince(state.laterStart ?? now)))
+        }
+        let minShare = 0.22
+        let total = parts.reduce(0, +)
+        var shares = parts.map { max($0 / total, minShare) }
+        let sum = shares.reduce(0, +)
+        shares = shares.map { $0 / sum }
+        return shares.map { CGFloat($0) }
     }
 
     private func phase(_ label: String, _ col: Color, _ time: String, knob: Bool = false) -> some View {
@@ -610,7 +635,7 @@ struct TimerLabel: View {
                     timer(Date.now...next, down: true)
                     // Just "free": the next block's name is already on the line below. A long name here
                     // made the fixed-size top row wider than the card and pushed it off both edges.
-                    unit("FREE")
+                    unit("LEFT")   // title already says "Free"
                 }
             }
         }

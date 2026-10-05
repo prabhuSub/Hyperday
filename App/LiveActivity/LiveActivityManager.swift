@@ -197,11 +197,13 @@ final class LiveActivityManager: ObservableObject {
         if let n = snap.next {
             s.nextHex = cats.displayColorHex(for: n)
             s.nextIcon = cats.category(for: n).iconName
+            s.nextEnd = n.end
             // C · free time: the block after next, for the "Later" capsule.
             if let later = snap.all.first(where: { $0.start >= n.end && $0.id != n.id }) {
                 s.laterTitle = later.title
                 s.laterStart = later.start
                 s.laterHex = cats.displayColorHex(for: later)
+                s.laterEnd = later.end
             }
         }
         let shown = Set(snap.all.map(\.id))   // same set as the total (respects the Focus filter)
@@ -384,6 +386,72 @@ final class LiveActivityManager: ObservableObject {
         autoStart = true
         forceStart = true
         await refresh()
+    }
+
+    /// Settings › "Preview all card styles": shows A (running), B (last 5 min), C (free) and D (day closed)
+    /// on the real Lock Screen card for 7 s each with sample content, then puts your real day back.
+    /// Lock the phone or go Home to watch (iOS hides an app's own card while the app is open).
+    func previewStyles() async {
+        guard let activity = Self.liveActivities().first else {
+            lastError = "Tap Go Live first, then Preview."
+            return
+        }
+        let bg = UIApplication.shared.beginBackgroundTask(withName: "preview")
+        defer { UIApplication.shared.endBackgroundTask(bg) }
+        for (state, stale) in Self.previewStates(now: .now) {
+            await activity.update(ActivityContent(state: state, staleDate: stale))
+            try? await Task.sleep(for: .seconds(7))
+        }
+        await refresh()
+    }
+
+    static func previewStates(now: Date) -> [(DayActivityAttributes.ContentState, Date?)] {
+        let cal = Calendar.current
+        let purple = "#BF5AF2", green = "#30D158", orange = "#FF9F0A", blue = "#0A84FF"
+        func t(_ m: Double) -> Date { now.addingTimeInterval(m * 60) }
+        func time(_ d: Date) -> String { d.formatted(date: .omitted, time: .shortened) }
+        var base = DayActivityAttributes.ContentState(
+            label: "Next · Standup at \(time(t(45)))", title: "Deep work", also: nil, source: .plan,
+            segments: [1, 0.4, 0, 0], dayProgress: 0.45, currentEnd: t(40), actionBlockID: "preview",
+            action: .done, stepsDone: nil, stepsTotal: nil, accentHex: green, alsoIsStep: nil,
+            freeStart: nil, nextStart: nil, nextTitle: nil, overSince: nil, iconName: "deepwork")
+        base.currentStart = t(-20)
+        base.nextHex = purple; base.nextIcon = "meetings"
+        base.doneCount = 3; base.totalCount = 7; base.focusMinutes = 130
+        base.trackFrom = t(-180); base.trackTo = t(300)
+        base.track = [TrackSeg(s: 0.02, e: 0.22, hex: blue), TrackSeg(s: 0.33, e: 0.42, hex: green),
+                      TrackSeg(s: 0.47, e: 0.53, hex: purple), TrackSeg(s: 0.62, e: 0.78, hex: blue),
+                      TrackSeg(s: 0.86, e: 0.97, hex: orange)]
+
+        // A · running
+        let a = base
+
+        // B · last 5 minutes (goes stale in 1 s → iOS redraws it as Now → Next)
+        var b = base
+        b.currentStart = t(-55); b.currentEnd = t(5)
+        b.headsUpAt = now; b.boundaryAt = t(5)
+        b.headsNextTitle = "Standup"; b.headsNextStart = t(5); b.headsNextPlace = "Room 3B"; b.headsNextHex = purple
+        b.headsUp = "Next: Standup \(time(t(5))) · Room 3B"
+
+        // C · free time, next block in 5 min, Gym later
+        var c = base
+        c.title = "Free"; c.source = .free; c.action = nil; c.actionBlockID = nil
+        c.accentHex = nil; c.iconName = nil; c.currentStart = nil; c.currentEnd = nil
+        c.freeStart = t(-10); c.nextStart = t(5); c.nextTitle = "Standup"; c.nextEnd = t(20)
+        c.label = "Next · Standup at \(time(t(5)))"
+        c.laterTitle = "Gym"; c.laterStart = t(180); c.laterEnd = t(240); c.laterHex = orange
+
+        // D · day closed
+        var d = base
+        d.closed = true; d.title = "Day closed"; d.source = .free; d.action = nil; d.actionBlockID = nil
+        d.currentEnd = nil; d.doneCount = 4; d.totalCount = 7; d.reviewCount = 0; d.focusMinutes = 190
+        d.focusByHour = [0, 0, 20, 55, 60, 30, 0, 45, 60, 25, 0, 0, 0, 0, 0, 0]
+        let tomorrow = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: now)) ?? now
+        d.tomorrowFirst = cal.date(bySettingHour: 9, minute: 0, second: 0, of: tomorrow)
+        d.tomorrowTitle = "Standup"
+        d.bedBy = cal.date(bySettingHour: 23, minute: 0, second: 0, of: now)
+
+        return [(a, nil), (b, now.addingTimeInterval(1)), (c, nil), (d, nil)]
     }
 
     func stop() async {
