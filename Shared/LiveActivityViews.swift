@@ -451,7 +451,7 @@ struct BlockActionButton: View {
     }
 }
 
-/// v24: free time → a solid green tile (same shape as the category icons) with hours left inside
+/// v22: free time → a green ring that fills live as the gap runs out, with hours left inside
 /// ("8h LEFT"); in the last hour, a live mm:ss. Replaces the clock tile.
 struct FreeRing: View {
     let state: DayActivityAttributes.ContentState
@@ -462,28 +462,28 @@ struct FreeRing: View {
     }
 
     var body: some View {
-        if let to = state.nextStart {
-            RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
-                .fill(DayLiveStyle.doneGreen)
-                .frame(width: size, height: size)
-                .overlay {
-                    Group {
-                        if let c = IslandTimer.coarse(until: to) {
-                            VStack(spacing: -1) {
-                                Text(c).font(.system(size: size * 0.3, weight: .heavy)).minimumScaleFactor(0.6)
-                                Text("LEFT").font(.system(size: size * 0.17, weight: .bold)).opacity(0.85)
-                            }
-                            .lineLimit(1)
-                        } else {
-                            Text(timerInterval: Date.now...max(to, Date.now), countsDown: true)
-                                .font(.system(size: size * 0.24, weight: .heavy).monospacedDigit())
-                                .multilineTextAlignment(.center)
-                        }
+        if let from = state.freeStart, let to = state.nextStart, from < to {
+            ZStack {
+                ProgressView(timerInterval: from...to, countsDown: false) { EmptyView() } currentValueLabel: { EmptyView() }
+                    .progressViewStyle(.circular)
+                    .tint(DayLiveStyle.doneGreen)
+                if let c = IslandTimer.coarse(until: to) {
+                    VStack(spacing: -1) {
+                        Text(c).font(.system(size: size * 0.27, weight: .heavy)).minimumScaleFactor(0.6)
+                        Text("LEFT").font(.system(size: size * 0.16, weight: .bold)).opacity(0.8)
                     }
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, size * 0.08)
+                    .lineLimit(1)
+                    .foregroundStyle(DayLiveStyle.doneGreen)
+                    .padding(.horizontal, size * 0.14)
+                } else {
+                    Text(timerInterval: Date.now...max(to, Date.now), countsDown: true)
+                        .font(.system(size: size * 0.22, weight: .heavy).monospacedDigit())
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(DayLiveStyle.doneGreen)
+                        .padding(.horizontal, size * 0.12)
                 }
-                .accessibilityLabel("Free time")
+            }
+            .frame(width: size, height: size)
         }
     }
 }
