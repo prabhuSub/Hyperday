@@ -1,6 +1,6 @@
 import Combine
 import ActivityKit
-import UserNotifications
+@preconcurrency import UserNotifications
 import BackgroundTasks
 import Foundation
 import UIKit
@@ -440,8 +440,9 @@ enum MeetingAlerts {
     static func schedule(_ blocks: [Block], now: Date) {
         let center = UNUserNotificationCenter.current()
         guard (UserDefaults.standard.object(forKey: "meetingAlerts") as? Bool) ?? true else {
-            center.getPendingNotificationRequests { reqs in
-                center.removePendingNotificationRequests(withIdentifiers: reqs.map(\.identifier).filter { $0.hasPrefix(prefix) })
+            Task { @MainActor in
+                let old = await center.pendingNotificationRequests().map(\.identifier).filter { $0.hasPrefix(prefix) }
+                center.removePendingNotificationRequests(withIdentifiers: old)
             }
             return
         }
@@ -461,10 +462,10 @@ enum MeetingAlerts {
             return UNNotificationRequest(identifier: prefix + b.id, content: c,
                                          trigger: UNCalendarNotificationTrigger(dateMatching: comps, repeats: false))
         }
-        center.getPendingNotificationRequests { reqs in
-            let old = reqs.map(\.identifier).filter { $0.hasPrefix(prefix) }
+        Task { @MainActor in
+            let old = await center.pendingNotificationRequests().map(\.identifier).filter { $0.hasPrefix(prefix) }
             center.removePendingNotificationRequests(withIdentifiers: old)
-            for r in requests { center.add(r) }
+            for r in requests { try? await center.add(r) }
         }
     }
 }
