@@ -155,7 +155,7 @@ struct LockScreenCard: View {
 
     /// v24 "day as a journey" card (Uber / delivery style), in Hyperday's colors.
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: inIsland ? 6 : 8) {
             // 1 · What's on + time left ·························· ends at
             HStack(spacing: 7) {
                 AppMark(size: 18)
@@ -189,11 +189,15 @@ struct LockScreenCard: View {
             }
 
             // 3 · Next (or the end-of-block band) ······ Pause · Done
-            HStack(spacing: 10) {
-                bottomLeft
-                Spacer(minLength: 4)
-                PauseButton(state: state)
-                BlockActionButton(state: state)
+            //     Free time: the capsules already show what's next, so only a button (if any) remains.
+            let freePhases = state.source == .free && state.nextStart != nil && !headsUp
+            if !freePhases || state.action != nil {
+                HStack(spacing: 10) {
+                    if !freePhases { bottomLeft }
+                    Spacer(minLength: 4)
+                    PauseButton(state: state)
+                    BlockActionButton(state: state)
+                }
             }
         }
         .foregroundStyle(.white)
@@ -248,6 +252,7 @@ struct NowNextStrip: View {
 }
 
 /// v24 C · free time: Now (free, white knob) / Next / Later as colored capsules, times underneath.
+/// Fixed proportions so every capsule shows; the countdown lives in the top row only.
 struct PhasesStrip: View {
     let state: DayActivityAttributes.ContentState
 
@@ -257,32 +262,33 @@ struct PhasesStrip: View {
         let next = state.label.hasPrefix("Next · ")
             ? String(state.label.dropFirst(7).split(separator: " at ").first ?? "") : "Next"
         let nextCol = state.nextHex.map { Color(hex: $0) } ?? Color(white: 0.5)
-        HStack(alignment: .top, spacing: 6) {
-            phase("Now · Free", DayLiveStyle.doneGreen, knob: true) {
-                if let n = state.nextStart, n > Date.now {
-                    Text(timerInterval: Date.now...n, countsDown: true).monospacedDigit()
+        let hasLater = state.laterTitle != nil
+        GeometryReader { g in
+            let gap: CGFloat = 6
+            let w = g.size.width - gap * (hasLater ? 2 : 1)
+            HStack(alignment: .top, spacing: gap) {
+                phase("Now · Free", DayLiveStyle.doneGreen, "", knob: true).frame(width: w * (hasLater ? 0.4 : 0.6))
+                phase(next, nextCol, t(state.nextStart)).frame(width: w * (hasLater ? 0.3 : 0.4))
+                if let later = state.laterTitle {
+                    phase(later, state.laterHex.map { Color(hex: $0) } ?? Color(white: 0.5), t(state.laterStart))
+                        .frame(width: w * 0.3)
                 }
             }
-            .layoutPriority(1)
-            phase(next, nextCol) { Text(t(state.nextStart)) }
-            if let later = state.laterTitle {
-                phase(later, state.laterHex.map { Color(hex: $0) } ?? Color(white: 0.5)) { Text(t(state.laterStart)) }
-            }
         }
+        .frame(height: 44)
     }
 
-    private func phase<V: View>(_ label: String, _ col: Color, knob: Bool = false, @ViewBuilder time: () -> V) -> some View {
+    private func phase(_ label: String, _ col: Color, _ time: String, knob: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(label).font(.system(size: 11, weight: .semibold)).opacity(0.75).lineLimit(1)
             Capsule()
                 .fill(LinearGradient(colors: [col, col.opacity(0.55)], startPoint: .leading, endPoint: .trailing))
-                .frame(height: 16)
+                .frame(height: 14)
                 .overlay(alignment: .leading) {
-                    if knob { Circle().fill(.white).frame(width: 12, height: 12).padding(.leading, 2) }
+                    if knob { Circle().fill(.white).frame(width: 10, height: 10).padding(.leading, 2) }
                 }
-            time().font(.system(size: 12, weight: .bold)).lineLimit(1)
+            Text(time).font(.system(size: 11.5, weight: .bold)).lineLimit(1)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
