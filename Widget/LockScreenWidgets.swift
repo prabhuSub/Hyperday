@@ -140,7 +140,7 @@ struct DayStripFamily: View {
     }
 }
 
-/// One line above the clock: "Deep work 41m ▰▰▰▱▱▱" — what's on, time left, how far through the day.
+/// One line above the clock: "▰▰▰▱▱▱ 41m Deep work" (bar first so a long title truncates, not the bar) — what's on, time left, how far through the day.
 /// iOS allows only text here (one line, no shapes), so the bar is drawn with characters.
 struct DayStripInline: View {
     let entry: DayEntry
@@ -154,11 +154,11 @@ struct DayStripInline: View {
         if day.todays(now).isEmpty {
             Text("Hyperday · nothing planned")
         } else if let c = day.current(at: now) {
-            Text("\(c.title) \(minutesLeft(now, c.end)) \(bar)")
+            Text("\(bar) \(minutesLeft(now, c.end)) \(c.title)")
         } else if let n = day.upcoming(at: now, limit: 1).first {
-            Text("Free · \(n.title) \(clock(n.start)) \(bar)")
+            Text("\(bar) Free · \(n.title) \(clock(n.start))")
         } else {
-            Text("Day done \(bar)")
+            Text("\(bar) Day done")
         }
     }
 }
