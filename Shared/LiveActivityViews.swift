@@ -187,8 +187,28 @@ struct LockScreenCard: View {
         }
     }
 
-    /// v24 "day as a journey" card (Uber / delivery style), in Hyperday's colors.
+    /// v28: each state is its own layout, exactly as mocked in v24.
+    ///   B · last 5 minutes → Now → Next flight card.  C · free time → Now / Next / Later capsules.  A · otherwise.
     var body: some View {
+        Group {
+            if headsUp, let next = state.headsNextTitle, let nextStart = state.headsNextStart {
+                NowNextStrip(title: state.title, start: state.currentStart, end: state.currentEnd,
+                             next: next, nextStart: nextStart, color: state.accentColor, icon: state.iconName,
+                             big: inIsland ? 19 : 24)
+            } else if state.source == .free, state.nextStart != nil {
+                PhasesStrip(state: state, inIsland: inIsland)
+            } else {
+                journey
+            }
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, inIsland ? 4 : 14)   // v26: the same gap on every side (concentric)
+        .padding(.vertical, inIsland ? 2 : 14)
+        .background { if !inIsland { EdgeTicks(state: state, headsUp: headsUp) } }   // v23: ticks around the card
+    }
+
+    /// v24 A · "day as a journey" card (Uber / delivery style), in Hyperday's colors.
+    private var journey: some View {
         VStack(alignment: .leading, spacing: inIsland ? 6 : 8) {
             // 1 · What's on + time left ·························· ends at
             HStack(spacing: 7) {
@@ -210,38 +230,22 @@ struct LockScreenCard: View {
             .foregroundStyle(nowColor)
 
             // 2 · The day as a track, a white knob at now
-            //     (B · last 5 minutes: Now → Next.  C · free time: Now / Next / Later capsules.)
-            if headsUp, let next = state.headsNextTitle, let nextStart = state.headsNextStart {
-                NowNextStrip(title: state.title, start: state.currentStart, end: state.currentEnd,
-                             next: next, nextStart: nextStart, color: nowColor,
-                             nextColor: state.headsNextHex.map { Color(hex: $0) } ?? .white)
-            } else if state.source == .free, state.nextStart != nil {
-                PhasesStrip(state: state)
-            } else {
-                JourneyTrack(state: state, knob: nowColor)
-                    .frame(height: 22)
-            }
+            JourneyTrack(state: state, knob: nowColor)
+                .frame(height: 22)
 
-            // 3 · Next (or the end-of-block band) ······ Pause · Done
-            //     Free time: the capsules already show what's next, so only a button (if any) remains.
-            let freePhases = state.source == .free && state.nextStart != nil && !headsUp
-            if !freePhases || state.action != nil {
-                HStack(spacing: 10) {
-                    if !freePhases { bottomLeft }
-                    Spacer(minLength: 4)
-                    PauseButton(state: state)
-                    BlockActionButton(state: state)
-                }
+            // 3 · Next ······ Pause · Done
+            HStack(spacing: 10) {
+                bottomLeft
+                Spacer(minLength: 4)
+                PauseButton(state: state)
+                BlockActionButton(state: state)
             }
         }
-        .foregroundStyle(.white)
-        .padding(.horizontal, inIsland ? 4 : 14)   // v26: the same gap on every side (concentric)
-        .padding(.vertical, inIsland ? 2 : 14)
-        .background { if !inIsland { EdgeTicks(state: state, headsUp: headsUp) } }   // v23: ticks around the card
     }
 }
 
-/// v24 B · last 5 minutes: "Deep work ——●—— Standup", times under each end, "Ends in 4:59" between.
+/// v24 B · last 5 minutes, as mocked: "Now  Deep work ——◉—— Standup  Next",
+/// start time · "Ends in 4:59" · next start underneath.
 struct NowNextStrip: View {
     let title: String
     let start: Date?
@@ -249,24 +253,36 @@ struct NowNextStrip: View {
     let next: String
     let nextStart: Date
     let color: Color
-    let nextColor: Color
+    var icon: String? = nil
+    var big: CGFloat = 24
+
+    private func t(_ d: Date?) -> String { d.map { $0.formatted(date: .omitted, time: .shortened) } ?? "" }
 
     var body: some View {
         VStack(spacing: 3) {
-            HStack(spacing: 8) {
-                Text(title).font(.system(size: 17, weight: .heavy)).lineLimit(1)
+            HStack {
+                Text("Now")
+                Spacer()
+                Text("Next")
+            }
+            .font(.system(size: 12, weight: .semibold))
+            .opacity(0.6)
+            HStack(spacing: 10) {
+                Text(title).font(.system(size: big, weight: .heavy)).lineLimit(1).minimumScaleFactor(0.6)
                 ZStack {
                     Capsule().fill(Color.white.opacity(0.15)).frame(height: 5)
                     if let s = start, let e = end, e > s {
                         ProgressView(timerInterval: s...e, countsDown: false) { EmptyView() } currentValueLabel: { EmptyView() }
                             .progressViewStyle(.linear).tint(color)
                     }
+                    Circle().fill(color).frame(width: 22, height: 22)
+                        .overlay(HDIcon(icon ?? "event", size: 12).foregroundStyle(.white))
                 }
-                .frame(minWidth: 40)
-                Text(next).font(.system(size: 17, weight: .heavy)).foregroundStyle(nextColor).lineLimit(1)
+                .frame(minWidth: 44)
+                Text(next).font(.system(size: big, weight: .heavy)).lineLimit(1).minimumScaleFactor(0.6)
             }
             HStack {
-                Text(start.map { $0.formatted(date: .omitted, time: .shortened) } ?? "")
+                Text(t(start))
                 Spacer()
                 if let e = end, e > Date.now {
                     HStack(spacing: 3) {
@@ -276,10 +292,9 @@ struct NowNextStrip: View {
                     .foregroundStyle(color)
                 }
                 Spacer()
-                Text(nextStart.formatted(date: .omitted, time: .shortened))
+                Text(t(nextStart))
             }
-            .font(.system(size: 12, weight: .semibold))
-            .opacity(0.9)
+            .font(.system(size: 14, weight: .bold))
         }
     }
 }
@@ -288,6 +303,7 @@ struct NowNextStrip: View {
 /// Fixed proportions so every capsule shows; the countdown lives in the top row only.
 struct PhasesStrip: View {
     let state: DayActivityAttributes.ContentState
+    var inIsland = false
 
     private func t(_ d: Date?) -> String { d.map { $0.formatted(date: .omitted, time: .shortened) } ?? "" }
 
@@ -297,11 +313,12 @@ struct PhasesStrip: View {
         let nextCol = state.nextHex.map { Color(hex: $0) } ?? Color(white: 0.5)
         let hasLater = state.laterTitle != nil
         let fr = widths()
+        VStack(spacing: 8) {
         GeometryReader { g in
             let gap: CGFloat = 6
             let w = g.size.width - gap * (hasLater ? 2 : 1)
             HStack(alignment: .top, spacing: gap) {
-                phase("Free · \(freeLeft)", DayLiveStyle.doneGreen, "", knob: true).frame(width: w * fr[0])
+                phase("Now · Free", DayLiveStyle.doneGreen, nil, knob: true, left: state.nextStart).frame(width: w * fr[0])
                 phase(next, nextCol, t(state.nextStart)).frame(width: w * fr[1])
                 if let later = state.laterTitle {
                     phase(later, state.laterHex.map { Color(hex: $0) } ?? Color(white: 0.5), t(state.laterStart))
@@ -309,14 +326,13 @@ struct PhasesStrip: View {
                 }
             }
         }
-        .frame(height: 44)
+        .frame(height: inIsland ? 50 : 60)
+            if state.action != nil {
+                HStack { Spacer(); BlockActionButton(state: state) }
+            }
+        }
     }
 
-    /// "5m" / "1h 20m" of free time left (worked out when iOS draws the card).
-    private var freeLeft: String {
-        let m = max(0, Int(((state.nextStart ?? .now).timeIntervalSince(.now) / 60).rounded(.up)))
-        return m >= 60 ? "\(m / 60)h \(m % 60)m" : "\(m)m"
-    }
 
     /// Capsule widths follow real time: free left vs the next block vs the later one,
     /// each at least 22% so its label fits. 5 free minutes before a 1-hour meeting → a short Free capsule.
@@ -336,16 +352,24 @@ struct PhasesStrip: View {
         return shares.map { CGFloat($0) }
     }
 
-    private func phase(_ label: String, _ col: Color, _ time: String, knob: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(label).font(.system(size: 11, weight: .semibold)).opacity(0.75).lineLimit(1)
+    private func phase(_ label: String, _ col: Color, _ time: String?, knob: Bool = false, left: Date? = nil) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(label).font(.system(size: 12, weight: .semibold)).opacity(0.75).lineLimit(1)
             Capsule()
                 .fill(LinearGradient(colors: [col, col.opacity(0.55)], startPoint: .leading, endPoint: .trailing))
-                .frame(height: 14)
+                .frame(height: inIsland ? 20 : 26)
                 .overlay(alignment: .leading) {
-                    if knob { Circle().fill(.white).frame(width: 10, height: 10).padding(.leading, 2) }
+                    if knob { Circle().fill(.white).frame(width: inIsland ? 14 : 20, height: inIsland ? 14 : 20).padding(.leading, 3) }
                 }
-            Text(time).font(.system(size: 11.5, weight: .bold)).lineLimit(1)
+            if let left, left > Date.now {
+                HStack(spacing: 3) {
+                    Text(timerInterval: Date.now...left, countsDown: true).monospacedDigit().fixedSize()
+                    Text("left")
+                }
+                .font(.system(size: 13, weight: .bold)).lineLimit(1)
+            } else {
+                Text(time ?? "").font(.system(size: 13, weight: .bold)).lineLimit(1)
+            }
         }
     }
 }
@@ -865,80 +889,64 @@ struct DayClosedCard: View {
         }
     }
 
-    /// "3h 10m focus": big digits, small letters.
-    private var focusText: Text {
+    /// "3h" over "10m focus": big digits, small "focus" (v24 D).
+    private var focusText: some View {
         let m = state.focusMinutes ?? 0
-        let big = compact ? 22.0 : 26.0
+        let big = compact ? 22.0 : 36.0
         func n(_ s: String) -> Text { Text(s).font(.system(size: big, weight: .heavy)) }
         func u(_ s: String) -> Text { Text(s).font(.system(size: big * 0.45, weight: .heavy)) }
-        if m >= 60 { return n("\(m / 60)") + u("h ") + n("\(m % 60)") + u("m focus") }
-        return n("\(m)") + u("m focus")
+        return Group {
+            if compact {
+                m >= 60 ? n("\(m / 60)h \(m % 60)m") + u(" focus") : n("\(m)m") + u(" focus")
+            } else if m >= 60 {
+                VStack(alignment: .leading, spacing: -6) {
+                    n("\(m / 60)h")
+                    n("\(m % 60)m") + u(" focus")
+                }
+            } else {
+                n("\(m)m") + u(" focus")
+            }
+        }
+        .foregroundStyle(DayLiveStyle.doneGreen)
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+    }
+
+    /// "Next: Standup 3:00 PM" (tomorrow's first block).
+    private var nextLine: String? {
+        guard let first = state.tomorrowFirst else { return nil }
+        return "Next: " + (state.tomorrowTitle.map { "\($0) " } ?? "") + time(first)
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: compact ? 5 : 6) {
-            if !compact {
-                HStack(spacing: 7) {
-                    AppMark(size: 20)
-                    Text("Day closed").font(.system(size: 14, weight: .bold))
-                    Spacer(minLength: 4)
-                    if let n = state.reviewCount, n > 0, let url = URL(string: "hyperday://close") {
-                        reviewLink(n, url)   // in the header, to keep the card under iOS's height limit
-                    } else {
-                        Text(Date.now.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.7))
-                    }
-                }
-            }
-            // v24 D · big focus number + today's focus by hour, then done count and Review.
+        VStack(alignment: .leading, spacing: compact ? 4 : 10) {
             HStack(alignment: .bottom, spacing: 10) {
-                VStack(alignment: .leading, spacing: 1) {
-                    focusText
-                        .foregroundStyle(DayLiveStyle.doneGreen)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                    (Text("\(done)").foregroundColor(DayLiveStyle.doneGreen) + Text(" of \(total) done"))
-                        .font(.system(size: 13, weight: .bold))
-                        .opacity(0.9)
-                }
+                focusText
                 Spacer(minLength: 4)
                 if let hours = state.focusByHour, hours.contains(where: { $0 > 0 }) {
-                    HStack(alignment: .bottom, spacing: 3) {
+                    HStack(alignment: .bottom, spacing: compact ? 3 : 4) {
                         ForEach(hours.indices, id: \.self) { i in
                             Capsule()
                                 .fill(hours[i] >= 15 ? DayLiveStyle.doneGreen : Color.white.opacity(0.22))
-                                .frame(width: compact ? 4 : 5, height: max(4, CGFloat(min(hours[i], 60) / 60) * (compact ? 24 : 32)))
+                                .frame(width: compact ? 4 : 7,
+                                       height: max(compact ? 4 : 7, CGFloat(min(hours[i], 60) / 60) * (compact ? 24 : 40)))
                         }
                     }
                 }
             }
-            if compact, let n = state.reviewCount, n > 0, let url = URL(string: "hyperday://close") {
-                reviewLink(n, url)
+            HStack {
+                Text("\(done)/\(total) done")
+                Spacer(minLength: 6)
+                if let nextLine { Text(nextLine).lineLimit(1) }
             }
-            Rectangle().fill(.white.opacity(0.15)).frame(height: 1).padding(.vertical, 1)
-            if let first = state.tomorrowFirst {
-                HStack(alignment: .top, spacing: 8) {
-                    stat("Tomorrow", time(first), .white)
-                    if state.leaveBy != nil { stat("Leave by", time(state.leaveBy), .white) }
-                    stat("Bed by", time(state.bedBy),
-                         (state.bedBy ?? .distantFuture) > .now ? DayLiveStyle.doneGreen : Color(red: 1, green: 0.27, blue: 0.23))
-                }
-                if !compact, (state.reviewCount ?? 0) == 0, let title = state.tomorrowTitle {
-                    Text("First up: \(title)")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.white.opacity(0.7))
-                        .lineLimit(1)
-                }
-            } else {
-                Text("Nothing planned tomorrow")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.75))
-            }
+            .font(.system(size: 13, weight: .semibold))
+            .opacity(0.7)
         }
         .foregroundStyle(.white)
         .padding(.horizontal, compact ? 6 : 16)
-        .padding(.vertical, compact ? 4 : 12)
+        .padding(.vertical, compact ? 4 : 14)
+        // The Review link left the card (not in the mockup): tapping the card opens the day review.
+        .widgetURL(URL(string: (state.reviewCount ?? 0) > 0 ? "hyperday://close" : "hyperday://today"))
     }
 
     private func stat(_ label: String, _ value: String, _ color: Color) -> some View {
