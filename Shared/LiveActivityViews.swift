@@ -789,6 +789,16 @@ struct DayClosedCard: View {
         d.map { $0.formatted(date: .omitted, time: .shortened) } ?? "—"
     }
 
+    private func reviewLink(_ n: Int, _ url: URL) -> some View {
+        Link(destination: url) {
+            Text("Review \(n)")
+                .font(.system(size: 12, weight: .bold))
+                .padding(.horizontal, 10)
+                .frame(height: 24)
+                .background(Color.white.opacity(0.2), in: Capsule())
+        }
+    }
+
     /// "3h 10m focus": big digits, small letters.
     private var focusText: Text {
         let m = state.focusMinutes ?? 0
@@ -806,9 +816,13 @@ struct DayClosedCard: View {
                     AppMark(size: 20)
                     Text("Day closed").font(.system(size: 14, weight: .bold))
                     Spacer(minLength: 4)
-                    Text(Date.now.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.7))
+                    if let n = state.reviewCount, n > 0, let url = URL(string: "hyperday://close") {
+                        reviewLink(n, url)   // in the header, to keep the card under iOS's height limit
+                    } else {
+                        Text(Date.now.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
                 }
             }
             // v24 D · big focus number + today's focus by hour, then done count and Review.
@@ -833,14 +847,8 @@ struct DayClosedCard: View {
                     }
                 }
             }
-            if let n = state.reviewCount, n > 0, let url = URL(string: "hyperday://close") {
-                Link(destination: url) {
-                    Text("Review \(n) not done")
-                        .font(.system(size: 12, weight: .bold))
-                        .padding(.horizontal, 10)
-                        .frame(height: 24)
-                        .background(Color.white.opacity(0.2), in: Capsule())
-                }
+            if compact, let n = state.reviewCount, n > 0, let url = URL(string: "hyperday://close") {
+                reviewLink(n, url)
             }
             Rectangle().fill(.white.opacity(0.15)).frame(height: 1).padding(.vertical, 1)
             if let first = state.tomorrowFirst {
@@ -850,7 +858,7 @@ struct DayClosedCard: View {
                     stat("Bed by", time(state.bedBy),
                          (state.bedBy ?? .distantFuture) > .now ? DayLiveStyle.doneGreen : Color(red: 1, green: 0.27, blue: 0.23))
                 }
-                if !compact, let title = state.tomorrowTitle {
+                if !compact, (state.reviewCount ?? 0) == 0, let title = state.tomorrowTitle {
                     Text("First up: \(title)")
                         .font(.system(size: 12))
                         .foregroundStyle(.white.opacity(0.7))
