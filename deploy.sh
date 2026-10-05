@@ -111,6 +111,18 @@ if [[ -z "$DEVICE" ]]; then
 fi
 
 echo "› Installing…"
-xcrun devicectl device install app --device "$DEVICE" "$APP" >/dev/null
+# Wi-Fi installs can drop mid-transfer ("Connection reset by peer"): try up to 3 times.
+for attempt in 1 2 3; do
+  if xcrun devicectl device install app --device "$DEVICE" "$APP" >/dev/null 2>"${TMPDIR:-/tmp}/hd-install.err"; then
+    break
+  fi
+  if [[ $attempt == 3 ]]; then
+    cat "${TMPDIR:-/tmp}/hd-install.err"
+    echo "✗ Couldn't reach your iPhone. Unlock it, keep it awake on the same Wi-Fi (or plug in the cable), then run ./deploy.sh again."
+    exit 1
+  fi
+  echo "› Connection dropped, retrying ($attempt/3)…"
+  sleep 3
+done
 xcrun devicectl device process launch --device "$DEVICE" com.prabhu.daylive >/dev/null || true
 echo "✓ Hyperday is on your iPhone."
