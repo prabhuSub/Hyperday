@@ -168,8 +168,11 @@ final class BlockStore: ObservableObject {
     }
 
     func planBlocks(on day: Date) -> [Block] {
+        // Any block that overlaps the day (an 11 PM–1 AM block shows on both days).
         let cal = Calendar.current
-        return planBlocks.filter { cal.isDate($0.start, inSameDayAs: day) }
+        let dayStart = cal.startOfDay(for: day)
+        let dayEnd = cal.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart.addingTimeInterval(86_400)
+        return planBlocks.filter { $0.start < dayEnd && $0.end > dayStart }
     }
 
     // MARK: Overrides (Done / Start next)

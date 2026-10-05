@@ -8,6 +8,19 @@ final class CalendarService {
 
     let store = EKEventStore()
 
+    /// One day's events, cached until the calendar changes (Today used to query EventKit every 30 s).
+    private var dayCache: [Date: [Block]] = [:]
+    private var observer: NSObjectProtocol?
+
+    private init() {
+        observer = NotificationCenter.default.addObserver(forName: .EKEventStoreChanged, object: nil, queue: .main) { [weak self] _ in
+            self?.dayCache = [:]
+        }
+    }
+
+    /// Forget cached days (calendar access changed, or a new day started).
+    func invalidate() { dayCache = [:] }
+
     var hasAccess: Bool {
         EKEventStore.authorizationStatus(for: .event) == .fullAccess
     }
@@ -25,7 +38,13 @@ final class CalendarService {
         let cal = Calendar.current
         let start = cal.startOfDay(for: day)
         guard let end = cal.date(byAdding: .day, value: 1, to: start) else { return [] }
-        return events(from: start, to: end)
+        if let hit = dayCache[start] { return hit }
+        let list = events(from: start, to: end)
+        if hasAccess {
+            if dayCache.count > 7 { dayCache = [:] }
+            dayCache[start] = list
+        }
+        return list
     }
 
     /// Events from every calendar on the phone in a date range (Calendar tab).

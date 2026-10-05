@@ -135,6 +135,20 @@ final class LiveActivityManager: ObservableObject {
         return s
     }
 
+    /// After midnight, record the previous day one last time as of 11:59:59 PM, so a block that was
+    /// running (or a Done tapped) after the last refresh before midnight isn't lost.
+    private func finalizePreviousDayIfNeeded(now: Date) {
+        let cal = Calendar.current
+        let key = "lastRecordedDay"
+        defer { UserDefaults.standard.set(now, forKey: key) }
+        guard let last = UserDefaults.standard.object(forKey: key) as? Date,
+              !cal.isDate(last, inSameDayAs: now), last < now,
+              let endOfLast = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: last))?.addingTimeInterval(-1)
+        else { return }
+        CalendarService.shared.invalidate()
+        HistoryStore.shared.recordToday(raw: allTodayBlocks(now: endOfLast), now: endOfLast)
+    }
+
     /// v20: today score (top row), Pause, and the last-5-minutes heads-up.
     /// The heads-up needs no wake-up: the card goes stale at `headsUpAt` and iOS redraws it in yellow.
     private func decorate(_ s: inout DayActivityAttributes.ContentState, snap: DaySnapshot, now: Date) {
@@ -218,6 +232,7 @@ final class LiveActivityManager: ObservableObject {
     private func performRefresh() async {
         let now = Date.now
         let snap = snapshot(now: now)
+        finalizePreviousDayIfNeeded(now: now)
         HistoryStore.shared.recordToday(raw: allTodayBlocks(now: now), now: now)
         let closed = DayCloseSettings.isClosed(at: now)
         let cal = Calendar.current

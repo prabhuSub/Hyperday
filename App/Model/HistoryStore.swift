@@ -114,8 +114,12 @@ final class HistoryStore: ObservableObject {
             guard a.start <= now else { return nil }
             let o = bs.overrides[b.id]
             let st = bs.steps(for: b.id)
-            let start = a.start
-            let end = min(a.end, now)
+            // Only the part of the block inside this day (blocks can cross midnight).
+            let dayStart = Calendar.current.startOfDay(for: now)
+            let dayEnd = Calendar.current.date(byAdding: .day, value: 1, to: dayStart) ?? now
+            let start = max(a.start, dayStart)
+            let end = min(a.end, now, dayEnd)
+            guard end > start || a.start <= now else { return nil }
             let allSteps = !st.isEmpty && st.allSatisfy(\.done)
             let cats = cs.categories(for: b).map(\.id)
             return HistoryEntry(
