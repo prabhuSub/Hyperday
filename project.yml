@@ -18,7 +18,8 @@ targets:
   DayLive:
     type: application
     platform: iOS
-    scheme: {}          # shared scheme so ./deploy.sh can build from Terminal
+    scheme:             # shared scheme so ./deploy.sh can build from Terminal
+      testTargets: [DayLiveTests]   # ⌘U runs the core-logic tests
     sources:
       - App
       - Shared
@@ -72,3 +73,15 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.prabhu.daylive.widget
         CODE_SIGN_ENTITLEMENTS: Hyperday.entitlements       # App Group
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) WIDGET_EXTENSION"
+
+  DayLiveTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - Tests
+    dependencies:
+      - target: DayLive
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.prabhu.daylive.tests
+        GENERATE_INFOPLIST_FILE: YES
