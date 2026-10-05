@@ -128,11 +128,37 @@ final class LiveActivityManager: ObservableObject {
         s.doneCount = entries.filter(\.done).count
         s.totalCount = max(snap.all.count, entries.count)
         s.reviewCount = reviewed ? 0 : notDoneToday(now: now).count
+        let f = Self.focus(snap.all, now: now)   // D · big focus number + bars by hour
+        s.focusMinutes = f.minutes
+        s.focusByHour = f.byHour
         s.tomorrowFirst = pre.first?.start
         s.tomorrowTitle = pre.first?.title
         s.leaveBy = pre.leaveBy
         s.bedBy = pre.bedBy
         return s
+    }
+
+    /// Work + Deep Work time so far today, in total and per hour (6 AM–10 PM).
+    static func focus(_ blocks: [Block], now: Date) -> (minutes: Int, byHour: [Double]) {
+        let cats = CategoryStore.shared
+        let cal = Calendar.current
+        let six = cal.date(bySettingHour: 6, minute: 0, second: 0, of: now) ?? now
+        var total: TimeInterval = 0
+        var hours = Array(repeating: 0.0, count: 16)
+        for b in blocks {
+            let ids = cats.categories(for: b).map(\.id)
+            let share = Double(ids.filter { $0 == "work" || $0 == "deepwork" }.count) / Double(max(ids.count, 1))
+            guard share > 0 else { continue }
+            let end = min(b.end, now)
+            guard end > b.start else { continue }
+            total += end.timeIntervalSince(b.start) * share
+            for h in 0..<16 {
+                let hs = six.addingTimeInterval(Double(h) * 3600), he = hs.addingTimeInterval(3600)
+                let overlap = min(end, he).timeIntervalSince(max(b.start, hs))
+                if overlap > 0 { hours[h] += overlap / 60 * share }
+            }
+        }
+        return (Int(total / 60), hours)
     }
 
     /// After midnight, record the previous day one last time as of 11:59:59 PM, so a block that was
@@ -153,13 +179,9 @@ final class LiveActivityManager: ObservableObject {
     /// The heads-up needs no wake-up: the card goes stale at `headsUpAt` and iOS redraws it in yellow.
     private func decorate(_ s: inout DayActivityAttributes.ContentState, snap: DaySnapshot, now: Date) {
         let cats = CategoryStore.shared
-        var focus: TimeInterval = 0
-        for b in snap.all {
-            let ids = cats.categories(for: b).map(\.id)
-            let focusShare = Double(ids.filter { $0 == "work" || $0 == "deepwork" }.count) / Double(max(ids.count, 1))
-            focus += max(0, min(b.end, now).timeIntervalSince(b.start)) * focusShare
-        }
-        s.focusMinutes = Int(focus / 60)
+        let f = Self.focus(snap.all, now: now)
+        s.focusMinutes = f.minutes
+        s.focusByHour = f.byHour
 
         // v24 journey track: every block (non-overlapping lanes) from the first start to the last end.
         if let first = snap.lanes.first?.start, let last = snap.lanes.map(\.end).max(), last > first {
@@ -175,6 +197,12 @@ final class LiveActivityManager: ObservableObject {
         if let n = snap.next {
             s.nextHex = cats.displayColorHex(for: n)
             s.nextIcon = cats.category(for: n).iconName
+            // C · free time: the block after next, for the "Later" capsule.
+            if let later = snap.all.first(where: { $0.start >= n.end && $0.id != n.id }) {
+                s.laterTitle = later.title
+                s.laterStart = later.start
+                s.laterHex = cats.displayColorHex(for: later)
+            }
         }
         let shown = Set(snap.all.map(\.id))   // same set as the total (respects the Focus filter)
         s.doneCount = HistoryStore.shared.entries(on: now).filter { $0.done && shown.contains($0.id) }.count
