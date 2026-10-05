@@ -122,12 +122,44 @@ struct NowRect: View {
 struct HyperdayDayWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: WidgetShared.dayKind, provider: DayProvider()) { entry in
-            DayStripRect(entry: entry)
+            DayStripFamily(entry: entry)
                 .containerBackground(for: .widget) { AccessoryWidgetBackground() }
         }
         .configurationDisplayName("Day strip")
-        .description("Your whole day as a strip, with where you are now and what's next.")
-        .supportedFamilies([.accessoryRectangular])
+        .description("Your whole day as a strip, with where you are now and what's next. Also a one-line version above the clock.")
+        .supportedFamilies([.accessoryRectangular, .accessoryInline])
+    }
+}
+
+/// Rectangular strip, or (v21) the one-line version next to the date above the clock.
+struct DayStripFamily: View {
+    @Environment(\.widgetFamily) private var family
+    let entry: DayEntry
+    var body: some View {
+        if family == .accessoryInline { DayStripInline(entry: entry) } else { DayStripRect(entry: entry) }
+    }
+}
+
+/// One line above the clock: "Deep work 41m ▰▰▰▱▱▱" — what's on, time left, how far through the day.
+/// iOS allows only text here (one line, no shapes), so the bar is drawn with characters.
+struct DayStripInline: View {
+    let entry: DayEntry
+
+    var body: some View {
+        let day = entry.day ?? .empty
+        let now = entry.date
+        let cells = 6
+        let filled = Int((day.progress(at: now) * Double(cells)).rounded())
+        let bar = String(repeating: "▰", count: filled) + String(repeating: "▱", count: cells - filled)
+        if day.todays(now).isEmpty {
+            Text("Hyperday · nothing planned")
+        } else if let c = day.current(at: now) {
+            Text("\(c.title) \(minutesLeft(now, c.end)) \(bar)")
+        } else if let n = day.upcoming(at: now, limit: 1).first {
+            Text("Free · \(n.title) \(clock(n.start)) \(bar)")
+        } else {
+            Text("Day done \(bar)")
+        }
     }
 }
 
