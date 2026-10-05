@@ -10,13 +10,62 @@ struct RealityCard: View {
 
     private let hourHeight: CGFloat = 30
 
+    /// One box on either side of the card.
+    private struct Item: Identifiable {
+        let id: String
+        let title: String
+        let color: Color
+        let start: Date
+        let end: Date
+        var column = 0
+        var columns = 1
+    }
+
+    /// Overlapping boxes sit side by side (like Apple Calendar) instead of on top of each other.
+    private static func layout(_ input: [Item]) -> [Item] {
+        var items = input.filter { $0.end > $0.start }.sorted { $0.start == $1.start ? $0.end > $1.end : $0.start < $1.start }
+        var i = 0
+        while i < items.count {
+            // A cluster = a run of items that overlap each other directly or through a chain.
+            var j = i, clusterEnd = items[i].end
+            var colEnds: [Date] = []
+            while j < items.count && (j == i || items[j].start < clusterEnd) {
+                if let c = colEnds.firstIndex(where: { $0 <= items[j].start }) {
+                    items[j].column = c; colEnds[c] = items[j].end
+                } else {
+                    items[j].column = colEnds.count; colEnds.append(items[j].end)
+                }
+                clusterEnd = max(clusterEnd, items[j].end)
+                j += 1
+            }
+            for k in i..<j { items[k].columns = colEnds.count }
+            i = j
+        }
+        return items
+    }
+
     var body: some View {
         let segs = reality.segments(on: now)
         let cal = Calendar.current
         let dayStart = cal.startOfDay(for: now)
-        let all = blocks.map(\.start) + segs.map(\.start)
-        let firstHour = min(7, all.map { cal.component(.hour, from: $0) }.min() ?? 7)
-        let lastHour = max(21, (blocks.map(\.end) + segs.map(\.end)).map { cal.component(.hour, from: $0) + 1 }.max() ?? 21)
+
+        let planned = Self.layout(blocks.map {
+            Item(id: $0.id, title: $0.title, color: categories.displayColor(for: $0), start: $0.start, end: $0.end)
+        })
+        // What happened = places, drives and workouts, plus every block you actually did (Done, or all steps),
+        // at the time it really ran.
+        let did = HistoryStore.shared.entries(on: now).filter(\.done).map {
+            Item(id: "did-" + $0.id, title: "✓ " + $0.title,
+                 color: categories.category(id: $0.categoryID)?.color ?? DayLiveStyle.doneGreen,
+                 start: $0.start, end: max($0.actualEnd, $0.start.addingTimeInterval(15 * 60)))
+        }
+        let happened = Self.layout(segs.map {
+            Item(id: $0.id, title: $0.label, color: color($0.kind), start: $0.start, end: $0.end)
+        } + did)
+
+        let all = planned + happened
+        let firstHour = min(7, all.map { cal.component(.hour, from: $0.start) }.min() ?? 7)
+        let lastHour = max(21, all.map { cal.component(.hour, from: $0.end) + 1 }.max() ?? 21)
         let top = dayStart.addingTimeInterval(TimeInterval(firstHour * 3600))
         let y: (Date) -> CGFloat = { CGFloat($0.timeIntervalSince(top) / 3600) * hourHeight }
         let height = CGFloat(lastHour - firstHour) * hourHeight
@@ -39,15 +88,17 @@ struct RealityCard: View {
                             .font(.system(size: 9)).foregroundStyle(Theme.faint)
                             .offset(y: yy - 6)
                     }
-                    ForEach(blocks) { b in
-                        lane(b.title, color: categories.displayColor(for: b), from: y(b.start), to: y(b.end))
-                            .frame(width: laneW)
-                            .offset(x: 30)
+                    ForEach(planned) { it in
+                        let w = laneW / CGFloat(it.columns)
+                        lane(it.title, color: it.color, from: y(it.start), to: y(it.end))
+                            .frame(width: w - (it.columns > 1 ? 2 : 0))
+                            .offset(x: 30 + w * CGFloat(it.column))
                     }
-                    ForEach(segs) { s in
-                        lane(s.label, color: color(s.kind), from: y(s.start), to: y(s.end))
-                            .frame(width: laneW)
-                            .offset(x: 30 + laneW + 8)
+                    ForEach(happened) { it in
+                        let w = laneW / CGFloat(it.columns)
+                        lane(it.title, color: it.color, from: y(it.start), to: y(it.end))
+                            .frame(width: w - (it.columns > 1 ? 2 : 0))
+                            .offset(x: 30 + laneW + 8 + w * CGFloat(it.column))
                     }
                     if now > top && y(now) < height {
                         Rectangle().fill(Theme.red).frame(height: 2).padding(.leading, 26).offset(y: y(now))  // stays inside the card
@@ -55,8 +106,8 @@ struct RealityCard: View {
                 }
             }
             .frame(height: height)
-            if segs.isEmpty {
-                Text("Nothing recorded yet today. Set Home and Office in Settings › Reality line, and add the car automation.")
+            if happened.isEmpty {
+                Text("Blocks you mark Done show up on the right at the time they ran. Set Home and Office in Settings › Reality line to add places and drives.")
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.muted)
             }
