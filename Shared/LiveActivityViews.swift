@@ -40,7 +40,12 @@ struct LockScreenCard: View {
     var isStale: Bool = false
 
     /// v20: the card goes stale 5 minutes before the end; iOS redraws it in heads-up yellow.
-    private var headsUp: Bool { isStale && state.headsUp != nil && state.paused != true }
+    private var headsUp: Bool {
+        isStale && state.headsUp != nil && state.paused != true && (state.headsUpAt.map { Date.now >= $0 } ?? true)
+    }
+
+    /// Really out of date (the content should have changed), not just an early planned redraw.
+    private var outOfDate: Bool { isStale && (state.boundaryAt.map { Date.now >= $0 } ?? true) }
 
     /// "4/7 done · 3h 10m focus"
     private var score: String? {
@@ -59,7 +64,7 @@ struct LockScreenCard: View {
 
     /// "Next · Standup at 10:30 PM" -> "Next: Standup 10:30 PM" (fits the top row)
     private var nextText: String {
-        if isStale { return "Out of date · tap to refresh" }
+        if outOfDate { return "Out of date · tap to refresh" }
         return state.label
             .replacingOccurrences(of: "Next · ", with: "Next: ")
             .replacingOccurrences(of: " at ", with: " ")
@@ -115,7 +120,7 @@ struct LockScreenCard: View {
                     .foregroundStyle(headsUp ? DayLiveStyle.stepYellow : state.paused == true ? Color(white: 0.75) : .white)
                     .fixedSize()
                 Spacer(minLength: 6)
-                if isStale && !headsUp && state.paused != true {
+                if outOfDate && !headsUp && state.paused != true {
                     Text(nextText)
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.72))
@@ -451,7 +456,8 @@ struct WatchCard: View {
     var isStale: Bool = false
 
     private var nextTime: String? {
-        guard !isStale, state.paused != true, let r = state.label.range(of: " at ") else { return nil }
+        let outOfDate = isStale && (state.boundaryAt.map { Date.now >= $0 } ?? true)
+        guard !outOfDate, state.paused != true, let r = state.label.range(of: " at ") else { return nil }
         return "Next " + state.label[r.upperBound...]
     }
 
@@ -754,7 +760,11 @@ struct IslandTimer: View {
             case .running(let r):
                 sized(r, down: true).foregroundStyle(state.accentColor)
             case .free(let r):
-                sized(Date.now...r.upperBound, down: true).foregroundStyle(DayLiveStyle.doneGreen)
+                if let c = Self.coarse(until: r.upperBound) {
+                    Text(c).foregroundStyle(DayLiveStyle.doneGreen)
+                } else {
+                    sized(Date.now...r.upperBound, down: true).foregroundStyle(DayLiveStyle.doneGreen)
+                }
             case .over(let since):
                 HStack(spacing: 0) {
                     Text("+")
@@ -764,7 +774,7 @@ struct IslandTimer: View {
             case .upNext(let next):
                 HStack(spacing: 3) {
                     Text("in")
-                    sized(Date.now...next, down: true)
+                    if let c = Self.coarse(until: next) { Text(c) } else { sized(Date.now...next, down: true) }
                 }
                 .foregroundStyle(.white.opacity(0.85))
             case .paused(let left):
@@ -774,6 +784,17 @@ struct IslandTimer: View {
             }
         }
         .font(.system(size: 15, weight: .semibold).monospacedDigit())
+    }
+
+    /// v21: an hour or more away → "2h" … "23h", then "1d" / "1d 4h". Hours round UP, so it never
+    /// claims less time than there is. Under an hour → nil (use the live mm:ss timer).
+    static func coarse(until date: Date, now: Date = .now) -> String? {
+        let secs = date.timeIntervalSince(now)
+        guard secs >= 3600 else { return nil }
+        let hours = Int((secs / 3600).rounded(.up))
+        if hours < 24 { return "\(hours)h" }
+        let d = hours / 24, h = hours % 24
+        return h == 0 ? "\(d)d" : "\(d)d \(h)h"
     }
 
     /// Minutes:seconds only (1:18:20 shows as 78:20), so the Island stays as narrow as Apple's own timers.

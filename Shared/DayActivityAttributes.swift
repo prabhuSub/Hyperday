@@ -58,6 +58,9 @@ struct DayActivityAttributes: ActivityAttributes {
         var pausedLeft: Double?      // seconds left when paused (timer frozen)
         var focusMinutes: Int?       // Work + Deep Work so far today
         var canPause: Bool?          // your own planned block is running
+        // v21: when the content really changes. The card can also go stale earlier on purpose
+        // (heads-up, or the Island switching from "20h" to a live timer), which isn't "out of date".
+        var boundaryAt: Date?
         // v16: start of the live block, so the Island ring fills across this block.
         var currentStart: Date?
     }
