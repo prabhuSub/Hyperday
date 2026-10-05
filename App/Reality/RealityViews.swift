@@ -148,7 +148,7 @@ struct RealitySettingsCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Caps("Reality line · places")
+            SectionHeader("Reality line", icon: "travel", color: Color(hex: "#30B0C7"))
             placeRow("home", "Home", "Used to see when you leave")
             placeRow("office", "Office",
                      DayCloseSettings.learnedCommuteMinutes.map { "Arrivals learn your commute: \($0) min avg" }

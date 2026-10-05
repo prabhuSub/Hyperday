@@ -18,7 +18,7 @@ struct SettingsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     VStack(alignment: .leading, spacing: 10) {
-                        Caps("Appearance")
+                        SectionHeader("Appearance", icon: "sun", color: Color(hex: "#FF9F0A"))
                         PillNav(options: Appearance.allCases,
                                 selection: Binding(get: { Appearance(rawValue: appearance) ?? .system },
                                                    set: { appearance = $0.rawValue })) { $0.label }
@@ -26,7 +26,7 @@ struct SettingsView: View {
                     .cardBox()
 
                     VStack(alignment: .leading, spacing: 10) {
-                        Caps("Categories")
+                        SectionHeader("Categories", icon: "star", color: Color(hex: "#BF5AF2"))
                         FlowLayout(spacing: 8) {
                             ForEach(categories.categories) { c in
                                 Chip(title: c.name, color: c.color, icon: c.iconName) { editingCategory = c }
@@ -52,7 +52,7 @@ struct SettingsView: View {
                     focusCard
 
                     VStack(alignment: .leading, spacing: 10) {
-                        Caps("Live Activity")
+                        SectionHeader("Live Activity", icon: "timer", color: DayLiveStyle.doneGreen)
                         Toggle(isOn: $activity.autoStart) {
                             Text("Start automatically when the day has blocks")
                                 .font(.system(size: 14))
@@ -78,7 +78,7 @@ struct SettingsView: View {
                     .cardBox()
 
                     VStack(alignment: .leading, spacing: 10) {
-                        Caps("Sample data")
+                        SectionHeader("Sample data", icon: "recap", color: Color(white: 0.55))
                         Text(history.hasDemo
                              ? "Sample data is loaded: 8 weeks of history and a planned day. Your real calendars are never touched."
                              : "Fill Today, Calendar and Stats with 8 sample weeks to preview the look. Your real calendars are never touched.")
@@ -114,7 +114,7 @@ struct SettingsView: View {
 
     private var focusCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Caps("Focus & Siri")
+            SectionHeader("Focus & Siri", icon: "siri", color: Color(hex: "#5E5CE6"))
             Text("Focus filters: in iOS Settings › Focus › Work › Add Filter › Hyperday, choose what Hyperday shows while that Focus is on (Work only, Personal only…). Right now: \(FocusFilterState.current.rawValue).")
                 .font(.system(size: 13))
                 .foregroundStyle(Theme.muted)
@@ -140,7 +140,7 @@ struct SettingsView: View {
     private var calendarsCard: some View {
         let list = CalendarService.shared.calendarList()
         return VStack(alignment: .leading, spacing: 0) {
-            Caps("Calendars").padding(.bottom, 8)
+            SectionHeader("Calendars", icon: "event", color: Theme.blue).padding(.bottom, 8)
             if list.isEmpty {
                 Text("Allow calendar access to color your calendars.")
                     .font(.system(size: 13))
@@ -463,7 +463,7 @@ struct BackupCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Caps("Backup").padding(.bottom, 8)
+            SectionHeader("Backup", icon: "share", color: Color(hex: "#64D2FF")).padding(.bottom, 8)
             Toggle("Weekly backup", isOn: $backups.weekly)
                 .font(.system(size: 14, weight: .semibold))
                 .tint(DayLiveStyle.doneGreen)

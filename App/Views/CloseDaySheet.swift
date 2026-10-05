@@ -188,7 +188,7 @@ struct DayCloseSettingsCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Caps("Day Close")
+            SectionHeader("Day Close", icon: "done", color: Color(hex: "#FF375F"))
             DatePicker("Close my day at", selection: $close, displayedComponents: [.hourAndMinute])
                 .font(.system(size: 14))
             Toggle("Show on Lock Screen", isOn: $show).font(.system(size: 14))

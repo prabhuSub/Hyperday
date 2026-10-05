@@ -231,6 +231,26 @@ struct BlueGlassCircle: ViewModifier {
     }
 }
 
+/// v27 Settings section header: the section's icon on a colored dot, then the title.
+struct SectionHeader: View {
+    let title: String
+    let icon: String
+    let color: Color
+
+    init(_ title: String, icon: String, color: Color) {
+        self.title = title; self.icon = icon; self.color = color
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Circle().fill(color).frame(width: 28, height: 28)
+                .overlay(HDIcon(icon, size: 15).foregroundStyle(.white))
+            Text(title).font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text)
+        }
+        .padding(.bottom, 2)
+    }
+}
+
 /// Wraps chips onto new lines.
 struct FlowLayout: Layout {
     var spacing: CGFloat = 8
