@@ -715,10 +715,12 @@ struct IslandRingIcon: View {
         let phase = IslandPhase(state)
         ZStack {
             switch phase {
-            case .running(let r), .free(let r):
+            case .running(let r):
                 ProgressView(timerInterval: r, countsDown: false) { EmptyView() } currentValueLabel: { EmptyView() }
                     .progressViewStyle(.circular)
                     .tint(ringColor(phase))
+            case .free:
+                Circle().fill(DayLiveStyle.doneGreen)   // free time: a solid green F, no ring
             case .over:
                 Circle().stroke(Self.overYellow, lineWidth: 2.5)
             case .upNext, .idle, .paused:
@@ -732,7 +734,7 @@ struct IslandRingIcon: View {
     @ViewBuilder private func glyph(_ phase: IslandPhase) -> some View {
         switch phase {
         case .free:
-            Text("F").font(.system(size: size * 0.38, weight: .black)).foregroundStyle(ringColor(phase))
+            Text("F").font(.system(size: size * 0.5, weight: .black)).foregroundStyle(.white)
         case .upNext, .idle, .paused:
             HDIcon(state.iconName ?? "event", size: size * 0.48).foregroundStyle(.white.opacity(0.7))
         default:
