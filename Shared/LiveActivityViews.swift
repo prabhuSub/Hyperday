@@ -152,8 +152,7 @@ struct LockScreenCard: View {
                     }
                 }
                 Spacer(minLength: 0)
-                if FreeRing.applies(state) { FreeRing(state: state, size: 44) }
-                else { SourceIcon(source: state.source, size: 44, tint: state.source == .free ? nil : state.accentColor, iconName: state.iconName) }
+                SourceIcon(source: state.source, size: 44, tint: state.source == .free ? nil : state.accentColor, iconName: state.iconName)
             }
             .padding(.top, 2)
 
@@ -447,43 +446,6 @@ struct BlockActionButton: View {
         case .done:      return "done"
         case .startNext: return "start"
         case .checkStep: return "step-done"
-        }
-    }
-}
-
-/// v22: free time → a green ring that fills live as the gap runs out, with hours left inside
-/// ("8h LEFT"); in the last hour, a live mm:ss. Replaces the clock tile.
-struct FreeRing: View {
-    let state: DayActivityAttributes.ContentState
-    var size: CGFloat = 44
-
-    static func applies(_ s: DayActivityAttributes.ContentState) -> Bool {
-        s.source == .free && s.closed != true && s.freeStart != nil && s.nextStart != nil
-    }
-
-    var body: some View {
-        if let from = state.freeStart, let to = state.nextStart, from < to {
-            ZStack {
-                ProgressView(timerInterval: from...to, countsDown: false) { EmptyView() } currentValueLabel: { EmptyView() }
-                    .progressViewStyle(.circular)
-                    .tint(DayLiveStyle.doneGreen)
-                if let c = IslandTimer.coarse(until: to) {
-                    VStack(spacing: -1) {
-                        Text(c).font(.system(size: size * 0.27, weight: .heavy)).minimumScaleFactor(0.6)
-                        Text("LEFT").font(.system(size: size * 0.16, weight: .bold)).opacity(0.8)
-                    }
-                    .lineLimit(1)
-                    .foregroundStyle(DayLiveStyle.doneGreen)
-                    .padding(.horizontal, size * 0.14)
-                } else {
-                    Text(timerInterval: Date.now...max(to, Date.now), countsDown: true)
-                        .font(.system(size: size * 0.22, weight: .heavy).monospacedDigit())
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(DayLiveStyle.doneGreen)
-                        .padding(.horizontal, size * 0.12)
-                }
-            }
-            .frame(width: size, height: size)
         }
     }
 }
