@@ -54,9 +54,12 @@ struct DayLiveActivityWidget: Widget {
                                 }
                             }
                             Spacer(minLength: 0)
-                            SourceIcon(source: context.state.source, size: 36,
-                                       tint: context.state.source == .free ? nil : context.state.accentColor,
-                                       iconName: context.state.iconName)
+                            if FreeRing.applies(context.state) { FreeRing(state: context.state, size: 36) }
+                            else {
+                                SourceIcon(source: context.state.source, size: 36,
+                                           tint: context.state.source == .free ? nil : context.state.accentColor,
+                                           iconName: context.state.iconName)
+                            }
                         }
                         HStack(spacing: 12) {
                             DayBar(state: context.state)
