@@ -489,27 +489,36 @@ enum AppTab: String, CaseIterable, Identifiable {
 struct RootView: View {
     @State private var tab: AppTab = .today
     @State private var adding: AddMode?
+    @State private var calendarIcon = CalendarTabIcon.image(for: .now)
+    @Environment(\.scenePhase) private var scenePhase
 
     enum AddMode: String, Identifiable { case block, words, scan; var id: String { rawValue } }
 
     var body: some View {
         TabView(selection: $tab) {
             TabRoot(title: "Today") { TodayView().tabFade(tab == .today) }
-                .tabItem { Image("hd-tab-" + AppTab.today.icon).renderingMode(.template).accessibilityLabel(AppTab.today.title) }   // icon only
+                .tabItem { Label { Text(AppTab.today.title) } icon: { Image("hd-tab-" + AppTab.today.icon).renderingMode(.template) } }
                 .tag(AppTab.today)
             TabRoot(title: "Calendar") { CalendarTabView().tabFade(tab == .calendar) }
-                .tabItem { Image("hd-tab-" + AppTab.calendar.icon).renderingMode(.template).accessibilityLabel(AppTab.calendar.title) }   // icon only
+                .tabItem { Label { Text(AppTab.calendar.title) } icon: { Image(uiImage: calendarIcon).renderingMode(.template) } }   // today's date
                 .tag(AppTab.calendar)
             TabRoot(title: "Stats") { StatsView().tabFade(tab == .stats) }
-                .tabItem { Image("hd-tab-" + AppTab.stats.icon).renderingMode(.template).accessibilityLabel(AppTab.stats.title) }   // icon only
+                .tabItem { Label { Text(AppTab.stats.title) } icon: { Image("hd-tab-" + AppTab.stats.icon).renderingMode(.template) } }
                 .tag(AppTab.stats)
             TabRoot(title: "Settings") { SettingsView().tabFade(tab == .settings) }
-                .tabItem { Image("hd-tab-" + AppTab.settings.icon).renderingMode(.template).accessibilityLabel(AppTab.settings.title) }   // icon only
+                .tabItem { Label { Text(AppTab.settings.title) } icon: { Image("hd-tab-" + AppTab.settings.icon).renderingMode(.template) } }
                 .tag(AppTab.settings)
         }
         .tint(Theme.text)   // tab bar stays full size while scrolling (Prabhu's call)
         .onReceive(NotificationCenter.default.publisher(for: CalendarJump.notification)) { _ in
             tab = .calendar
+        }
+        // The Calendar tab shows today's date: redraw at midnight and whenever the app comes back.
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+            calendarIcon = CalendarTabIcon.image(for: .now)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { calendarIcon = CalendarTabIcon.image(for: .now) }
         }
         // v12: Tesla-style round + in thumb reach on every tab. Tap = Add block, hold = more.
         .overlay(alignment: .bottomTrailing) {
@@ -526,6 +535,42 @@ struct RootView: View {
 }
 
 
+
+// MARK: - v22 Calendar tab icon with today's date
+
+/// Same outline as the other tab icons (31pt, heavy stroke) with today's day number inside.
+/// Drawn once into a template image, so the tab bar tints it like the others.
+enum CalendarTabIcon {
+    @MainActor
+    static func image(for date: Date) -> UIImage {
+        let day = Calendar.current.component(.day, from: date)
+        let size: CGFloat = 31
+        let art = ZStack(alignment: .top) {
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                .stroke(Color.black, lineWidth: 2.6)
+                .frame(width: size - 5, height: size - 7)
+                .offset(y: 5)
+            // Top band + two rings, like a desk calendar.
+            Rectangle().fill(Color.black).frame(width: size - 5, height: 2.6).offset(y: 11)
+            HStack(spacing: 9) {
+                Capsule().fill(Color.black).frame(width: 2.6, height: 6)
+                Capsule().fill(Color.black).frame(width: 2.6, height: 6)
+            }
+            .offset(y: 2)
+            Text("\(day)")
+                .font(.system(size: 12, weight: .heavy, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(Color.black)
+                .offset(y: 13.5)
+        }
+        .frame(width: size, height: size)
+
+        let renderer = ImageRenderer(content: art)
+        renderer.scale = UIScreen.main.scale
+        let img = renderer.uiImage ?? UIImage(named: "hd-tab-calendar") ?? UIImage()
+        return img.withRenderingMode(.alwaysTemplate)
+    }
+}
 
 // MARK: - v18 tab switch: quick crossfade
 

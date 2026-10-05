@@ -41,11 +41,13 @@ struct CloseDaySheet: View {
                     }
 
                     if !notDone.isEmpty {
-                        Caps("Not done · swipe each")
+                        Caps("Not done · mark or move each")
                         VStack(spacing: 0) {
                             ForEach(Array(notDone.enumerated()), id: \.element.id) { index, b in
                                 if index > 0 { Rectangle().fill(Theme.border).frame(height: 1) }
-                                SwipeRow(trailing: [
+                                SwipeRow(leading: [
+                                    SwipeAction(title: "Done", icon: "done", color: DayLiveStyle.doneGreen) { markDone(b) },
+                                ], trailing: [
                                     SwipeAction(title: "Tomorrow", icon: "move", color: Theme.blue) { move(b) },
                                     SwipeAction(title: "Drop", icon: "close", color: Color(white: 0.56)) { drop(b) },
                                 ]) {
@@ -54,7 +56,7 @@ struct CloseDaySheet: View {
                             }
                         }
                         .cardBox(padding: 0)
-                        Text("Swipe left: Tomorrow (same time) or Drop. Anything left here moves to tomorrow when you close the day.")
+                        Text("Tap the circle or swipe right if you did it. Swipe left: Tomorrow (same time) or Drop. Anything left here moves to tomorrow when you close the day.")
                             .font(.system(size: 12))
                             .foregroundStyle(Theme.muted)
                     }
@@ -111,7 +113,14 @@ struct CloseDaySheet: View {
 
     private func row(_ b: Block) -> some View {
         HStack(spacing: 10) {
-            Circle().stroke(DayLiveStyle.stepYellow, lineWidth: 1.5).frame(width: 18, height: 18)
+            // Tap the circle (or swipe right) if you did it but forgot to tap Done: counts as done today.
+            Button { markDone(b) } label: {
+                Circle().stroke(DayLiveStyle.stepYellow, lineWidth: 1.5).frame(width: 18, height: 18)
+                    .frame(width: 30, height: 30)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Mark \(b.title) done")
             RoundedRectangle(cornerRadius: 2).fill(CategoryStore.shared.displayColor(for: b)).frame(width: 3, height: 30)
             VStack(alignment: .leading, spacing: 2) {
                 Text(b.title).font(.system(size: 15)).foregroundStyle(Theme.text).lineLimit(1)
@@ -119,14 +128,23 @@ struct CloseDaySheet: View {
             }
             Spacer()
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.leading, 8)
+        .padding(.trailing, 14)
+        .padding(.vertical, 6)
         .background(Theme.card)
     }
 
     private func move(_ b: Block) {
         store.move(id: b.id, byDays: 1)
         notDone.removeAll { $0.id == b.id }
+    }
+
+    /// Missed tapping Done: mark it done at its planned end, so it counts for today
+    /// (streak, heatmap, "done today") without changing how long it ran.
+    private func markDone(_ b: Block) {
+        withAnimation(.easeOut(duration: 0.2)) { notDone.removeAll { $0.id == b.id } }
+        store.finish(blockID: b.id, at: b.end)
+        Task { await LiveActivityManager.shared.refresh() }
     }
 
     private func drop(_ b: Block) {

@@ -1,5 +1,6 @@
 import EventKit
 import SwiftUI
+import UIKit
 import UserNotifications
 
 @main
@@ -14,6 +15,15 @@ struct DayLiveApp: App {
     @State private var showCloseDay = false
 
     init() {
+        // v22: small tab labels under the big icons.
+        let tabs = UITabBarAppearance()
+        tabs.configureWithDefaultBackground()
+        for layout in [tabs.stackedLayoutAppearance, tabs.inlineLayoutAppearance, tabs.compactInlineLayoutAppearance] {
+            layout.normal.titleTextAttributes = [.font: UIFont.systemFont(ofSize: 9, weight: .semibold)]
+            layout.selected.titleTextAttributes = [.font: UIFont.systemFont(ofSize: 9, weight: .bold)]
+        }
+        UITabBar.appearance().standardAppearance = tabs
+        UITabBar.appearance().scrollEdgeAppearance = tabs
         // Must be set before launch finishes so a tap on the Sunday recap opens it.
         UNUserNotificationCenter.current().delegate = RecapCenter.shared
         // Reality line: keep watching saved places (iOS relaunches us on arrive/leave).
