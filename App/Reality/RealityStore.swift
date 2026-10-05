@@ -153,15 +153,24 @@ final class RealityStore: ObservableObject {
         events.removeAll { $0.date < cutoff }
     }
 
+    private var loadBlocked = false
+
+    func retryLoadIfNeeded() { if loadBlocked { load() } }
+
     private func load() {
-        guard let data = try? Data(contentsOf: fileURL),
-              let s = try? JSONDecoder().decode(Snapshot.self, from: data) else { return }
+        let s: Snapshot
+        switch SafeFile.load(Snapshot.self, from: fileURL) {
+        case .loaded(let x): s = x; loadBlocked = false
+        case .missing: loadBlocked = false; return
+        case .unavailable, .unreadable: loadBlocked = true; return
+        }
         events = s.events
         places = s.places
         commuteSamples = s.commuteSamples ?? []
     }
 
     private func save() {
+        guard !loadBlocked else { return }
         let s = Snapshot(events: events, places: places, commuteSamples: commuteSamples)
         guard let data = try? JSONEncoder().encode(s) else { return }
         try? data.write(to: fileURL, options: .atomic)

@@ -225,13 +225,27 @@ final class BlockStore: ObservableObject {
         extraCategories = extraCategories.filter { key, _ in
             key.hasPrefix("plan-") ? liveIDs.contains(key) : true
         }
-        if overrides.count > 20_000 { overrides = [:] }   // safety cap; ~2 years of Done taps
+        // Calendar overrides ("cal-<event>-<timestamp>") older than 2 years go; never clear everything.
+        let cutoff = Date.now.addingTimeInterval(-2 * 365 * 86_400).timeIntervalSince1970
+        overrides = overrides.filter { key, _ in
+            guard key.hasPrefix("cal-"), let ts = key.split(separator: "-").last.flatMap({ Double($0) }) else { return true }
+            return ts > cutoff
+        }
         if planBlocks.count != before || overrides.count != overridesBefore { save() }
     }
 
+    /// True when the file couldn't be read or decoded: saving is off so it is never overwritten.
+    private var loadBlocked = false
+
+    func retryLoadIfNeeded() { if loadBlocked { load() } }
+
     private func load() {
-        guard let data = try? Data(contentsOf: fileURL),
-              let snap = try? JSONDecoder().decode(Snapshot.self, from: data) else { return }
+        let snap: Snapshot
+        switch SafeFile.load(Snapshot.self, from: fileURL) {
+        case .loaded(let s): snap = s; loadBlocked = false
+        case .missing: loadBlocked = false; return
+        case .unavailable, .unreadable: loadBlocked = true; return
+        }
         planBlocks = snap.planBlocks
         overrides = snap.overrides
         steps = snap.steps ?? [:]
@@ -240,6 +254,7 @@ final class BlockStore: ObservableObject {
     }
 
     private func save() {
+        guard !loadBlocked else { return }
         let snap = Snapshot(planBlocks: planBlocks, overrides: overrides, steps: steps,
                             categoryOverrides: categoryOverrides, extraCategories: extraCategories)
         guard let data = try? JSONEncoder().encode(snap) else { return }

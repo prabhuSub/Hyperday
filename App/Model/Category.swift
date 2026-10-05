@@ -164,9 +164,17 @@ final class CategoryStore: ObservableObject {
 
     // MARK: Persistence
 
+    private var loadBlocked = false
+
+    func retryLoadIfNeeded() { if loadBlocked { load() } }
+
     private func load() {
-        guard let data = try? Data(contentsOf: fileURL),
-              let snap = try? JSONDecoder().decode(Snapshot.self, from: data) else { return }
+        let snap: Snapshot
+        switch SafeFile.load(Snapshot.self, from: fileURL) {
+        case .loaded(let s): snap = s; loadBlocked = false
+        case .missing: loadBlocked = false; return
+        case .unavailable, .unreadable: loadBlocked = true; return
+        }
         loading = true
         categories = snap.categories.isEmpty ? CategoryStore.defaultCategories : snap.categories
         rules = snap.rules
@@ -176,7 +184,7 @@ final class CategoryStore: ObservableObject {
     }
 
     private func save() {
-        guard !loading else { return }
+        guard !loading, !loadBlocked else { return }
         let snap = Snapshot(categories: categories, rules: rules, fallbackID: fallbackID, calendarColors: calendarColors)
         guard let data = try? JSONEncoder().encode(snap) else { return }
         try? data.write(to: fileURL, options: .atomic)

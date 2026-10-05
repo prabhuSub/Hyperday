@@ -48,3 +48,42 @@ extension TimeInterval {
         return r == 0 ? "\(h)h" : "\(h)h \(r)m"
     }
 }
+
+
+// MARK: - Data safety (v24)
+
+/// Reads a save file without ever letting a bad read wipe it.
+/// - no file → `.missing` (fresh install, fine to start empty and save)
+/// - can't read yet (iPhone locked after reboot) → `.unavailable`: don't save, try again later
+/// - read but can't decode (older/newer format) → a copy is kept as `name.bad-<time>.json`, `.unreadable`: don't save
+enum SafeFile {
+    enum Result<T> { case loaded(T), missing, unavailable, unreadable }
+
+    static func load<T: Decodable>(_ type: T.Type, from url: URL) -> Result<T> {
+        guard FileManager.default.fileExists(atPath: url.path) else { return .missing }
+        guard let data = try? Data(contentsOf: url) else { return .unavailable }
+        do {
+            return .loaded(try JSONDecoder().decode(T.self, from: data))
+        } catch {
+            let stamp = Int(Date().timeIntervalSince1970)
+            let copy = url.deletingPathExtension().appendingPathExtension("bad-\(stamp).json")
+            try? FileManager.default.copyItem(at: url, to: copy)
+            return .unreadable
+        }
+    }
+}
+
+/// Fields added after v1 decode with their defaults, so an older file still loads.
+extension Block {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        title = try c.decode(String.self, forKey: .title)
+        start = try c.decode(Date.self, forKey: .start)
+        end = try c.decode(Date.self, forKey: .end)
+        source = try c.decode(BlockSource.self, forKey: .source)
+        calendarName = try c.decodeIfPresent(String.self, forKey: .calendarName)
+        declined = try c.decodeIfPresent(Bool.self, forKey: .declined) ?? false
+        location = try c.decodeIfPresent(String.self, forKey: .location)
+    }
+}

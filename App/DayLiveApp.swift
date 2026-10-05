@@ -62,6 +62,11 @@ struct DayLiveApp: App {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
+                // A save file that was locked at launch (after a reboot) can be read now.
+                BlockStore.shared.retryLoadIfNeeded()
+                HistoryStore.shared.retryLoadIfNeeded()
+                CategoryStore.shared.retryLoadIfNeeded()
+                RealityStore.shared.retryLoadIfNeeded()
                 Task {
                     await RealityStore.shared.refreshWorkouts()
                     await LiveActivityManager.shared.refresh()

@@ -34,6 +34,15 @@ struct DayRecord: Codable, Hashable {
     var isDemo: Bool = false
 }
 
+extension DayRecord {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        day = try c.decode(String.self, forKey: .day)
+        entries = try c.decode([HistoryEntry].self, forKey: .entries)
+        isDemo = try c.decodeIfPresent(Bool.self, forKey: .isDemo) ?? false
+    }
+}
+
 enum StatsRange: String, CaseIterable, Hashable {
     case week = "Week", month = "Month", year = "Year"
     var days: Int {
@@ -212,13 +221,28 @@ final class HistoryStore: ObservableObject {
 
     // MARK: Persistence
 
+    /// True when the file couldn't be read or decoded: saving is off so it is never overwritten.
+    private var loadBlocked = false
+
     private func load() {
-        guard let data = try? Data(contentsOf: fileURL),
-              let list = try? JSONDecoder().decode([DayRecord].self, from: data) else { return }
-        days = Dictionary(list.map { ($0.day, $0) }, uniquingKeysWith: { a, _ in a })
+        switch SafeFile.load([DayRecord].self, from: fileURL) {
+        case .loaded(let list):
+            days = Dictionary(list.map { ($0.day, $0) }, uniquingKeysWith: { a, _ in a })
+            loadBlocked = false
+        case .missing: loadBlocked = false
+        case .unavailable, .unreadable: loadBlocked = true
+        }
+    }
+
+    /// Called when the app becomes active: a file that was locked at launch can be read now.
+    func retryLoadIfNeeded() {
+        guard loadBlocked else { return }
+        load()
+        if !loadBlocked { publishHeat() }
     }
 
     private func save() {
+        guard !loadBlocked else { return }
         let list = days.values.sorted { $0.day < $1.day }
         guard let data = try? JSONEncoder().encode(list) else { return }
         try? data.write(to: fileURL, options: .atomic)

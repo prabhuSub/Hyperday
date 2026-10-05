@@ -45,7 +45,7 @@ enum DayCloseSettings {
     /// Day keys you tapped "Close the day" on.
     static var closedDays: Set<String> {
         get { Set((d.array(forKey: "dcClosedDays") as? [String]) ?? []) }
-        set { d.set(Array(newValue.suffix(60)), forKey: "dcClosedDays") }
+        set { d.set(Array(newValue.sorted().suffix(60)), forKey: "dcClosedDays") }   // keep the latest 60
     }
 
     static func closeTime(on day: Date) -> Date {
