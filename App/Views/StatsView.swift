@@ -17,14 +17,14 @@ struct StatsView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             Caps(s.subtitle)
                             Text(s.title)
-                                .font(.system(size: 36, weight: .bold))
+                                .font(.system(size: 26, weight: .heavy))   // v27: modest
                                 .foregroundStyle(Theme.text)
                         }
                         PillNav(options: StatsRange.allCases, selection: $range) { $0.rawValue }
                         InfoRow(items: [
-                            InfoItem(label: "Focused", value: hours(s.focusedHours)),
-                            InfoItem(label: "Steps done", value: "\(s.stepsDone)"),
-                            InfoItem(label: "Streak", value: "\(s.streak) day\(s.streak == 1 ? "" : "s")"),
+                            InfoItem(label: "Focused", value: hours(s.focusedHours), color: DayLiveStyle.doneGreen),
+                            InfoItem(label: "Steps done", value: "\(s.stepsDone)", color: Theme.blue),
+                            InfoItem(label: "Streak", value: "\(s.streak) day\(s.streak == 1 ? "" : "s")", color: Color(hex: "#FF9F0A")),
                         ])
                     }
                     .padding(20)
@@ -66,32 +66,35 @@ struct StatsView: View {
         h >= 10 ? "\(Int(h.rounded()))h" : (h * 3600).hoursMinutes
     }
 
+    /// v27: one stacked bar of where the time went, then a legend with color dots and big hour numbers.
     private func categoryCard(_ s: StatsSummary) -> some View {
-        let maxHours = max(s.byCategory.map(\.hours).max() ?? 1, 0.1)
-        return VStack(alignment: .leading, spacing: 11) {
-            Caps("Hours by category")
+        VStack(alignment: .leading, spacing: 10) {
+            Caps("Where the time went")
             if s.byCategory.isEmpty {
                 Text("—").foregroundStyle(Theme.faint)
-            }
-            ForEach(s.byCategory) { c in
-                HStack(spacing: 10) {
-                    Text(c.name)
-                        .font(.system(size: 13))
-                        .foregroundStyle(Theme.text)
-                        .frame(width: 84, alignment: .leading)
-                        .lineLimit(1)
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 2).fill(Theme.section)
-                            RoundedRectangle(cornerRadius: 2).fill(c.color)
-                                .frame(width: geo.size.width * c.hours / maxHours)
+            } else {
+                GeometryReader { geo in
+                    let total = max(s.byCategory.map(\.hours).reduce(0, +), 0.01)
+                    let gap: CGFloat = 3
+                    let w = geo.size.width - gap * CGFloat(max(s.byCategory.count - 1, 0))
+                    HStack(spacing: gap) {
+                        ForEach(s.byCategory) { c in
+                            Capsule().fill(c.color).frame(width: max(6, w * c.hours / total))
                         }
                     }
-                    .frame(height: 8)
-                    Text(String(format: c.hours >= 10 ? "%.0fh" : "%.1fh", c.hours))
-                        .font(.system(size: 13).monospacedDigit())
-                        .foregroundStyle(Theme.muted)
-                        .frame(width: 44, alignment: .trailing)
+                }
+                .frame(height: 12)
+            }
+            VStack(spacing: 0) {
+                ForEach(Array(s.byCategory.enumerated()), id: \.element.id) { i, c in
+                    HStack(spacing: 10) {
+                        Circle().fill(c.color).frame(width: 10, height: 10)
+                        Text(c.name).font(.system(size: 14)).foregroundStyle(Theme.text).lineLimit(1)
+                        Spacer()
+                        bigSmallText(hours(c.hours), size: 15).foregroundStyle(Theme.text)
+                    }
+                    .padding(.vertical, 8)
+                    .overlay(alignment: .top) { if i > 0 { Rectangle().fill(Theme.border).frame(height: 1) } }
                 }
             }
         }
@@ -109,8 +112,8 @@ struct StatsView: View {
                     Rectangle().fill(Theme.section)
                 }
             }
-            .frame(height: 8)
-            .clipShape(RoundedRectangle(cornerRadius: 2))
+            .frame(height: 12)
+            .clipShape(Capsule())   // v27
             HStack {
                 (Text(hours(s.meetingHours)).bold().foregroundColor(Theme.text) + Text(" meetings"))
                 Spacer()

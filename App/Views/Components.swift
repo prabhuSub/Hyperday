@@ -211,10 +211,23 @@ struct Chip: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 7)
             .foregroundStyle(Theme.text)
-            .background(RoundedRectangle(cornerRadius: 4).fill(Theme.card))
-            .overlay(RoundedRectangle(cornerRadius: 4).stroke(selected ? Theme.text : Theme.border, lineWidth: 1))
+            .background(Capsule().fill(Theme.card))   // v27: capsule chips
+            .overlay(Capsule().stroke(selected ? Theme.text : Theme.border, lineWidth: 1))
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// v27: the + button's blue Liquid Glass (iOS 26+); a solid blue circle on iOS 18–25.
+struct BlueGlassCircle: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.glassEffect(.regular.tint(Theme.blue).interactive(), in: Circle())
+        } else {
+            content
+                .background(Circle().fill(Theme.blue))
+                .shadow(color: .black.opacity(0.25), radius: 10, y: 6)
+        }
     }
 }
 
@@ -279,22 +292,27 @@ struct PillNav<T: Hashable>: View {
     let label: (T) -> String
 
     var body: some View {
+        // v27: one capsule track, the chosen option filled dark (the video's pill language).
         HStack(spacing: 4) {
             ForEach(options, id: \.self) { option in
                 let on = option == selection
                 Button {
-                    withAnimation(.easeOut(duration: 0.15)) { selection = option }
+                    withAnimation(.snappy(duration: 0.2)) { selection = option }
                 } label: {
                     Text(label(option))
-                        .font(.system(size: 13, weight: on ? .semibold : .regular))
-                        .foregroundStyle(on ? Theme.text : Theme.muted)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 6)
-                        .background(RoundedRectangle(cornerRadius: 6).fill(on ? Theme.navActive : Color.clear))
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(on ? Theme.bg : Theme.muted)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 7)
+                        .background(Capsule().fill(on ? Theme.text : Color.clear))
+                        .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
             }
         }
+        .padding(4)
+        .background(Capsule().fill(Theme.card))
+        .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
     }
 }
 
@@ -697,12 +715,13 @@ struct AddFab: View {
                 .padding(.bottom, 72 + 72)
                 .transition(.scale(scale: 0.85, anchor: .bottomTrailing).combined(with: .opacity))
             }
-            HDIcon("add", size: 26)
-                .foregroundStyle(Theme.bg)
+            // v27: Liquid Glass tinted blue (Apple's rule for the main floating action), thick white plus.
+            Image(systemName: "plus")
+                .font(.system(size: 24, weight: .heavy))
+                .foregroundStyle(.white)
                 .rotationEffect(.degrees(menu ? 45 : 0))
                 .frame(width: 58, height: 58)
-                .background(Circle().fill(Theme.text))
-                .shadow(color: .black.opacity(0.28), radius: 10, y: 6)
+                .modifier(BlueGlassCircle())
                 .contentShape(Circle())
                 .onTapGesture { menu ? close() : open(.block) }
                 .onLongPressGesture(minimumDuration: 0.35) {

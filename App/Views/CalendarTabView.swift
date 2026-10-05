@@ -203,16 +203,18 @@ struct CalendarTabView: View {
     private var titleRow: some View {
         HStack(alignment: .firstTextBaseline) {
             Text(titleText)
-                .font(.system(size: 30, weight: .bold))
+                .font(.system(size: 20, weight: .heavy))   // v27: the big title is the nav bar's; this is the month
                 .foregroundStyle(Theme.text)
             Spacer()
-            HStack(spacing: 4) {
+            HStack(spacing: 6) {
                 navButton("back") { shift(-1) }
                 Button("Today") { tapDay(cal.startOfDay(for: .now), fromTodayButton: true) }
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(Theme.text)
                     .buttonStyle(.plain)
-                    .padding(.horizontal, 6)
+                    .padding(.horizontal, 12)
+                    .frame(height: 30)
+                    .overlay(Capsule().stroke(Theme.border, lineWidth: 1))   // v27 pill
                 navButton("next") { shift(1) }
             }
         }
@@ -234,10 +236,11 @@ struct CalendarTabView: View {
 
     private func navButton(_ symbol: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HDIcon(symbol, size: 18)
-                .foregroundStyle(Theme.muted)
+            HDIcon(symbol, size: 16)
+                .foregroundStyle(Theme.text)
                 .frame(width: 30, height: 30)
-                .contentShape(Rectangle())
+                .overlay(Circle().stroke(Theme.border, lineWidth: 1))   // v27 round
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(symbol == "back" ? "Previous" : "Next")
@@ -342,8 +345,8 @@ struct CalendarTabView: View {
             .font(.system(size: size > 30 ? 16 : 14, weight: isToday ? .bold : .medium))
             .foregroundStyle(isToday ? Theme.bg : (dimPast && past ? Theme.faint : Theme.text))
             .frame(width: size, height: size)
-            .background(Circle().fill(isToday ? Theme.text : Color.clear))
-            .overlay(Circle().stroke(isSelected && !isToday ? Theme.text : Color.clear, lineWidth: 1.5))
+            .background(RoundedRectangle(cornerRadius: size * 0.34, style: .continuous).fill(isToday ? Theme.text : Color.clear))   // v27
+            .overlay(RoundedRectangle(cornerRadius: size * 0.34, style: .continuous).stroke(isSelected && !isToday ? Theme.text : Color.clear, lineWidth: 1.5))
     }
 
     private func dots(_ items: [Block], faded: Bool) -> some View {
