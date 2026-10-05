@@ -15,6 +15,7 @@ struct TodayView: View {
     @State private var editing: Block?
     @State private var now = Date.now
     @State private var calendarGranted = CalendarService.shared.hasAccess
+    @Environment(\.scenePhase) private var scenePhase
 
     private let tick = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
 
@@ -81,6 +82,10 @@ struct TodayView: View {
             .presentationDetents([.large])
         }
         .onReceive(tick) { now = $0 }
+        .onChange(of: scenePhase) { _, phase in
+            // Back from iOS Settings (or the background): pick up calendar access and a new day right away.
+            if phase == .active { calendarGranted = CalendarService.shared.hasAccess; now = .now }
+        }
         .task {
             if CalendarService.shared.needsPrompt {
                 calendarGranted = await CalendarService.shared.requestAccess()

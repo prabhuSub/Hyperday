@@ -95,7 +95,8 @@ final class RecapCenter: NSObject, ObservableObject, UNUserNotificationCenterDel
         next.hour = 19
         guard let fire = Calendar.current.nextDate(after: .now, matching: next, matchingPolicy: .nextTime) else { return }
 
-        let recap = HistoryStore.shared.weeklyRecap(now: fire)
+        var recap = HistoryStore.shared.weeklyRecap(now: fire)
+        recap.streak = HistoryStore.shared.streak(now: .now)   // counting from the future Sunday always gave 0
         let content = UNMutableNotificationContent()
         content.title = "Hyperday"
         content.body = recap.isEmpty
@@ -254,7 +255,9 @@ struct WeeklyRecapView: View {
     @MainActor
     init(recap: WeeklyRecap? = nil) { self.recap = recap ?? HistoryStore.shared.weeklyRecap() }
 
-    private var image: UIImage? {
+    @State private var image: UIImage?
+
+    private func render() -> UIImage? {
         let r = ImageRenderer(content: RecapCard(recap: recap).frame(width: 350, height: 540).padding(20)
             .background(Color(red: 0.05, green: 0.055, blue: 0.063)))
         r.scale = 3
@@ -276,6 +279,7 @@ struct WeeklyRecapView: View {
                     .accessibilityLabel("Close")
                 }
                 RecapCard(recap: recap)
+                    .task { if image == nil { image = render() } }   // once, not on every redraw
                 HStack(spacing: 10) {
                     if let img = image {
                         ShareLink(item: Image(uiImage: img),

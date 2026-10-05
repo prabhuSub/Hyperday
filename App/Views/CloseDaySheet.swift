@@ -9,7 +9,7 @@ struct CloseDaySheet: View {
     @State private var notDone: [Block] = []
     @State private var story: String?
 
-    private let today = Date.now
+    @State private var today = Date.now   // fixed while the sheet is open (across midnight too)
 
     var body: some View {
         let entries = history.entries(on: today)

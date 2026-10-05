@@ -15,6 +15,7 @@ struct CalendarTabView: View {
     @State private var showDeclined = false
     @State private var editing: Block?
     @State private var cache = ItemsCache()
+    @State private var eventsTick = 0   // bumps on calendar changes so the view redraws
     @State private var agendaTop: Date?   // the day at the top of the agenda list
     @State private var scrollTick = 0   // bumped on every date tap so the list scrolls even if the date didn't change
 
@@ -101,7 +102,7 @@ struct CalendarTabView: View {
             tapDay(cal.startOfDay(for: .now), fromTodayButton: true)
         }
         .onChange(of: mode) { _, _ in tapDay(selected, fromTodayButton: true) }
-        .onReceive(NotificationCenter.default.publisher(for: .EKEventStoreChanged)) { _ in cache.eventsVersion += 1 }
+        .onReceive(NotificationCenter.default.publisher(for: .EKEventStoreChanged)) { _ in cache.eventsVersion += 1; eventsTick += 1 }
         .sheet(item: $editing) { block in
             BlockEditorSheet(
                 block: store.planBlocks.first { $0.id == block.id } ?? block,   // raw plan, not timer-adjusted
@@ -179,7 +180,7 @@ struct CalendarTabView: View {
     /// Calendar events + (optionally) planned tasks, grouped by day start.
     private func items(in range: DateInterval) -> [Date: [Block]] {
         let key = "\(range.start.timeIntervalSince1970)|\(range.end.timeIntervalSince1970)|\(showTasks)|\(showDeclined)|"
-            + "\(store.planBlocks.hashValue)|\(store.overrides.hashValue)|\(FocusFilterState.current.rawValue)|\(cache.eventsVersion)"
+            + "\(store.planBlocks.hashValue)|\(store.overrides.hashValue)|\(FocusFilterState.current.rawValue)|\(cache.eventsVersion)|\(eventsTick)"
         if key == cache.key { return cache.value }
         let value = loadItems(in: range)
         cache.key = key
@@ -239,6 +240,7 @@ struct CalendarTabView: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(symbol == "back" ? "Previous" : "Next")
     }
 
     /// Tap a date: the list below jumps to it. Tap the same date again: back to today.

@@ -606,6 +606,10 @@ struct SwipeRow<Content: View>: View {
                             offset = min(max(startOffset + v.translation.width, -maxRight), maxLeft)
                         }
                         .onEnded { v in
+                            guard abs(v.translation.width) > abs(v.translation.height) else {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { offset = startOffset }
+                                return
+                            }
                             let target = startOffset + v.predictedEndTranslation.width
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
                                 if target < -width / 2 && maxRight > 0 { offset = -maxRight }

@@ -101,7 +101,7 @@ struct QuickAddSheet: View {
     @FocusState private var titleFocused: Bool
 
     @State private var title = ""
-    @State private var day = Date.now
+    @State private var day = QuickAddSheet.nextFiveMinutes()   // same day as the default start (23:56 → tomorrow)
     @State private var start = QuickAddSheet.nextFiveMinutes()
     @State private var minutes = 60
     @State private var categoryIDs: [String] = []

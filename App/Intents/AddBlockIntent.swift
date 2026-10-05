@@ -26,7 +26,9 @@ struct AddBlockIntent: LiveActivityIntent {
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let begin = start ?? .now
-        BlockStore.shared.add(title: what, start: begin, minutes: minutes)
+        guard BlockStore.shared.add(title: what, start: begin, minutes: minutes) != nil else {
+            return .result(dialog: "I couldn't add that. Try a name and a length.")
+        }
         await LiveActivityManager.shared.refresh()
         return .result(dialog: "Added \(what) at \(begin.shortTime).")
     }

@@ -40,12 +40,23 @@ final class ProfileStore: ObservableObject {
     }
 
     func setPhoto(_ image: UIImage?) {
+        let image = image.map { Self.shrink($0, to: 256) }
         photo = image
         if let data = image?.jpegData(compressionQuality: 0.85) {
             try? data.write(to: photoURL, options: .atomic)
         } else {
             try? FileManager.default.removeItem(at: photoURL)
         }
+    }
+
+    /// A 12 MP photo decoded for a 32pt avatar costs ~48 MB; 256 px is plenty.
+    private static func shrink(_ image: UIImage, to side: CGFloat) -> UIImage {
+        let s = image.size
+        guard max(s.width, s.height) > side else { return image }
+        let k = side / max(s.width, s.height)
+        let size = CGSize(width: s.width * k, height: s.height * k)
+        let format = UIGraphicsImageRendererFormat(); format.scale = 1
+        return UIGraphicsImageRenderer(size: size, format: format).image { _ in image.draw(in: CGRect(origin: .zero, size: size)) }
     }
 
     func handle(_ result: Result<ASAuthorization, Error>) -> String? {
