@@ -25,3 +25,7 @@ server/.venv/
 *.db
 *.p8
 .no-healthkit
+
+# Tesla Fleet API: private key never goes to git; tesla-site is its own repo
+.tesla-keys/
+tesla-site/
