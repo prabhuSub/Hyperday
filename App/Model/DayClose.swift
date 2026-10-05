@@ -49,7 +49,10 @@ enum DayCloseSettings {
     }
 
     static func closeTime(on day: Date) -> Date {
-        Calendar.current.startOfDay(for: day).addingTimeInterval(TimeInterval(closeMinutes * 60))
+        // Wall-clock time, so a daylight-saving day doesn't move it by an hour.
+        let cal = Calendar.current
+        return cal.date(bySettingHour: closeMinutes / 60, minute: closeMinutes % 60, second: 0, of: day)
+            ?? cal.startOfDay(for: day).addingTimeInterval(TimeInterval(closeMinutes * 60))
     }
 
     /// From close time until midnight.

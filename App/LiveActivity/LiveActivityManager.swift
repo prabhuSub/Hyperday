@@ -145,7 +145,8 @@ final class LiveActivityManager: ObservableObject {
             focus += max(0, min(b.end, now).timeIntervalSince(b.start)) * focusShare
         }
         s.focusMinutes = Int(focus / 60)
-        s.doneCount = HistoryStore.shared.entries(on: now).filter(\.done).count
+        let shown = Set(snap.all.map(\.id))   // same set as the total (respects the Focus filter)
+        s.doneCount = HistoryStore.shared.entries(on: now).filter { $0.done && shown.contains($0.id) }.count
         s.totalCount = snap.all.count
 
         guard let c = snap.current, !snap.overtime else { return }

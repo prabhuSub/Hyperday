@@ -130,7 +130,8 @@ enum DayEngine {
         let startedAt = current.flatMap { overrides[$0.id]?.started == true ? $0.start : nil }
 
         // Free time starts when the last block before now ended (or 6 AM if nothing yet today).
-        let dayStart = Calendar.current.startOfDay(for: now).addingTimeInterval(6 * 3600)
+        let dayStart = Calendar.current.date(bySettingHour: 6, minute: 0, second: 0, of: now)
+            ?? Calendar.current.startOfDay(for: now).addingTimeInterval(6 * 3600)   // 6 AM even on DST days
         let lastEnd = blocks.filter { $0.end <= now }.map(\.end).max()
         let freeStart = min(lastEnd ?? min(dayStart, now), now)
 
