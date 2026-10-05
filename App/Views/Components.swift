@@ -541,27 +541,24 @@ struct RootView: View {
 /// Same outline as the other tab icons (31pt, heavy stroke) with today's day number inside.
 /// Drawn once into a template image, so the tab bar tints it like the others.
 enum CalendarTabIcon {
+    /// Drawn on the exact grid the other tab icons use (24-unit glyph, cropped to 2.5…21.5, stroke 2.8),
+    /// so it matches them in size and weight; only the day number is new.
     @MainActor
     static func image(for date: Date) -> UIImage {
         let day = Calendar.current.component(.day, from: date)
         let size: CGFloat = 31
-        let art = ZStack(alignment: .top) {
-            RoundedRectangle(cornerRadius: 5, style: .continuous)
-                .stroke(Color.black, lineWidth: 2.6)
-                .frame(width: size - 5, height: size - 7)
-                .offset(y: 5)
-            // Top band + two rings, like a desk calendar.
-            Rectangle().fill(Color.black).frame(width: size - 5, height: 2.6).offset(y: 11)
-            HStack(spacing: 9) {
-                Capsule().fill(Color.black).frame(width: 2.6, height: 6)
-                Capsule().fill(Color.black).frame(width: 2.6, height: 6)
-            }
-            .offset(y: 2)
-            Text("\(day)")
-                .font(.system(size: 12, weight: .heavy, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(Color.black)
-                .offset(y: 13.5)
+        let k = size / 19
+        func pt(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: (x - 2.5) * k, y: (y - 2.5) * k) }
+        let art = Canvas { ctx, _ in
+            var outline = Path(roundedRect: CGRect(origin: pt(3.5, 5), size: CGSize(width: 17 * k, height: 15.5 * k)),
+                               cornerRadius: 2 * k)
+            outline.move(to: pt(3.5, 10)); outline.addLine(to: pt(20.5, 10))   // top band
+            outline.move(to: pt(8, 3)); outline.addLine(to: pt(8, 7))           // rings
+            outline.move(to: pt(16, 3)); outline.addLine(to: pt(16, 7))
+            ctx.stroke(outline, with: .color(.black),
+                       style: StrokeStyle(lineWidth: 2.8 * k, lineCap: .round, lineJoin: .round))
+            let number = Text("\(day)").font(.system(size: 7.6 * k, weight: .heavy, design: .rounded))
+            ctx.draw(number, at: pt(12, 15.6), anchor: .center)
         }
         .frame(width: size, height: size)
 
@@ -692,13 +689,14 @@ struct AddFab: View {
                 ZStack {
                     // Glossy glass: a full-strength frosted blur, a light white wash,
                     // and a sheen from the top-left so it reads as glass, not fog.
-                    Rectangle().fill(.thinMaterial)
-                    Color.white.opacity(0.10)
+                    // v23: the whole glass effect at 80% (20% less), same look.
+                    Rectangle().fill(.thinMaterial).opacity(0.8)
+                    Color.white.opacity(0.08)
                     LinearGradient(stops: [
-                        .init(color: .white.opacity(0.55), location: 0),
-                        .init(color: .white.opacity(0.08), location: 0.38),
+                        .init(color: .white.opacity(0.44), location: 0),
+                        .init(color: .white.opacity(0.064), location: 0.38),
                         .init(color: .white.opacity(0), location: 0.6),
-                        .init(color: .white.opacity(0.12), location: 1),
+                        .init(color: .white.opacity(0.096), location: 1),
                     ], startPoint: .topLeading, endPoint: .bottomTrailing)
                 }
                     .contentShape(Rectangle())
