@@ -139,7 +139,7 @@ struct LockScreenCard: View {
         } else if let n = nextParts {
             HStack(spacing: 8) {
                 let col = state.nextHex.map { Color(hex: $0) } ?? Color(white: 0.5)
-                Circle().fill(col).frame(width: 26, height: 26)
+                Circle().fill(col).frame(width: 24, height: 24)
                     .overlay(HDIcon(state.nextIcon ?? "event", size: 14).foregroundStyle(.white))
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Next: \(n.title)").font(.system(size: 14, weight: .bold)).lineLimit(1)
@@ -160,11 +160,11 @@ struct LockScreenCard: View {
             HStack(spacing: 7) {
                 AppMark(size: 18)
                 Text(state.title)
-                    .font(.system(size: 16, weight: .heavy))
+                    .font(.system(size: 15, weight: .semibold))
                     .lineLimit(1)
                     .layoutPriority(-1)
-                Text("·").font(.system(size: 16, weight: .heavy)).opacity(0.6)
-                TimerLabel(state: state, size: 16)
+                Text("·").font(.system(size: 15, weight: .semibold)).opacity(0.6)
+                TimerLabel(state: state, size: 15)
                     .fixedSize()
                 Spacer(minLength: 6)
                 if outOfDate && !headsUp && state.paused != true {
@@ -201,9 +201,8 @@ struct LockScreenCard: View {
             }
         }
         .foregroundStyle(.white)
-        .padding(.leading, inIsland ? 4 : 16)
-        .padding(.trailing, inIsland ? 4 : 14)
-        .padding(.vertical, inIsland ? 2 : 13)
+        .padding(.horizontal, inIsland ? 4 : 14)   // v26: the same gap on every side (concentric)
+        .padding(.vertical, inIsland ? 2 : 14)
         .background { if !inIsland { EdgeTicks(state: state, headsUp: headsUp) } }   // v23: ticks around the card
     }
 }
@@ -589,7 +588,7 @@ struct TimerLabel: View {
     var size: CGFloat = 14
 
     private func unit(_ s: String) -> some View {
-        Text(s).font(.system(size: size * 0.6, weight: .heavy)).kerning(0.6).opacity(0.85).lineLimit(1)
+        Text(s).font(.system(size: size * 0.6, weight: .bold)).kerning(0.6).opacity(0.85).lineLimit(1)
     }
 
     /// 1930 s -> "32:10", 4210 s -> "1:10:10"
@@ -639,7 +638,7 @@ struct TimerLabel: View {
                 }
             }
         }
-        .font(.system(size: size, weight: .heavy).monospacedDigit())
+        .font(.system(size: size, weight: .semibold).monospacedDigit())   // v26: modest, not heavy
         .lineLimit(1)
     }
 }
@@ -681,7 +680,7 @@ struct PauseButton: View {
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(paused ? .black : .white)
                     .contentTransition(.symbolEffect(.replace.downUp))
-                    .frame(width: 36, height: 36)
+                    .frame(width: 34, height: 34)
                     // Paused: yellow so Resume stands out; running: quiet grey.
                     .background(paused ? DayLiveStyle.stepYellow : Color.white.opacity(0.18), in: Circle())
             }
@@ -709,7 +708,7 @@ struct BlockActionButton: View {
                 }
                     .font(.system(size: 14, weight: action == .startNext ? .semibold : .bold))
                     .padding(.horizontal, 14)
-                    .frame(height: 36)
+                    .frame(height: 34)
                     .background(fill, in: Capsule())
             }
             .buttonStyle(.plain)
@@ -833,7 +832,7 @@ struct DayClosedCard: View {
     /// "3h 10m focus": big digits, small letters.
     private var focusText: Text {
         let m = state.focusMinutes ?? 0
-        let big = compact ? 26.0 : 32.0
+        let big = compact ? 22.0 : 26.0
         func n(_ s: String) -> Text { Text(s).font(.system(size: big, weight: .heavy)) }
         func u(_ s: String) -> Text { Text(s).font(.system(size: big * 0.45, weight: .heavy)) }
         if m >= 60 { return n("\(m / 60)") + u("h ") + n("\(m % 60)") + u("m focus") }
@@ -1028,7 +1027,7 @@ struct IslandRingIcon: View {
             default:
                 Capsule().fill(col.opacity(0.24))
                     .overlay(HDIcon(state.iconName ?? "event", size: size * 0.55).foregroundStyle(col))
-                    .frame(width: size * 1.4, height: size)
+                    .frame(width: size * 1.36, height: size)   // v26: concentric with the Island end
             }
         }
     }
@@ -1077,13 +1076,13 @@ struct IslandTimer: View {
                 DayRing(progress: state.dayProgress, accent: state.accentColor).frame(width: 20, height: 20)
             }
         }
-        .font(.system(size: 17, weight: .heavy).monospacedDigit())   // v23: bigger, same color as the icon
+        .font(.system(size: 14, weight: .semibold).monospacedDigit())   // v26: small and tight to the camera
     }
 
     /// "1d 4h" → big digits, small letters (v23 #3).
     static func bigSmall(_ s: String) -> Text {
         s.reduce(Text("")) { acc, ch in
-            acc + Text(String(ch)).font(.system(size: ch.isNumber ? 17 : 11, weight: .heavy))
+            acc + Text(String(ch)).font(.system(size: ch.isNumber ? 14 : 9, weight: .semibold))
         }
     }
 

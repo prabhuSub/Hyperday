@@ -42,7 +42,7 @@ struct DayLiveActivityWidget: Widget {
                                tint: context.state.source == .free ? nil : context.state.accentColor,
                                iconName: context.state.iconName)
                 } else {
-                    IslandRingIcon(state: context.state, size: 24)
+                    IslandRingIcon(state: context.state, size: 22)
                 }
             } compactTrailing: {
                 if context.state.closed == true || context.state.driving == true {
