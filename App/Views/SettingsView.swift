@@ -74,6 +74,26 @@ struct SettingsView: View {
                         Text("Tap, then lock the phone: Running → Last 5 min → Free → Day closed, 7 seconds each. Then your real day comes back.")
                             .font(.system(size: 12))
                             .foregroundStyle(Theme.muted)
+
+                        // v28 test kit: one style for a full minute, or a real mini-day around now.
+                        Caps("Test one style for 60 s")
+                        HStack(spacing: 8) {
+                            ForEach(Array(["Running", "Last 5", "Free", "Closed"].enumerated()), id: \.offset) { i, name in
+                                Button(name) { Task { await activity.previewOne(i) } }
+                                    .buttonStyle(SecondaryButtonStyle())
+                                    .font(.system(size: 12, weight: .bold))
+                            }
+                        }
+                        Caps("Test a real mini-day")
+                        HStack(spacing: 10) {
+                            Button("Load test day") { Task { await activity.loadTestDay() } }
+                                .buttonStyle(PrimaryButtonStyle())
+                            Button("Remove") { Task { await activity.clearTestDay() } }
+                                .buttonStyle(SecondaryButtonStyle())
+                        }
+                        Text("Adds 'Test ·' blocks around now: Deep work is running (its last 5 min start in about a minute), then 3 min free, Standup at +9 min, Gym at +30. Lock the phone and watch the card change. Remove deletes only the test blocks.")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Theme.muted)
                     }
                     .cardBox()
 

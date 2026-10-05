@@ -402,6 +402,47 @@ final class LiveActivityManager: ObservableObject {
         await refresh()
     }
 
+    /// Settings › Test: hold ONE sample style (0 A running, 1 B last 5 min, 2 C free, 3 D closed) for 60 s.
+    func previewOne(_ index: Int) async {
+        guard let activity = Self.liveActivities().first else {
+            lastError = "Tap Go Live first, then pick a style."
+            return
+        }
+        let bg = UIApplication.shared.beginBackgroundTask(withName: "preview-one")
+        defer { UIApplication.shared.endBackgroundTask(bg) }
+        let all = Self.previewStates(now: .now)
+        guard all.indices.contains(index) else { return }
+        await activity.update(ActivityContent(state: all[index].0, staleDate: all[index].1))
+        try? await Task.sleep(for: .seconds(60))
+        await refresh()
+    }
+
+    /// Settings › Test: a real mini-day around now, so the card changes on its own:
+    /// running now (A), its last 5 minutes start in ~1 min (B), a 3-minute gap (C), then the next block,
+    /// then a later one. Titles start with "Test ·" so they're easy to remove.
+    func loadTestDay() async {
+        let now = Date.now
+        func at(_ m: Double) -> Date { now.addingTimeInterval(m * 60) }
+        let store = BlockStore.shared
+        removeTestDay()
+        _ = store.add(title: "Test · Deep work", start: at(-24), minutes: 30, categoryIDs: ["deepwork"])
+        _ = store.add(title: "Test · Standup", start: at(9), minutes: 15, categoryIDs: ["meetings"])
+        _ = store.add(title: "Test · Gym", start: at(30), minutes: 30, categoryIDs: ["fitness"])
+        autoStart = true
+        forceStart = true
+        await refresh()
+    }
+
+    func removeTestDay() {
+        let store = BlockStore.shared
+        for b in store.planBlocks where b.title.hasPrefix("Test · ") { store.delete(id: b.id) }
+    }
+
+    func clearTestDay() async {
+        removeTestDay()
+        await refresh()
+    }
+
     static func previewStates(now: Date) -> [(DayActivityAttributes.ContentState, Date?)] {
         let cal = Calendar.current
         let purple = "#BF5AF2", green = "#30D158", orange = "#FF9F0A", blue = "#0A84FF"
