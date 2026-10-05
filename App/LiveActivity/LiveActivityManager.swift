@@ -146,6 +146,22 @@ final class LiveActivityManager: ObservableObject {
             focus += max(0, min(b.end, now).timeIntervalSince(b.start)) * focusShare
         }
         s.focusMinutes = Int(focus / 60)
+
+        // v24 journey track: every block (non-overlapping lanes) from the first start to the last end.
+        if let first = snap.lanes.first?.start, let last = snap.lanes.map(\.end).max(), last > first {
+            let from = min(first, now), to = max(last, now.addingTimeInterval(60))
+            let span = to.timeIntervalSince(from)
+            s.trackFrom = from
+            s.trackTo = to
+            s.track = snap.lanes.prefix(24).map {
+                TrackSeg(s: $0.start.timeIntervalSince(from) / span, e: $0.end.timeIntervalSince(from) / span,
+                         hex: cats.displayColorHex(for: $0))
+            }
+        }
+        if let n = snap.next {
+            s.nextHex = cats.displayColorHex(for: n)
+            s.nextIcon = cats.category(for: n).iconName
+        }
         let shown = Set(snap.all.map(\.id))   // same set as the total (respects the Focus filter)
         s.doneCount = HistoryStore.shared.entries(on: now).filter { $0.done && shown.contains($0.id) }.count
         s.totalCount = snap.all.count

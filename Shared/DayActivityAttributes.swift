@@ -15,6 +15,13 @@ enum BlockAction: String, Codable, Hashable {
     case checkStep  // current block has steps: check the next unchecked one
 }
 
+/// One block on the journey track (positions as 0…1 of the day window, color as hex).
+struct TrackSeg: Codable, Hashable {
+    var s: Double
+    var e: Double
+    var hex: String
+}
+
 struct DayActivityAttributes: ActivityAttributes {
     /// Everything the Lock Screen card and Dynamic Island render.
     /// Kept small: ActivityKit caps the payload at 4 KB.
@@ -66,6 +73,12 @@ struct DayActivityAttributes: ActivityAttributes {
         var headsNextStart: Date?
         var headsNextPlace: String?
         var headsNextHex: String?
+        // v24 journey card: today's blocks as colored segments on one track, plus the next block's look.
+        var track: [TrackSeg]?
+        var trackFrom: Date?
+        var trackTo: Date?
+        var nextHex: String?
+        var nextIcon: String?
         // v16: start of the live block, so the Island ring fills across this block.
         var currentStart: Date?
     }

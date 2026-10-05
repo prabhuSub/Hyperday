@@ -111,67 +111,118 @@ struct LockScreenCard: View {
         }
     }
 
+    /// v24: the color of what's on now (green in free time, yellow in overtime / last 5 min, grey paused).
+    private var nowColor: Color {
+        if state.paused == true { return Color(white: 0.75) }
+        if state.overSince != nil || headsUp { return DayLiveStyle.stepYellow }
+        if state.source == .free { return DayLiveStyle.doneGreen }
+        return state.accentColor
+    }
+
+    private var endText: String? {
+        let d = state.currentEnd ?? state.nextStart
+        return d.map { $0.formatted(date: .omitted, time: .shortened) }
+    }
+
+    @ViewBuilder
+    private var bottomLeft: some View {
+        if state.paused == true {
+            pill("Paused · the end moves later")
+        } else if headsUp, let title = state.headsNextTitle, let start = state.headsNextStart {
+            HeadsUpBand(title: title, start: start, place: state.headsNextPlace,
+                        color: state.headsNextHex.map { Color(hex: $0) } ?? DayLiveStyle.stepYellow)
+        } else if state.alsoIsStep == true, let also = state.also {
+            pill(also)
+        } else if let also = state.also, also.hasPrefix("also:") {
+            Text(also).font(.system(size: 13)).opacity(0.8).lineLimit(1)
+        } else if let n = nextParts {
+            HStack(spacing: 8) {
+                let col = state.nextHex.map { Color(hex: $0) } ?? Color(white: 0.5)
+                Circle().fill(col).frame(width: 26, height: 26)
+                    .overlay(HDIcon(state.nextIcon ?? "event", size: 14).foregroundStyle(.white))
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Next: \(n.title)").font(.system(size: 14, weight: .bold)).lineLimit(1)
+                    Text(score.map { "\(n.time) · \($0)" } ?? n.time)
+                        .contentTransition(.numericText())
+                        .font(.system(size: 11.5, weight: .medium)).opacity(0.65).lineLimit(1)
+                }
+            }
+        } else if let score {
+            Text(score).contentTransition(.numericText()).font(.system(size: 13, weight: .semibold)).opacity(0.75)
+        }
+    }
+
+    /// v24 "day as a journey" card (Uber / delivery style), in Hyperday's colors.
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            // Top row (like Tesla's card): [app icon] 26:10 left ······ Next: Standup 10:30 PM
+        VStack(alignment: .leading, spacing: 8) {
+            // 1 · What's on + time left ·························· ends at
             HStack(spacing: 7) {
-                AppMark(size: 20)
+                AppMark(size: 18)
+                Text(state.title)
+                    .font(.system(size: 16, weight: .heavy))
+                    .lineLimit(1)
+                    .layoutPriority(-1)
+                Text("·").font(.system(size: 16, weight: .heavy)).opacity(0.6)
                 TimerLabel(state: state, size: 16)
-                    .foregroundStyle(headsUp ? DayLiveStyle.stepYellow : state.paused == true ? Color(white: 0.75) : .white)
                     .fixedSize()
                 Spacer(minLength: 6)
                 if outOfDate && !headsUp && state.paused != true {
-                    Text(nextText)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.72))
-                        .lineLimit(1)
-                } else if let score {
-                    Text(score)
-                        .contentTransition(.numericText())   // v23: numbers roll when they change
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.75))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+                    Text("Out of date").font(.system(size: 12, weight: .semibold)).opacity(0.7)
+                } else if let endText {
+                    Text(endText).font(.system(size: 13, weight: .semibold)).opacity(0.8).fixedSize()
                 }
             }
+            .foregroundStyle(nowColor)
 
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 3) {
-                    CardTitle(state: state, size: 23)
-                    if state.paused == true {
-                        pill("Paused — the end moves later with it")
-                    } else if headsUp, let title = state.headsNextTitle, let start = state.headsNextStart {
-                        HeadsUpBand(title: title, start: start, place: state.headsNextPlace,
-                                    color: state.headsNextHex.map { Color(hex: $0) } ?? DayLiveStyle.stepYellow)
-                    } else if headsUp, let h = state.headsUp {
-                        Text(h)
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(DayLiveStyle.stepYellow)
-                            .lineLimit(1)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 2)
-                            .background(DayLiveStyle.stepYellow.opacity(0.2), in: Capsule())
-                    } else {
-                        secondLine
-                    }
-                }
-                Spacer(minLength: 0)
-                SourceIcon(source: state.source, size: 44, tint: state.source == .free ? nil : state.accentColor, iconName: state.iconName)
-            }
-            .padding(.top, 2)
+            // 2 · The day as a track, a white knob at now
+            JourneyTrack(state: state, knob: nowColor)
+                .frame(height: 22)
 
-            HStack(spacing: 12) {
-                DayBar(state: barState, height: 6)
+            // 3 · Next (or the end-of-block band) ······ Pause · Done
+            HStack(spacing: 10) {
+                bottomLeft
+                Spacer(minLength: 4)
                 PauseButton(state: state)
-                BlockActionButton(state: state)   // Done / Step n/N are always yellow, never the category color
+                BlockActionButton(state: state)
             }
-            .padding(.top, 6)
         }
         .foregroundStyle(.white)
         .padding(.leading, 16)
         .padding(.trailing, 14)
         .padding(.vertical, 13)
         .background { EdgeTicks(state: state, headsUp: headsUp) }   // v23: progress ticks around the card
+    }
+}
+
+/// v24: today's blocks as colored segments on one track, with a white knob at now.
+/// The knob's spot is worked out each time iOS draws the card.
+struct JourneyTrack: View {
+    let state: DayActivityAttributes.ContentState
+    var knob: Color = .white
+
+    var body: some View {
+        GeometryReader { g in
+            let w = g.size.width, h: CGFloat = 8, y = (g.size.height - h) / 2
+            let segs = state.track ?? []
+            let p: Double = {
+                guard let a = state.trackFrom, let b = state.trackTo, b > a else { return 0 }
+                return min(max(Date.now.timeIntervalSince(a) / b.timeIntervalSince(a), 0), 1)
+            }()
+            ZStack(alignment: .topLeading) {
+                Capsule().fill(Color.white.opacity(0.14)).frame(width: w, height: h).offset(y: y)
+                ForEach(Array(segs.enumerated()), id: \.offset) { _, sg in
+                    let x0 = w * CGFloat(sg.s), x1 = w * CGFloat(sg.e)
+                    Capsule().fill(Color(hex: sg.hex).opacity(sg.e <= p ? 0.55 : 1))
+                        .frame(width: max(4, x1 - x0 - 2), height: h)
+                        .offset(x: x0, y: y)
+                }
+                Capsule().fill(Color.white)
+                    .frame(width: 22, height: g.size.height)
+                    .overlay(Capsule().fill(knob).frame(width: 8, height: 8))
+                    .shadow(color: .black.opacity(0.35), radius: 3)
+                    .offset(x: min(max(w * CGFloat(p) - 11, 0), w - 22))
+            }
+        }
     }
 }
 
