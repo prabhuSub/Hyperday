@@ -28,8 +28,7 @@ struct TodayView: View {
                     // as they scroll up under the title. The round + covers adding once they're gone.
                     VStack(alignment: .leading, spacing: 12) {
                         hero(snap: snap)
-                        heroButtons
-                            .padding(.horizontal, 8)   // sits a little inside the card's edges
+                        heroButtons   // same left/right edges as the card above
                     }
                     .padding(.horizontal, 20)   // same margin as the title and the cards below
                     .padding(.top, 6)
