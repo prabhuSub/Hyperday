@@ -13,6 +13,12 @@ RED, INK = "#E31937", "#111214"
 
 
 def glyph(v: str, fg="#fff", red=RED, dim=0.5) -> str:
+    if v == "G":   # v27: Now Line for iOS 26/27 (Liquid Glass) — thicker round bars, centred with more margin
+        return (f'<rect x="19" y="27" width="46" height="13" rx="6.5" fill="{fg}"/>'
+                f'<rect x="31" y="43.5" width="51" height="13" rx="6.5" fill="{fg}" opacity=".6"/>'
+                f'<rect x="19" y="60" width="34" height="13" rx="6.5" fill="{fg}" opacity=".35"/>'
+                f'<rect x="55.5" y="20" width="5" height="62" rx="2.5" fill="{red}"/>'
+                f'<circle cx="58" cy="20" r="6" fill="{red}"/>')
     if v == "O":   # the original Now Line: three stacked blocks, red now-line with a pin (chosen)
         return (f'<rect x="18" y="26" width="46" height="11" rx="5.5" fill="{fg}"/>'
                 f'<rect x="30" y="44.5" width="52" height="11" rx="5.5" fill="{fg}" opacity=".55"/>'
@@ -37,7 +43,11 @@ def glyph(v: str, fg="#fff", red=RED, dim=0.5) -> str:
 
 def svg(v: str, variant: str, size: int) -> str:
     if variant == "light":
-        bg, g = f'<rect width="100" height="100" fill="{INK}"/>', glyph(v)
+        # Full-bleed square, soft top-light gradient, no baked corners/shadows (iOS adds the glass).
+        bg = ('<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">'
+              '<stop offset="0" stop-color="#2a2e38"/><stop offset="1" stop-color="#0c0d10"/></linearGradient></defs>'
+              '<rect width="100" height="100" fill="url(#g)"/>') if v == "G" else f'<rect width="100" height="100" fill="{INK}"/>'
+        g = glyph(v)
     elif variant == "dark":      # iOS draws its own dark background behind a transparent icon
         bg, g = "", glyph(v)
     else:                        # tinted: grayscale, iOS applies the tint
@@ -60,7 +70,7 @@ def mark_svg(v: str, size: int) -> str:
 
 
 if __name__ == "__main__":
-    v = (sys.argv[1] if len(sys.argv) > 1 else "O").upper()
+    v = (sys.argv[1] if len(sys.argv) > 1 else "G").upper()   # G = v27 (iOS 26/27 rules)
     root = Path(__file__).resolve().parent.parent
     icon = root / "App/Assets.xcassets/AppIcon.appiconset"
     for variant in ("light", "dark", "tinted"):
@@ -68,4 +78,14 @@ if __name__ == "__main__":
     for cat in ("App", "Widget"):
         cairosvg.svg2png(bytestring=check_mark_svg(96).encode(),
                          write_to=str(root / f"{cat}/Assets.xcassets/HyperdayMark.imageset/HyperdayMark.png"))
+    # Layers for Apple's Icon Composer (drag in for full Liquid Glass depth): background, blocks, now-line.
+    layers = root / "tools/icon-layers"
+    layers.mkdir(exist_ok=True)
+    head = '<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 100 100">'
+    (layers / "1-background.svg").write_text(head + svg(v, "light", 1024).split(">", 1)[1].split("<rect x=")[0] + "</svg>")
+    full = glyph(v)
+    blocks = "".join(p + "/>" for p in full.split("/>") if 'height="13"' in p)
+    line = "".join(p + "/>" for p in full.split("/>") if ("#E31937" in p or 'fill="' + RED + '"' in p) and p.strip())
+    (layers / "2-blocks.svg").write_text(head + blocks + "</svg>")
+    (layers / "3-now-line.svg").write_text(head + line + "</svg>")
     print("app icon", v)
