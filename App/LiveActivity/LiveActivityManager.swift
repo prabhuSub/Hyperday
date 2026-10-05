@@ -380,7 +380,7 @@ enum MeetingAlerts {
     @MainActor
     static func schedule(_ blocks: [Block], now: Date) {
         let center = UNUserNotificationCenter.current()
-        guard UserDefaults.standard.object(forKey: "meetingAlerts") as? Bool ?? true else {
+        guard (UserDefaults.standard.object(forKey: "meetingAlerts") as? Bool) ?? true else {
             center.getPendingNotificationRequests { reqs in
                 center.removePendingNotificationRequests(withIdentifiers: reqs.map(\.identifier).filter { $0.hasPrefix(prefix) })
             }
