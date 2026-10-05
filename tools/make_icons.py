@@ -88,6 +88,14 @@ def write(catalog: Path, names, tabs=False):
     items = [(n, f"hd-{n}", svg(ICONS[n])) for n in names]
     if tabs:
         items += [(n, f"hd-tab-{n}", tab_svg(ICONS[n])) for n in TABS]
+    if tabs:
+        # v24: Calendar tab with today's date, one asset per day (hd-tab-cal-1 … hd-tab-cal-31), drawn on the
+        # same grid, crop and stroke as the other tab icons so it is exactly proportional to them.
+        for day in range(1, 32):
+            body = ('<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>'
+                    f'<text x="12" y="18.3" text-anchor="middle" font-family="DejaVu Sans, Arial, sans-serif" '
+                    f'font-weight="bold" font-size="{7.2 if day < 10 else 6.6}" fill="#000" stroke="none">{day}</text>')
+            items.append((f"cal-{day}", f"hd-tab-cal-{day}", tab_svg(body)))
     for name, asset, source in items:
         d = folder / f"{asset}.imageset"
         d.mkdir()

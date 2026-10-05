@@ -489,7 +489,7 @@ enum AppTab: String, CaseIterable, Identifiable {
 struct RootView: View {
     @State private var tab: AppTab = .today
     @State private var adding: AddMode?
-    @State private var calendarIcon = CalendarTabIcon.image(for: .now)
+    @State private var calDay = Calendar.current.component(.day, from: .now)
     @Environment(\.scenePhase) private var scenePhase
 
     enum AddMode: String, Identifiable { case block, words, scan; var id: String { rawValue } }
@@ -500,7 +500,7 @@ struct RootView: View {
                 .tabItem { Label { Text(AppTab.today.title) } icon: { Image("hd-tab-" + AppTab.today.icon).renderingMode(.template) } }
                 .tag(AppTab.today)
             TabRoot(title: "Calendar") { CalendarTabView().tabFade(tab == .calendar) }
-                .tabItem { Label { Text(AppTab.calendar.title) } icon: { Image(uiImage: calendarIcon).renderingMode(.template) } }   // today's date
+                .tabItem { Label { Text(AppTab.calendar.title) } icon: { Image("hd-tab-cal-\(calDay)").renderingMode(.template) } }   // today's date
                 .tag(AppTab.calendar)
             TabRoot(title: "Stats") { StatsView().tabFade(tab == .stats) }
                 .tabItem { Label { Text(AppTab.stats.title) } icon: { Image("hd-tab-" + AppTab.stats.icon).renderingMode(.template) } }
@@ -515,10 +515,10 @@ struct RootView: View {
         }
         // The Calendar tab shows today's date: redraw at midnight and whenever the app comes back.
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
-            calendarIcon = CalendarTabIcon.image(for: .now)
+            calDay = Calendar.current.component(.day, from: .now)
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { calendarIcon = CalendarTabIcon.image(for: .now) }
+            if phase == .active { calDay = Calendar.current.component(.day, from: .now) }
         }
         // v12: Tesla-style round + in thumb reach on every tab. Tap = Add block, hold = more.
         .overlay(alignment: .bottomTrailing) {
@@ -535,39 +535,6 @@ struct RootView: View {
 }
 
 
-
-// MARK: - v22 Calendar tab icon with today's date
-
-/// Same outline as the other tab icons (31pt, heavy stroke) with today's day number inside.
-/// Drawn once into a template image, so the tab bar tints it like the others.
-enum CalendarTabIcon {
-    /// Drawn on the exact grid the other tab icons use (24-unit glyph, cropped to 2.5…21.5, stroke 2.8),
-    /// so it matches them in size and weight; only the day number is new.
-    @MainActor
-    static func image(for date: Date) -> UIImage {
-        let day = Calendar.current.component(.day, from: date)
-        let size: CGFloat = 31
-        let k = size / 19
-        func pt(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: (x - 2.5) * k, y: (y - 2.5) * k) }
-        let art = Canvas { ctx, _ in
-            var outline = Path(roundedRect: CGRect(origin: pt(3.5, 5), size: CGSize(width: 17 * k, height: 15.5 * k)),
-                               cornerRadius: 2 * k)
-            outline.move(to: pt(3.5, 10)); outline.addLine(to: pt(20.5, 10))   // top band
-            outline.move(to: pt(8, 3)); outline.addLine(to: pt(8, 7))           // rings
-            outline.move(to: pt(16, 3)); outline.addLine(to: pt(16, 7))
-            ctx.stroke(outline, with: .color(.black),
-                       style: StrokeStyle(lineWidth: 2.8 * k, lineCap: .round, lineJoin: .round))
-            let number = Text("\(day)").font(.system(size: 7.6 * k, weight: .heavy, design: .rounded))
-            ctx.draw(number, at: pt(12, 15.6), anchor: .center)
-        }
-        .frame(width: size, height: size)
-
-        let renderer = ImageRenderer(content: art)
-        renderer.scale = UIScreen.main.scale
-        let img = renderer.uiImage ?? UIImage(named: "hd-tab-calendar") ?? UIImage()
-        return img.withRenderingMode(.alwaysTemplate)
-    }
-}
 
 // MARK: - v18 tab switch: quick crossfade
 
