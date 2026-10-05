@@ -495,16 +495,16 @@ struct RootView: View {
     var body: some View {
         TabView(selection: $tab) {
             TabRoot(title: "Today") { TodayView().tabFade(tab == .today) }
-                .tabItem { Label { Text(AppTab.today.title) } icon: { Image("hd-tab-" + AppTab.today.icon).renderingMode(.template) } }
+                .tabItem { Image("hd-tab-" + AppTab.today.icon).renderingMode(.template).accessibilityLabel(AppTab.today.title) }   // icon only
                 .tag(AppTab.today)
             TabRoot(title: "Calendar") { CalendarTabView().tabFade(tab == .calendar) }
-                .tabItem { Label { Text(AppTab.calendar.title) } icon: { Image("hd-tab-" + AppTab.calendar.icon).renderingMode(.template) } }
+                .tabItem { Image("hd-tab-" + AppTab.calendar.icon).renderingMode(.template).accessibilityLabel(AppTab.calendar.title) }   // icon only
                 .tag(AppTab.calendar)
             TabRoot(title: "Stats") { StatsView().tabFade(tab == .stats) }
-                .tabItem { Label { Text(AppTab.stats.title) } icon: { Image("hd-tab-" + AppTab.stats.icon).renderingMode(.template) } }
+                .tabItem { Image("hd-tab-" + AppTab.stats.icon).renderingMode(.template).accessibilityLabel(AppTab.stats.title) }   // icon only
                 .tag(AppTab.stats)
             TabRoot(title: "Settings") { SettingsView().tabFade(tab == .settings) }
-                .tabItem { Label { Text(AppTab.settings.title) } icon: { Image("hd-tab-" + AppTab.settings.icon).renderingMode(.template) } }
+                .tabItem { Image("hd-tab-" + AppTab.settings.icon).renderingMode(.template).accessibilityLabel(AppTab.settings.title) }   // icon only
                 .tag(AppTab.settings)
         }
         .tint(Theme.text)   // tab bar stays full size while scrolling (Prabhu's call)
