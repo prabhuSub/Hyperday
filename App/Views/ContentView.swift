@@ -133,6 +133,10 @@ struct TodayView: View {
                 Text(subtitle)
                     .font(.system(size: 14))
                     .foregroundStyle(.white.opacity(0.75))
+                if snap.lanes.count > 0 {
+                    AppJourney(lanes: snap.lanes, now: now, color: { categories.displayColor(for: $0) })
+                        .padding(.top, 8)
+                }
             }
             // Tap the live block's name to open it (replaces the old LIVE NOW pill).
             .contentShape(Rectangle())
@@ -154,7 +158,7 @@ struct TodayView: View {
         .background(
             LinearGradient(colors: [Color(red: 0.11, green: 0.15, blue: 0.22), Color(red: 0.24, green: 0.21, blue: 0.31)],
                            startPoint: .topLeading, endPoint: .bottomTrailing),
-            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+            in: RoundedRectangle(cornerRadius: 24, style: .continuous)
         )
     }
 
@@ -162,14 +166,13 @@ struct TodayView: View {
     private var heroButtons: some View {
         HStack(spacing: 10) {
             Button("Add block") { showingAdd = true }
-                .buttonStyle(PrimaryButtonStyle(width: 124))
+                .buttonStyle(PrimaryButtonStyle())
             Button(activity.isRunning ? "Stop Live" : "Go Live") {
                 Task {
                     if activity.isRunning { await activity.stop() } else { await activity.start() }
                 }
             }
-            .buttonStyle(SecondaryButtonStyle(width: 124))
-            Spacer(minLength: 16)   // left pair hugs the card's left edge, icons hug its right edge
+            .buttonStyle(SecondaryButtonStyle())
             // #5 Plan with words · #8 Scan to blocks
             iconButton("siri", label: "Plan with words") { showingWords = true }
             iconButton("calendar-scan", label: "Scan to blocks") { showingScan = true }
@@ -217,9 +220,9 @@ struct TodayView: View {
             stepsTotal += st.count
         }
         return [
-            InfoItem(label: "Focused", value: focused.hoursMinutes),
-            InfoItem(label: "Steps", value: stepsTotal == 0 ? "—" : "\(stepsDone) / \(stepsTotal)"),
-            InfoItem(label: "Meetings left", value: "\(meetingsLeft)"),
+            InfoItem(label: "Focused", value: focused.hoursMinutes, color: DayLiveStyle.doneGreen),
+            InfoItem(label: "Steps", value: stepsTotal == 0 ? "—" : "\(stepsDone)/\(stepsTotal)", color: Theme.blue),
+            InfoItem(label: "Meetings left", value: "\(meetingsLeft)", color: Color(hex: "#BF5AF2")),
         ]
     }
 
@@ -256,9 +259,9 @@ struct TodayView: View {
             HDIcon(icon, size: 20)
                 .foregroundStyle(Theme.text)
                 .frame(width: 40, height: 40)
-                .background(RoundedRectangle(cornerRadius: 4).fill(Theme.card))
-                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Theme.border, lineWidth: 1))
-                .contentShape(Rectangle())
+                .background(Circle().fill(Theme.card))   // v24: round icon buttons
+                .overlay(Circle().stroke(Theme.border, lineWidth: 1))
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)
@@ -319,5 +322,60 @@ private struct HeroOutlineButton: ButtonStyle {
             .frame(width: 116, height: 40)
             .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white.opacity(0.45), lineWidth: 1))
             .opacity(configuration.isPressed ? 0.7 : 1)
+    }
+}
+
+
+/// v24: the day as a journey on the Today card — colored blocks on one track, a white knob at now,
+/// hour marks underneath. Same look as the Lock Screen card.
+struct AppJourney: View {
+    let lanes: [Block]
+    let now: Date
+    let color: (Block) -> Color
+
+    var body: some View {
+        let from = min(lanes.first?.start ?? now, now)
+        let to = max(lanes.map(\.end).max() ?? now, now.addingTimeInterval(60))
+        let span = to.timeIntervalSince(from)
+        let f: (Date) -> CGFloat = { CGFloat(min(max($0.timeIntervalSince(from) / span, 0), 1)) }
+        VStack(spacing: 4) {
+            GeometryReader { g in
+                let w = g.size.width
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.white.opacity(0.15)).frame(height: 8)
+                    ForEach(lanes) { b in
+                        Capsule().fill(color(b).opacity(b.end <= now ? 0.55 : 1))
+                            .frame(width: max(4, w * (f(b.end) - f(b.start)) - 2), height: 8)
+                            .offset(x: w * f(b.start))
+                    }
+                    Circle().fill(Color.white).frame(width: 18, height: 18)
+                        .shadow(color: .black.opacity(0.3), radius: 3)
+                        .offset(x: min(max(w * f(now) - 9, 0), w - 18))
+                        .animation(.easeInOut(duration: 0.6), value: now)
+                }
+                .frame(height: 22)
+            }
+            .frame(height: 22)
+            HStack {
+                ForEach(Self.ticks(from, to), id: \.self) { d in
+                    Text(d.formatted(.dateTime.hour(.defaultDigits(amPM: .narrow))))
+                    if d != Self.ticks(from, to).last { Spacer(minLength: 0) }
+                }
+            }
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(.white.opacity(0.55))
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Today's blocks on a timeline")
+    }
+
+    /// Up to 5 evenly spread hour marks across the window.
+    static func ticks(_ a: Date, _ b: Date) -> [Date] {
+        let cal = Calendar.current
+        guard let first = cal.nextDate(after: a.addingTimeInterval(-1), matching: DateComponents(minute: 0), matchingPolicy: .nextTime),
+              b > first else { return [] }
+        let hours = max(1, Int(b.timeIntervalSince(first) / 3600))
+        let step = max(1, Int((Double(hours) / 4).rounded(.up)))
+        return stride(from: 0, through: hours, by: step).map { first.addingTimeInterval(Double($0) * 3600) }
     }
 }

@@ -102,6 +102,14 @@ struct InfoItem: Identifiable {
     let id = UUID()
     let label: String
     let value: String
+    var color: Color? = nil   // v24: big number in this color
+}
+
+/// "3h 10m" → big digits, small letters (v24 card language).
+func bigSmallText(_ s: String, size: CGFloat) -> Text {
+    s.reduce(Text("")) { acc, ch in
+        acc + Text(String(ch)).font(.system(size: (ch.isNumber || ch == "—") ? size : size * 0.5, weight: .heavy))
+    }
 }
 
 /// Row of label/value pairs over thin dividers (the site's About panel).
@@ -109,18 +117,22 @@ struct InfoRow: View {
     let items: [InfoItem]
 
     var body: some View {
-        HStack(alignment: .top, spacing: 14) {
+        // v24: stat tiles — big colored number, small unit, caps label.
+        HStack(alignment: .top, spacing: 10) {
             ForEach(items) { item in
-                VStack(alignment: .leading, spacing: 4) {
-                    Rectangle().fill(Theme.border).frame(height: 1).padding(.bottom, 6)
-                    Caps(item.label)
-                    Text(item.value)
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(Theme.text)
+                VStack(alignment: .leading, spacing: 2) {
+                    bigSmallText(item.value, size: 24)
+                        .foregroundStyle(item.color ?? Theme.text)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.7)
+                        .minimumScaleFactor(0.6)
+                        .contentTransition(.numericText())
+                    Caps(item.label)
                 }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Theme.card))
+                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Theme.border, lineWidth: 1))
             }
         }
     }
@@ -136,7 +148,7 @@ struct PrimaryButtonStyle: ButtonStyle {
             .foregroundStyle(Color.white)
             .frame(maxWidth: width ?? .infinity)
             .frame(height: 40)
-            .background(RoundedRectangle(cornerRadius: 4).fill(Theme.blue))
+            .background(Capsule().fill(Theme.blue))   // v24: pill buttons
             .opacity(configuration.isPressed ? 0.8 : 1)
     }
 }
@@ -149,8 +161,8 @@ struct SecondaryButtonStyle: ButtonStyle {
             .foregroundStyle(Theme.text)
             .frame(maxWidth: width ?? .infinity)
             .frame(height: 40)
-            .background(RoundedRectangle(cornerRadius: 4).fill(Theme.card))
-            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Theme.border, lineWidth: 1))
+            .background(Capsule().fill(Theme.card))
+            .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
             .opacity(configuration.isPressed ? 0.7 : 1)
     }
 }
@@ -164,8 +176,9 @@ struct CardBox: ViewModifier {
         content
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 6).fill(Theme.card))
-            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Theme.border, lineWidth: 1))
+            .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Theme.card))   // v24: rounder
+            .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.border, lineWidth: 1))
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }
 
@@ -298,6 +311,7 @@ struct BlockRow: View {
 
     private var detail: String {
         var parts: [String] = []
+        parts.append(block.start.shortTime)   // v24: time moves into the subtitle
         parts.append(block.source == .calendar ? (block.calendarName ?? "Calendar") : "My plan")
         parts.append(block.end.timeIntervalSince(block.start).hoursMinutes)
         if !steps.isEmpty { parts.append("\(steps.filter(\.done).count)/\(steps.count) steps") }
@@ -310,18 +324,11 @@ struct BlockRow: View {
         let done = block.end <= now
 
         HStack(spacing: 12) {
-            Text(block.start.shortTime)
-                .font(.system(size: 13, weight: .medium).monospacedDigit())
-                .foregroundStyle(isNow ? Theme.text : Theme.muted)
-                .frame(width: 66, alignment: .leading)
-            RoundedRectangle(cornerRadius: 2)
-                .fill(color)
-                .opacity(done ? 0.35 : 1)
-                .frame(width: 3, height: 32)
-            if let icon {
-                HDIcon(icon, size: 18)
-                    .foregroundStyle(done ? Theme.faint : Theme.muted)
-            }
+            // v24: the block's icon on a dot of its category color.
+            Circle()
+                .fill(color.opacity(done ? 0.35 : 1))
+                .frame(width: 30, height: 30)
+                .overlay(HDIcon(icon ?? "event", size: 16).foregroundStyle(.white))
             VStack(alignment: .leading, spacing: 2) {
                 Text(block.title)
                     .font(.system(size: 15, weight: isNow ? .semibold : .regular))
