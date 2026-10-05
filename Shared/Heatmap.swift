@@ -6,6 +6,17 @@ struct HeatData: Codable, Equatable {
     var counts: [String: Int]     // "2026-09-30" -> blocks done
     var updated: Date = .now
 
+    init(counts: [String: Int], updated: Date = .now) {
+        self.counts = counts
+        self.updated = updated
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        counts = try c.decode([String: Int].self, forKey: .counts)
+        updated = try c.decodeIfPresent(Date.self, forKey: .updated) ?? .now
+    }
+
     static func key(_ date: Date) -> String {
         let c = Calendar.current.dateComponents([.year, .month, .day], from: date)
         return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)

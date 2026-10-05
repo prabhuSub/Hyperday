@@ -215,7 +215,7 @@ struct HeatWidgetView: View {
                 ForEach(days.indices, id: \.self) { i in
                     let isToday = Calendar.current.isDate(days[i], inSameDayAs: entry.date)
                     VStack(spacing: 3) {
-                        Text(vals[i][0] == 0 ? "–" : String(format: vals[i][0] < 10 ? "%.1gh" : "%.0fh", vals[i][0]))
+                        Text(vals[i][0] == 0 ? "–" : (vals[i][0].formatted(.number.precision(.fractionLength(0...(vals[i][0] < 10 ? 1 : 0)))) + "h"))
                             .font(.system(size: 9, weight: .bold))
                             .foregroundStyle(isToday ? .primary : .secondary)
                         ZStack(alignment: .bottom) {

@@ -642,7 +642,7 @@ struct DriveCard: View {
                         Text("Driving ·")
                         Text(timerInterval: since...since.addingTimeInterval(6 * 3600), countsDown: false)
                             .monospacedDigit()
-                            .frame(width: 48, alignment: .leading)
+                            .frame(width: 56, alignment: .leading)   // fits 1:02:03
                     }
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.72))
@@ -803,7 +803,7 @@ struct IslandTimer: View {
     /// The box is sized with a hidden "88:88" (or "888:88" past 100 minutes) so it never jumps.
     private func sized(_ range: ClosedRange<Date>, down: Bool) -> some View {
         let span = range.upperBound.timeIntervalSince(range.lowerBound)
-        let sample = down && span >= 6000 ? "888:88" : "88:88"
+        let sample = down && span >= 6000 ? "888:88" : "88:88"   // overtime is capped at 1h, so "88:88" fits
         return Text(sample).hidden()
             .overlay(alignment: .trailing) {
                 Text(timerInterval: range, pauseTime: nil, countsDown: down, showsHours: false)

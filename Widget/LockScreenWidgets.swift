@@ -108,7 +108,8 @@ struct NowRect: View {
                     .lineLimit(1)
             } else {
                 Caps(text: "Hyperday")
-                Text(entry.day == nil ? "Open Hyperday" : "Day complete")
+                // Yesterday's data (app not opened today) isn't "Day complete".
+                Text(entry.day?.isToday(now) == true ? "Day complete" : "Open Hyperday")
                     .font(.system(size: 15, weight: .bold))
             }
         }
@@ -192,7 +193,7 @@ struct DayStripRect: View {
                     }
                     Rectangle()
                         .fill(Color.primary)
-                        .frame(width: 2, height: 16)
+                        .frame(width: 2, height: 12)
                         .offset(x: x(now) - 1)
                 }
             }
@@ -328,6 +329,7 @@ struct CircleView: View {
             guard let c = current, c.stepsTotal > 0 else { return (0, "—", "STEPS") }
             return (Double(c.stepsDone) / Double(c.stepsTotal), "\(c.stepsDone)/\(c.stepsTotal)", "STEPS")
         case .nextStart:
+            guard day.isToday(now) else { return (0, "—", "OPEN") }
             guard let n = day.upcoming(at: now, limit: 1).first else { return (1, "✓", "DONE") }
             return (day.progress(at: now), clock(n.start), "NEXT")
         case .blocksLeft:

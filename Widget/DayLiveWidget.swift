@@ -34,7 +34,8 @@ struct DayLiveActivityWidget: Widget {
                 DynamicIslandExpandedRegion(.trailing) {
                     TimerLabel(state: context.state, size: 18)
                         .foregroundStyle(context.state.overSince != nil ? DayLiveStyle.stepYellow : .white)
-                        .fixedSize()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)   // "Paused · 1:23:45 left" must fit beside the camera
                         .padding(.trailing, 6)
                         .frame(maxHeight: .infinity, alignment: .center)
                 }

@@ -21,8 +21,8 @@ func dayTimeline(metric: CircleMetric = .nextStart) -> Timeline<DayEntry> {
         if b.end > now { dates.insert(b.end) }
     }
     let minute = Calendar.current.component(.minute, from: now)
-    let firstTick = Calendar.current.date(bySetting: .second, value: 0, of: now)?
-        .addingTimeInterval(Double(5 - minute % 5) * 60) ?? now
+    let minuteStart = Calendar.current.dateInterval(of: .minute, for: now)?.start ?? now   // :04:30 → :04:00
+    let firstTick = minuteStart.addingTimeInterval(Double(5 - minute % 5) * 60)
     for i in 0..<24 { dates.insert(firstTick.addingTimeInterval(Double(i) * 300)) }
     let entries = dates.sorted().prefix(80).map {
         DayEntry(date: $0, day: day, needsAppGroup: WidgetShared.fileURL == nil, metric: metric)
