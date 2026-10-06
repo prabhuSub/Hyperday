@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### v42–v44
+- **Tesla data fix:** endpoints are sent encoded, so lock, Sentry, inside temperature and place come back.
+- **Plan vs real:** 56 pt per hour, bigger text, header no longer overlaps.
+- **Matte car:** no metal or clear coat, very rough surfaces; paint set to a darker Quicksilver so it doesn't read white; softer spotlight.
+- **Car tab in Tesla's style:** centred name with battery · range · status, full-width 3D stage (badges kept), text row of views, a 3×2 grid of thin outline icons (lock, Sentry, port, inside, windows, tires), big thin battery % and range with a thin bar.
+
 ### v41
 - **Lock Screen car card, more detail:** battery · range, lock icon + inside temperature, Leave-by (or place · last read), with a smaller front picture.
 - **Car tab icon:** a front view of the car.

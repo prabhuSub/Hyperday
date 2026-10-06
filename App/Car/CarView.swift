@@ -9,29 +9,30 @@ struct CarView: View {
     @StateObject private var pins = CarPins()
 
     var body: some View {
+        // v44: Tesla's style: centred name, the car on a full-width stage, a text row of views,
+        // thin outline icons with grey labels, big thin numbers. No chips, dots or cards.
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                statusLine
+            VStack(spacing: 0) {
+                teslaHeader
                 stage
-                statusChips   // v41: the same facts as the badges, always visible
-                if let c = cars.car {
-                    InfoRow(items: [
-                        InfoItem(label: "Battery", value: "\(c.battery)%", color: DayLiveStyle.doneGreen),
-                        InfoItem(label: "Range", value: "\(c.rangeMiles) mi", color: Color(hex: "#64D2FF")),
-                        InfoItem(label: "Inside", value: c.insideF.map { "\($0)°F" } ?? "—", color: Theme.blue),
-                    ])
+                angleRow
+                Rectangle().fill(Theme.border).frame(height: 1).padding(.horizontal, 20).padding(.top, 10)
+                statusGrid
+                Rectangle().fill(Theme.border).frame(height: 1).padding(.horizontal, 20)
+                batteryBlock
+                VStack(alignment: .leading, spacing: 12) {
+                    plateRow
+                    if !cars.signedIn { connectCard }
+                    if let m = cars.message {
+                        Text(m).font(.system(size: 12)).foregroundStyle(Theme.muted)
+                    }
+                    Text("3D model: “2021 Tesla Model Y” by tonielpro520 on Sketchfab, CC BY 4.0, repainted Quicksilver.")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Theme.faint)
                 }
-                plateRow
-                if !cars.signedIn { connectCard }
-                if let m = cars.message {
-                    Text(m).font(.system(size: 12)).foregroundStyle(Theme.muted)
-                }
-                Text("3D model: “2021 Tesla Model Y” by tonielpro520 on Sketchfab, CC BY 4.0, repainted Quicksilver.")
-                    .font(.system(size: 10))
-                    .foregroundStyle(Theme.faint)
-                    .padding(.top, 4)
+                .padding(.horizontal, 16)
+                .padding(.top, 20)
             }
-            .padding(.horizontal, 16)
             .padding(.bottom, 120)
         }
         .refreshable { await cars.start(force: true, wake: true).value }   // pull down = wake + read (2¢)
@@ -64,6 +65,98 @@ struct CarView: View {
         }
     }
 
+    private var teslaHeader: some View {
+        VStack(spacing: 6) {
+            Text(cars.car?.name ?? "Your car").font(.system(size: 26, weight: .medium)).tracking(0.5)
+                .foregroundStyle(Theme.text)
+            HStack(spacing: 8) {
+                Image(systemName: cars.car?.charging == true ? "battery.100.bolt" : "battery.75")
+                    .font(.system(size: 17, weight: .light))
+                if let c = cars.car { Text("\(c.rangeMiles) mi").fontWeight(.medium).foregroundStyle(Theme.text); Text("·") }
+                Text(statusText)
+                if cars.busy { ProgressView().controlSize(.mini) }
+            }
+            .font(.system(size: 15))
+            .foregroundStyle(Theme.muted)
+            .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 4)
+        .padding(.bottom, 14)
+    }
+
+    private var angleRow: some View {
+        HStack(spacing: 26) {
+            ForEach(CarAngle.allCases) { a in
+                let on = pins.angle == a
+                Button { pins.go(a) } label: {
+                    Text(a.title.uppercased())
+                        .font(.system(size: 12, weight: on ? .semibold : .regular)).tracking(1.5)
+                        .foregroundStyle(on ? Theme.text : Theme.muted)
+                        .padding(.bottom, 4)
+                        .overlay(alignment: .bottom) { if on { Rectangle().fill(Theme.text).frame(height: 2) } }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.top, 12)
+    }
+
+    private var statusGrid: some View {
+        let c = cars.car
+        var items: [(String, String)] = []
+        if let l = c?.locked { items.append((l ? "lock" : "lock.open", l ? "Locked" : "Unlocked")) }
+        if let s = c?.sentry { items.append(("shield", s ? "Sentry On" : "Sentry Off")) }
+        if let c { items.append(("bolt", c.charging ? "Charging" + (c.chargeKW.map { " \(Int($0)) kW" } ?? "") : "Port Closed")) }
+        if let f = c?.insideF { items.append(("thermometer.medium", "\(f)° Inside")) }
+        if let w = c?.windowsOpen { items.append((w ? "window.vertical.open" : "window.vertical.closed", w ? "Window Open" : "Windows Closed")) }
+        if let t = c?.tiresLow { items.append(("circle.circle", t ? "Check Tires" : "Tires OK")) }
+        return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 3), spacing: 0) {
+            ForEach(items.indices, id: \.self) { i in
+                VStack(spacing: 7) {
+                    Image(systemName: items[i].0).font(.system(size: 22, weight: .light)).foregroundStyle(Theme.text)
+                        .frame(height: 26)
+                    Text(items[i].1).font(.system(size: 12)).foregroundStyle(Theme.muted).lineLimit(1).minimumScaleFactor(0.8)
+                }
+                .padding(.vertical, 12)
+            }
+        }
+        .padding(.horizontal, 14)
+    }
+
+    @ViewBuilder
+    private var batteryBlock: some View {
+        if let c = cars.car {
+            VStack(spacing: 8) {
+                HStack(alignment: .lastTextBaseline) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        (Text("\(c.battery)").font(.system(size: 44, weight: .light)) + Text("%").font(.system(size: 20, weight: .light)))
+                        Text("Battery").font(.system(size: 12)).foregroundStyle(Theme.muted)
+                    }
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 0) {
+                        (Text("\(c.rangeMiles)").font(.system(size: 44, weight: .light)) + Text(" mi").font(.system(size: 18, weight: .light)))
+                        Text("Range").font(.system(size: 12)).foregroundStyle(Theme.muted)
+                    }
+                }
+                .foregroundStyle(Theme.text)
+                Capsule().fill(Theme.border).frame(height: 4)
+                    .overlay(alignment: .leading) {
+                        GeometryReader { g in Capsule().fill(Theme.text).frame(width: g.size.width * CGFloat(c.battery) / 100) }
+                    }
+                    .frame(height: 4)
+                HStack {
+                    Text([c.place, c.isSample ? nil : c.updatedAt.formatted(.relative(presentation: .named))].compactMap { $0 }.joined(separator: " · "))
+                    Spacer()
+                    if let lim = c.chargeLimit { Text("Limit \(lim)%") }
+                }
+                .font(.system(size: 11)).foregroundStyle(Theme.muted)
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 14)
+        }
+    }
+
     private var statusText: String {
         guard let c = cars.car else { return cars.signedIn ? "Reading your car…" : "Not connected" }
         if c.isSample { return "Sample car" }
@@ -84,22 +177,9 @@ struct CarView: View {
                         .position(p)
                 }
             }
-            // v34: like the car's screen. Drag spins the car; these jump to a view (tap again any time to get back).
-            HStack(spacing: 6) {
-                ForEach(CarAngle.allCases) { a in
-                    Button(a.title) { pins.go(a) }
-                        .font(.system(size: 12, weight: .heavy))
-                        .foregroundStyle(pins.angle == a ? .black : .white)
-                        .padding(.horizontal, 11).frame(height: 28)
-                        .background(Capsule().fill(pins.angle == a ? Color.white : Color.white.opacity(0.12)))
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-            .padding(.bottom, 12)
         }
-        .frame(height: 360)
+        .frame(height: 320)
         .background(scheme == .dark ? Color(red: 0.06, green: 0.07, blue: 0.08) : Color(red: 0.93, green: 0.94, blue: 0.95))   // v41: follows the phone
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
     private struct Badge { let id: String; let icon: String; let text: String; let color: Color }
@@ -257,7 +337,7 @@ struct CarSceneView: UIViewRepresentable {
         scene.fogStartDistance = 18; scene.fogEndDistance = 150; scene.fogDensityExponent = 1.4
         // v40: a soft, diffused spotlight from above, so the car is lit like a showroom.
         let spot = SCNNode(); spot.name = "hd-spot"
-        let sl = SCNLight(); sl.type = .spot; sl.intensity = 850
+        let sl = SCNLight(); sl.type = .spot; sl.intensity = 650   // v44: a bit softer on the matte paint
         sl.color = UIColor(red: 1, green: 0.98, blue: 0.95, alpha: 1)
         sl.spotInnerAngle = 25; sl.spotOuterAngle = 100          // wide, soft edge = diffused
         sl.castsShadow = true; sl.shadowRadius = 14; sl.shadowSampleCount = 16; sl.shadowMode = .deferred
@@ -468,6 +548,12 @@ struct CarSceneView: UIViewRepresentable {
             for m in g.materials {
                 let name = (m.name ?? "").lowercased()
                 let glass = name.contains("vidro") || name.contains("glass") || name.contains("lens")
+                // v44: the body paint is the one material that was fully metallic. Without its dark
+                // reflections it read as white, so give it Quicksilver's real, darker grey directly.
+                let wasMetal = ((m.metalness.contents as? NSNumber)?.doubleValue ?? 0) > 0.8
+                if name.contains("pintura") || name.contains("paint") || wasMetal {
+                    m.diffuse.contents = UIColor(red: 0.30, green: 0.31, blue: 0.33, alpha: 1)
+                }
                 m.lightingModel = .physicallyBased
                 m.metalness.contents = 0.0
                 m.roughness.contents = glass ? 0.5 : 0.92
