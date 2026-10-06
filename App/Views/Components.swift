@@ -575,7 +575,7 @@ struct RootView: View {
                 Tab(value: AppTab.car) {
                     TabRoot(title: "Car") { CarView().tabFade(tab == .car) }
                 } label: {
-                    Label { Text("Car") } icon: { Image("hd-tab-car").renderingMode(.template) }   // your car's outline
+                    Label { Text("Car") } icon: { Image("hd-tab-car-front").renderingMode(.template) }   // v41: front view of your car
                 }
             }
             Tab("Stats", systemImage: "chart.bar", value: AppTab.stats) {

@@ -13,6 +13,7 @@ struct CarView: View {
             VStack(alignment: .leading, spacing: 12) {
                 statusLine
                 stage
+                statusChips   // v41: the same facts as the badges, always visible
                 if let c = cars.car {
                     InfoRow(items: [
                         InfoItem(label: "Battery", value: "\(c.battery)%", color: DayLiveStyle.doneGreen),
@@ -97,11 +98,29 @@ struct CarView: View {
             .padding(.bottom, 12)
         }
         .frame(height: 360)
-        .background(Color(red: 0.06, green: 0.07, blue: 0.08))
+        .background(scheme == .dark ? Color(red: 0.06, green: 0.07, blue: 0.08) : Color(red: 0.93, green: 0.94, blue: 0.95))   // v41: follows the phone
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
     private struct Badge { let id: String; let icon: String; let text: String; let color: Color }
+
+    /// v41: Locked · Sentry · Charge port · Inside · Windows · Tires, as chips under the 3D car.
+    @ViewBuilder
+    private var statusChips: some View {
+        if let c = cars.car {
+            let grey = Color(white: 0.55)
+            let red = Color(hex: "#FF453A")
+            FlowLayout(spacing: 8) {
+                if let l = c.locked { StatusChip(color: l ? DayLiveStyle.doneGreen : red, text: l ? "Locked" : "Unlocked") }
+                if let s = c.sentry { StatusChip(color: s ? Color(hex: "#BF5AF2") : grey, text: s ? "Sentry on" : "Sentry off") }
+                StatusChip(color: c.charging ? DayLiveStyle.doneGreen : grey,
+                           text: c.charging ? "Charging" + (c.chargeKW.map { " · \(Int($0)) kW" } ?? "") : "Port closed")
+                if let f = c.insideF { StatusChip(color: Theme.blue, text: "\(f)° inside") }
+                if let w = c.windowsOpen { StatusChip(color: w ? red : grey, text: w ? "Window open" : "Windows closed") }
+                if let t = c.tiresLow { StatusChip(color: t ? Color(hex: "#FF9F0A") : grey, text: t ? "Check tires" : "Tires OK") }
+            }
+        }
+    }
 
     private var badges: [Badge] {
         guard let c = cars.car else { return [] }
@@ -135,6 +154,21 @@ struct CarView: View {
             }
         }
         .cardBox()
+    }
+}
+
+/// v41: a small status chip (dot + text) like the mockup.
+struct StatusChip: View {
+    let color: Color
+    let text: String
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle().fill(color).frame(width: 8, height: 8)
+            Text(text).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text)
+        }
+        .padding(.horizontal, 11).padding(.vertical, 7)
+        .background(Capsule().fill(Theme.card))
+        .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
     }
 }
 

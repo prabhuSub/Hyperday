@@ -20,6 +20,9 @@ struct CarSnapshot: Codable, Equatable {
     var nextTripTitle: String?
     var leaveBy: Date?
     var drivesToday: Int?
+    // v41: more status for the Car tab chips
+    var windowsOpen: Bool? = nil
+    var tiresLow: Bool? = nil
 
     var enoughForToday: Bool? { todayMiles.map { rangeMiles >= $0 + 15 } }
 

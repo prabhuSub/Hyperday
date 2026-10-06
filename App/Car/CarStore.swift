@@ -136,7 +136,20 @@ final class CarStore: ObservableObject {
             todayMiles: previous?.todayMiles,
             nextTripTitle: previous?.nextTripTitle,
             leaveBy: previous?.leaveBy,
-            drivesToday: previous?.drivesToday)
+            drivesToday: previous?.drivesToday,
+            windowsOpen: Self.anyOpen(vs, ["fd_window", "fp_window", "rd_window", "rp_window"]),
+            tiresLow: Self.anyTrue(vs, ["tpms_soft_warning_fl", "tpms_soft_warning_fr", "tpms_soft_warning_rl", "tpms_soft_warning_rr",
+                                        "tpms_hard_warning_fl", "tpms_hard_warning_fr", "tpms_hard_warning_rl", "tpms_hard_warning_rr"]))
+    }
+
+    /// v41: nil when Tesla didn't send any of the fields (older cars / asleep), so the chip is simply left out.
+    private static func anyOpen(_ o: JSONObject, _ keys: [String]) -> Bool? {
+        let vals = keys.compactMap { (o[$0] as? NSNumber)?.intValue }
+        return vals.isEmpty ? nil : vals.contains { $0 != 0 }
+    }
+    private static func anyTrue(_ o: JSONObject, _ keys: [String]) -> Bool? {
+        let vals = keys.compactMap { o[$0] as? Bool }
+        return vals.isEmpty ? nil : vals.contains(true)
     }
 
     /// "Home" / "Office" from your saved places, else the street name.

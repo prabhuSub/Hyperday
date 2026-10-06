@@ -88,20 +88,34 @@ struct CarBatteryView: View {
         let c = entry.car
         switch family {
         case .accessoryRectangular:
-            // v40: Lock Screen version of the medium car widget: 78% · lock + range · the front of the car.
-            HStack(spacing: 8) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(c.map { "\($0.battery)%" } ?? "–").font(.system(size: 24, weight: .bold)).minimumScaleFactor(0.8)
+            // v41: more detail: battery · range / lock + inside temp / Leave-by (or place · last read), smaller car.
+            HStack(spacing: 4) {
+                VStack(alignment: .leading, spacing: 1) {
                     if let c {
-                        HStack(spacing: 5) {
+                        Label { Text("\(c.battery)% · \(c.rangeMiles) mi").font(.system(size: 14, weight: .bold)) }
+                            icon: { Image("hd-car").renderingMode(.template) }
+                        HStack(spacing: 4) {
                             Image(systemName: c.locked == false ? "lock.open.fill" : "lock.fill")
-                            Text("\(c.rangeMiles) mi")
+                            if let f = c.insideF { Text("\(f)° inside") } else { Text(c.locked == false ? "Unlocked" : "Locked") }
                         }
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 12, weight: .semibold))
+                        Group {
+                            if let leave = c.leaveBy {
+                                Label("Leave \(leave.formatted(date: .omitted, time: .shortened))", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+                            } else {
+                                Text([c.place, Self.ago(c.updatedAt, entry.date)].compactMap { $0 }.joined(separator: " · "))
+                            }
+                        }
+                        .font(.system(size: 12, weight: .semibold))
+                    } else {
+                        Text("Car").font(.system(size: 14, weight: .bold))
+                        Text("Open Hyperday").font(.system(size: 12, weight: .semibold))
                     }
                 }
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
                 Spacer(minLength: 0)
-                Image("CarFront").resizable().scaledToFit().frame(maxWidth: 66)
+                Image("CarFront").resizable().scaledToFit().frame(maxWidth: 50)
             }
         case .accessoryInline:
             if let c {
@@ -116,6 +130,11 @@ struct CarBatteryView: View {
         default:
             gauge(c)
         }
+    }
+
+    static func ago(_ d: Date, _ now: Date) -> String {
+        let m = max(0, Int(now.timeIntervalSince(d) / 60))
+        return m < 1 ? "just now" : (m < 60 ? "\(m)m ago" : "\(m / 60)h ago")
     }
 
     @ViewBuilder

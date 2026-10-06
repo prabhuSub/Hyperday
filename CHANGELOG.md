@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### v41
+- **Lock Screen car card, more detail:** battery · range, lock icon + inside temperature, Leave-by (or place · last read), with a smaller front picture.
+- **Car tab icon:** a front view of the car.
+- **Car tab status chips:** Locked · Sentry · Charge port · Inside · Windows · Tires under the 3D car, always visible. Windows and tire warnings are now read from Tesla (same read, no extra cost). The 3D stage background follows light/dark.
+
 ### v39–v40
 - **Car section back** (tab with your car's outline, Settings › Car, all car widgets).
 - **Front view in every car widget:** a new matte (no gloss) straight-on render of your Quicksilver Model Y replaces the side/3⁄4 picture, including the Lock Screen gauges.
