@@ -127,6 +127,9 @@ struct InfoRow: View {
                         .minimumScaleFactor(0.6)
                         .contentTransition(.numericText())
                     Caps(item.label)
+                        .lineLimit(1)                 // v37: one line in every tile ("MEETINGS LEFT" wrapped)
+                        .minimumScaleFactor(0.7)
+                        .allowsTightening(true)
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
