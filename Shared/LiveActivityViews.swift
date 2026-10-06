@@ -358,14 +358,15 @@ struct PhasesStrip: View {
             Text(label).font(.system(size: 11, weight: .semibold)).opacity(0.75).lineLimit(1)
             Capsule()
                 .fill(LinearGradient(colors: [col, col.opacity(0.55)], startPoint: .leading, endPoint: .trailing))
-                .frame(height: inIsland ? 14 : 22)
+                .frame(height: 26)   // v34: thick like the mockup, in the Island too
                 .overlay(alignment: .leading) {
-                    if knob { Circle().fill(.white).frame(width: inIsland ? 10 : 16, height: inIsland ? 10 : 16).padding(.leading, 2) }
+                    if knob { Circle().fill(.white).frame(width: 20, height: 20).padding(.leading, 3) }
                 }
             if let left, left > Date.now {
                 HStack(spacing: 3) {
-                    Text(timerInterval: Date.now...left, countsDown: true).monospacedDigit()
-                    Text("left")
+                    Text(timerInterval: Date.now...left, countsDown: true).monospacedDigit().fixedSize()   // keeps its seconds
+                    Text("left").fixedSize()
+                    Spacer(minLength: 0)
                 }
                 .font(.system(size: 12, weight: .bold)).lineLimit(1)
             } else {
