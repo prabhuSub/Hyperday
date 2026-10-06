@@ -49,6 +49,7 @@ struct SettingsView: View {
                     DayCloseSettingsCard()
                     RealitySettingsCard()
                     BackupCard()
+                    CarSettingsCard()
                     focusCard
 
                     VStack(alignment: .leading, spacing: 10) {

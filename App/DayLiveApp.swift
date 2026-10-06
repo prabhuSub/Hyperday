@@ -12,6 +12,7 @@ struct DayLiveApp: App {
     @StateObject private var categories = CategoryStore.shared
     @StateObject private var history = HistoryStore.shared
     @StateObject private var recap = RecapCenter.shared
+    @StateObject private var cars = CarStore.shared
     @State private var showCloseDay = false
 
     init() {
@@ -44,11 +45,13 @@ struct DayLiveApp: App {
                 .environmentObject(activity)
                 .environmentObject(categories)
                 .environmentObject(history)
+                .environmentObject(cars)
                 .fullScreenCover(isPresented: $recap.showing) { WeeklyRecapView() }
                 // "Day closed · Review" on the Lock Screen opens hyperday://close
                 .onOpenURL { url in
                     if url.host == "close" { showCloseDay = true }
-                    if url.host == "calendar" { CalendarJump.open(.now) }   // calendar widget → Calendar tab, today
+                    if url.host == "calendar" { CalendarJump.open(.now) }
+                    if url.host == "car" { NotificationCenter.default.post(name: .openCarTab, object: nil) }   // car widgets   // calendar widget → Calendar tab, today
                 }
                 .sheet(isPresented: $showCloseDay) {
                     CloseDaySheet()
@@ -72,6 +75,7 @@ struct DayLiveApp: App {
                     await RealityStore.shared.refreshWorkouts()
                     await LiveActivityManager.shared.refresh()
                     await RecapCenter.shared.schedule()
+                    await CarStore.shared.refresh()   // at most every 10 min, never wakes the car
                 }
             }
         }

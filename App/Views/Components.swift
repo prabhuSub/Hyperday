@@ -516,13 +516,14 @@ struct LiveTimerPill: View {
 // MARK: - Floating tab bubble
 
 enum AppTab: String, CaseIterable, Identifiable {
-    case today, calendar, stats, settings
+    case today, calendar, car, stats, settings
     var id: String { rawValue }
     var title: String { rawValue.capitalized }
     var icon: String {
         switch self {
         case .today: return "today"
         case .calendar: return "calendar"
+        case .car: return "car"
         case .stats: return "stats"
         case .settings: return "settings"
         }
@@ -547,6 +548,9 @@ struct RootView: View {
             TabRoot(title: "Calendar") { CalendarTabView().tabFade(tab == .calendar) }
                 .tabItem { Label { Text(AppTab.calendar.title) } icon: { Image("hd-tab-cal-\(calDay)").renderingMode(.template) } }   // today's date
                 .tag(AppTab.calendar)
+            TabRoot(title: "Car") { CarView().tabFade(tab == .car) }   // v31: your Model Y in 3D
+                .tabItem { Label { Text(AppTab.car.title) } icon: { Image("hd-tab-car").renderingMode(.template) } }
+                .tag(AppTab.car)
             TabRoot(title: "Stats") { StatsView().tabFade(tab == .stats) }
                 .tabItem { Label { Text(AppTab.stats.title) } icon: { Image("hd-tab-" + AppTab.stats.icon).renderingMode(.template) } }
                 .tag(AppTab.stats)
@@ -558,6 +562,7 @@ struct RootView: View {
         .onReceive(NotificationCenter.default.publisher(for: CalendarJump.notification)) { _ in
             tab = .calendar
         }
+        .onReceive(NotificationCenter.default.publisher(for: .openCarTab)) { _ in tab = .car }
         // The Calendar tab shows today's date: redraw at midnight and whenever the app comes back.
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
             calDay = Calendar.current.component(.day, from: .now)
@@ -829,4 +834,9 @@ extension ToolbarContent {
             self
         }
     }
+}
+
+
+extension Notification.Name {
+    static let openCarTab = Notification.Name("hyperday.openCarTab")   // car widgets → Car tab
 }

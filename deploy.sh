@@ -18,6 +18,9 @@ if [[ -z "${DEVELOPMENT_TEAM:-}" ]]; then
   exit 1
 fi
 echo "$DEVELOPMENT_TEAM" > .team
+
+# Tesla: only the Client ID goes into the app (it's public by design). The secret never does.
+TESLA_CLIENT_ID=$(sed -n 's/^TESLA_CLIENT_ID=//p' .tesla-keys/client.env 2>/dev/null | tr -d '\r' || true)
 export DEVELOPMENT_TEAM
 echo "› Team $DEVELOPMENT_TEAM"
 
@@ -30,7 +33,7 @@ build() {
   xcodebuild -project DayLive.xcodeproj -scheme DayLive -configuration Debug \
     -destination 'generic/platform=iOS' -derivedDataPath build \
     -allowProvisioningUpdates -allowProvisioningDeviceRegistration \
-    DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM" CODE_SIGN_STYLE=Automatic \
+    DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM" CODE_SIGN_STYLE=Automatic TESLA_CLIENT_ID="${TESLA_CLIENT_ID:-}" \
     "$@" -quiet build
 }
 

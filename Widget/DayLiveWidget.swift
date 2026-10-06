@@ -12,6 +12,7 @@ struct DayLiveWidgetBundle: WidgetBundle {
         HyperdayCircleWidget()
         HyperdayHeatWidget()
         HyperdayCalendarWidget()
+        CarWidgetsBundle().body   // v31 car widgets
     }
 }
 
