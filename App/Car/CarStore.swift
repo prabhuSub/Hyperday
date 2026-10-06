@@ -33,7 +33,7 @@ final class CarStore: ObservableObject {
         do {
             try await TeslaAuth.shared.signIn()
             signedIn = true
-            await refresh(force: true)
+            await refresh(force: true, wake: true)   // once, so your real numbers show right away (2¢)
         } catch {
             message = error.localizedDescription
         }
@@ -69,6 +69,7 @@ final class CarStore: ObservableObject {
             }
             guard state == "online" else {
                 asleep = true
+                if car?.isSample == true { publish(nil) }   // never show sample numbers as your car
                 message = "Asleep · showing the last reading. Pull down to wake it (costs 2¢)."
                 return
             }

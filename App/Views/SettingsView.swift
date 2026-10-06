@@ -42,6 +42,8 @@ struct SettingsView: View {
                     }
                     .cardBox()
 
+                    CarSettingsCard()   // v32: near the top, easy to find
+
                     calendarsCard
 
                     rulesCard
@@ -49,7 +51,6 @@ struct SettingsView: View {
                     DayCloseSettingsCard()
                     RealitySettingsCard()
                     BackupCard()
-                    CarSettingsCard()
                     focusCard
 
                     VStack(alignment: .leading, spacing: 10) {

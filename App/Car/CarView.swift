@@ -19,6 +19,7 @@ struct CarView: View {
                         InfoItem(label: "Inside", value: c.insideF.map { "\($0)°F" } ?? "—", color: Theme.blue),
                     ])
                 }
+                plateRow
                 if !cars.signedIn { connectCard }
                 if let m = cars.message {
                     Text(m).font(.system(size: 12)).foregroundStyle(Theme.muted)
@@ -33,6 +34,18 @@ struct CarView: View {
         }
         .refreshable { await cars.refresh(force: true, wake: true) }   // pull down = wake + read (2¢)
         .task { await cars.refresh() }
+    }
+
+    /// Your plate, drawn on the 3D car. Stays on this iPhone.
+    private var plateRow: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "rectangle.and.text.magnifyingglass").foregroundStyle(Theme.muted)
+            Text("Plate").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text)
+            TextField("Type your plate", text: $cars.plate)
+                .textInputAutocapitalization(.characters).autocorrectionDisabled().submitLabel(.done)
+                .multilineTextAlignment(.trailing).font(.system(size: 15, weight: .heavy))
+        }
+        .cardBox(padding: 14)
     }
 
     private var statusLine: some View {
@@ -70,7 +83,7 @@ struct CarView: View {
                 }
             }
             HStack(spacing: 8) {
-                Text("Drag to turn · pinch to zoom")
+                Text("Drag to turn · pinch to zoom · double-tap")
                 Button { pins.resetCamera() } label: { Image(systemName: "arrow.counterclockwise") }
             }
             .font(.system(size: 11.5, weight: .bold))
@@ -146,16 +159,9 @@ struct CarBadge: View {
 @MainActor
 final class CarPins: ObservableObject {
     @Published var points: [String: CGPoint] = [:]
-    weak var view: SCNView?
-    var home: SCNVector3 = SCNVector3(4.3, 1.5, 4.6)
+    var onReset: (() -> Void)?
 
-    func resetCamera() {
-        guard let v = view, let cam = v.pointOfView else { return }
-        SCNTransaction.begin(); SCNTransaction.animationDuration = 0.5
-        cam.position = home
-        cam.look(at: SCNVector3(0, 0.75, 0))
-        SCNTransaction.commit()
-    }
+    func resetCamera() { onReset?() }
 }
 
 struct CarSceneView: UIViewRepresentable {
@@ -170,11 +176,17 @@ struct CarSceneView: UIViewRepresentable {
         let v = SCNView()
         v.backgroundColor = .clear
         v.antialiasingMode = .multisampling4X
-        v.allowsCameraControl = true
-        v.defaultCameraController.interactionMode = .orbitTurntable
-        v.defaultCameraController.target = SCNVector3(0, 0.75, 0)
+        // v32: Tesla-screen feel. The car spins on a turntable under your finger (with momentum),
+        // a little tilt up/down, pinch to zoom within limits, double-tap to reset. No free camera.
+        v.allowsCameraControl = false
+        v.rendersContinuously = true
         v.delegate = context.coordinator
-        pins.view = v
+        let c = context.coordinator
+        v.addGestureRecognizer(UIPanGestureRecognizer(target: c, action: #selector(Coordinator.pan(_:))))
+        v.addGestureRecognizer(UIPinchGestureRecognizer(target: c, action: #selector(Coordinator.pinch(_:))))
+        let dbl = UITapGestureRecognizer(target: c, action: #selector(Coordinator.reset)); dbl.numberOfTapsRequired = 2
+        v.addGestureRecognizer(dbl)
+        pins.onReset = { [weak c] in c?.reset() }
 
         guard let url = Bundle.main.url(forResource: "Car", withExtension: "usdz"),
               let scene = try? SCNScene(url: url) else { return v }
@@ -183,7 +195,10 @@ struct CarSceneView: UIViewRepresentable {
         // Blender wrote it Z-up (length along Y); turn it Y-up for SceneKit if the loader didn't.
         let (mn, mx) = car.boundingBox
         if (mx.y - mn.y) > 3 { car.eulerAngles.x = -.pi / 2 }
-        scene.rootNode.addChildNode(car)
+        let turn = SCNNode()                        // the turntable
+        turn.addChildNode(car)
+        scene.rootNode.addChildNode(turn)
+        c.turn = turn
         context.coordinator.anchors = Self.anchors.compactMap { car.childNode(withName: $0, recursively: true) }
 
         Self.paintPlate(in: car, text: plate)
@@ -195,8 +210,9 @@ struct CarSceneView: UIViewRepresentable {
         key.eulerAngles = SCNVector3(-0.9, 0.6, 0); scene.rootNode.addChildNode(key)
 
         let camNode = SCNNode(); camNode.camera = SCNCamera(); camNode.camera?.fieldOfView = 34
-        camNode.position = pins.home; camNode.look(at: SCNVector3(0, 0.75, 0))
         scene.rootNode.addChildNode(camNode)
+        c.cam = camNode
+        c.apply()
         v.scene = scene
         v.pointOfView = camNode
         return v
@@ -214,7 +230,62 @@ struct CarSceneView: UIViewRepresentable {
         var plate = ""
         private var last: TimeInterval = 0
 
+        weak var turn: SCNNode?
+        weak var cam: SCNNode?
+        static let homeYaw: Float = -0.8, homeTilt: Float = 0.2, homeDist: Float = 7.4
+        var yaw = homeYaw, tilt = homeTilt, dist = homeDist
+        private var spin: Float = 0                     // radians per frame after a flick
+        private var startDist: Float = 7.4
+        private var link: CADisplayLink?
+
         init(pins: CarPins) { self.pins = pins }
+
+        func apply() {
+            turn?.eulerAngles.y = yaw
+            cam?.position = SCNVector3(0, 0.75 + dist * sin(tilt), dist * cos(tilt))
+            cam?.look(at: SCNVector3(0, 0.75, 0))
+        }
+
+        @objc func pan(_ g: UIPanGestureRecognizer) {
+            let t = g.translation(in: g.view); g.setTranslation(.zero, in: g.view)
+            switch g.state {
+            case .began: stopSpin()
+            case .changed:
+                yaw += Float(t.x) * 0.009
+                tilt = min(0.55, max(0.02, tilt + Float(t.y) * 0.004))
+                apply()
+            case .ended, .cancelled:
+                spin = Float(g.velocity(in: g.view).x) * 0.009 / 60
+                if abs(spin) > 0.002 { startSpin() }
+            default: break
+            }
+        }
+
+        @objc func pinch(_ g: UIPinchGestureRecognizer) {
+            if g.state == .began { startDist = dist; stopSpin() }
+            dist = min(11, max(5.2, startDist / Float(max(g.scale, 0.1))))
+            apply()
+        }
+
+        @objc func reset() {
+            stopSpin()
+            yaw = Self.homeYaw; tilt = Self.homeTilt; dist = Self.homeDist
+            SCNTransaction.begin(); SCNTransaction.animationDuration = 0.6
+            SCNTransaction.animationTimingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            apply()
+            SCNTransaction.commit()
+        }
+
+        private func startSpin() {
+            link?.invalidate()
+            let l = CADisplayLink(target: self, selector: #selector(step)); l.add(to: .main, forMode: .common); link = l
+        }
+        private func stopSpin() { link?.invalidate(); link = nil; spin = 0 }
+        @objc private func step() {
+            yaw += spin; spin *= 0.95                   // glides to a stop, like the Tesla screen
+            apply()
+            if abs(spin) < 0.0004 { stopSpin() }
+        }
 
         func renderer(_ renderer: SCNSceneRenderer, updateAtTime time: TimeInterval) {
             guard time - last > 1.0 / 20, let cam = renderer.pointOfView else { return }
