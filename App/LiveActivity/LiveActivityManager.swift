@@ -139,25 +139,30 @@ final class LiveActivityManager: ObservableObject {
     }
 
     /// Work + Deep Work time so far today, in total and per hour (6 AM–10 PM).
+    /// v34: time you actually spent in blocks today (every category, overlaps counted once), up to now.
+    /// It used to count only Work / Deep Work, so a day of meetings showed "0m".
     static func focus(_ blocks: [Block], now: Date) -> (minutes: Int, byHour: [Double]) {
-        let cats = CategoryStore.shared
         let cal = Calendar.current
         let six = cal.date(bySettingHour: 6, minute: 0, second: 0, of: now) ?? now
-        var total: TimeInterval = 0
+        let today = cal.startOfDay(for: now)
+        var spans: [(Date, Date)] = blocks.compactMap { b in
+            let s = max(b.start, today), e = min(b.end, now)
+            return e > s ? (s, e) : nil
+        }.sorted { $0.0 < $1.0 }
+        var merged: [(Date, Date)] = []
+        for sp in spans {
+            if let last = merged.last, sp.0 <= last.1 { merged[merged.count - 1].1 = max(last.1, sp.1) } else { merged.append(sp) }
+        }
+        spans = merged
         var hours = Array(repeating: 0.0, count: 16)
-        for b in blocks {
-            let ids = cats.categories(for: b).map(\.id)
-            let share = Double(ids.filter { $0 == "work" || $0 == "deepwork" }.count) / Double(max(ids.count, 1))
-            guard share > 0 else { continue }
-            let end = min(b.end, now)
-            guard end > b.start else { continue }
-            total += end.timeIntervalSince(b.start) * share
+        for (s, e) in spans {
             for h in 0..<16 {
                 let hs = six.addingTimeInterval(Double(h) * 3600), he = hs.addingTimeInterval(3600)
-                let overlap = min(end, he).timeIntervalSince(max(b.start, hs))
-                if overlap > 0 { hours[h] += overlap / 60 * share }
+                let overlap = min(e, he).timeIntervalSince(max(s, hs))
+                if overlap > 0 { hours[h] += overlap / 60 }
             }
         }
+        let total = spans.reduce(0.0) { $0 + $1.1.timeIntervalSince($1.0) }
         return (Int(total / 60), hours)
     }
 

@@ -82,20 +82,21 @@ struct CarView: View {
                         .position(p)
                 }
             }
-            HStack(spacing: 8) {
-                Text("Drag to turn · pinch to zoom · double-tap")
-                Button { pins.resetCamera() } label: { Image(systemName: "arrow.counterclockwise") }
+            // v34: like the car's screen. Drag spins the car; these jump to a view (tap again any time to get back).
+            HStack(spacing: 6) {
+                ForEach(CarAngle.allCases) { a in
+                    Button(a.title) { pins.go(a) }
+                        .font(.system(size: 12, weight: .heavy))
+                        .foregroundStyle(pins.angle == a ? .black : .white)
+                        .padding(.horizontal, 11).frame(height: 28)
+                        .background(Capsule().fill(pins.angle == a ? Color.white : Color.white.opacity(0.12)))
+                }
             }
-            .font(.system(size: 11.5, weight: .bold))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 12).padding(.vertical, 6)
-            .background(Capsule().fill(Color.black.opacity(0.45)))
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             .padding(.bottom, 12)
         }
-        .frame(height: 330)
-        .background(RadialGradient(colors: [Color(hex: "#F4F5F7"), Color(hex: "#D5D9DE")], center: .init(x: 0.5, y: 0.35),
-                                   startRadius: 10, endRadius: 320))
+        .frame(height: 360)
+        .background(Color(red: 0.06, green: 0.07, blue: 0.08))
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
@@ -155,13 +156,23 @@ struct CarBadge: View {
 
 // MARK: - SceneKit
 
+enum CarAngle: String, CaseIterable, Identifiable {
+    case threeQuarter, side, front, rear, top
+    var id: String { rawValue }
+    var title: String {
+        switch self { case .threeQuarter: return "3/4"; case .side: return "Side"; case .front: return "Front"; case .rear: return "Rear"; case .top: return "Top" }
+    }
+}
+
 /// Where each anchor (baked into Car.usdz) lands on screen, updated as you turn the car.
 @MainActor
 final class CarPins: ObservableObject {
     @Published var points: [String: CGPoint] = [:]
-    var onReset: (() -> Void)?
+    @Published var angle: CarAngle? = .threeQuarter
+    var onGo: ((CarAngle) -> Void)?
 
-    func resetCamera() { onReset?() }
+    func go(_ a: CarAngle) { angle = a; onGo?(a) }
+    func resetCamera() { go(.threeQuarter) }
 }
 
 struct CarSceneView: UIViewRepresentable {
@@ -186,7 +197,6 @@ struct CarSceneView: UIViewRepresentable {
         v.addGestureRecognizer(UIPinchGestureRecognizer(target: c, action: #selector(Coordinator.pinch(_:))))
         let dbl = UITapGestureRecognizer(target: c, action: #selector(Coordinator.reset)); dbl.numberOfTapsRequired = 2
         v.addGestureRecognizer(dbl)
-        pins.onReset = { [weak c] in c?.reset() }
 
         guard let url = Bundle.main.url(forResource: "Car", withExtension: "usdz"),
               let scene = try? SCNScene(url: url) else { return v }
@@ -203,28 +213,36 @@ struct CarSceneView: UIViewRepresentable {
 
         Self.paintPlate(in: car, text: plate)
 
-        // v33: parked on a Point Reyes cliff road. The 360° scenery is the background and what the paint reflects.
-        if let pano = Bundle.main.url(forResource: "PointReyes360", withExtension: "jpg").flatMap({ UIImage(contentsOfFile: $0.path) }) {
-            scene.background.contents = pano
-            scene.lightingEnvironment.contents = pano
-            scene.lightingEnvironment.intensity = 1.25
-        } else {
-            scene.lightingEnvironment.contents = Self.environment()
-            scene.lightingEnvironment.intensity = 1.0
+        // v34: the car's own screen look. Dark space, a low-poly grid floor and wireframe mountains,
+        // all real 3D, so the world turns with you as you spin the car.
+        let bg = UIColor(red: 0.06, green: 0.07, blue: 0.08, alpha: 1)
+        scene.background.contents = Self.skyGradient()
+        scene.lightingEnvironment.contents = Self.environment()     // studio light for the paint
+        scene.lightingEnvironment.intensity = 1.3
+        scene.fogColor = bg; scene.fogStartDistance = 18; scene.fogEndDistance = 150; scene.fogDensityExponent = 1.4
+        let key = SCNNode(); key.light = SCNLight(); key.light?.type = .directional; key.light?.intensity = 500
+        key.light?.castsShadow = true; key.light?.shadowMode = .deferred; key.light?.shadowRadius = 8
+        key.light?.shadowColor = UIColor(white: 0, alpha: 0.7); key.light?.shadowSampleCount = 8
+        key.light?.automaticallyAdjustsShadowProjection = true
+        key.eulerAngles = SCNVector3(-1.25, 0.4, 0); scene.rootNode.addChildNode(key)
+        let ground = Self.groundY(car)
+        Self.addGrid(to: scene.rootNode, y: ground)
+        Self.addMountains(to: scene.rootNode, y: ground)
+
+        // Which way the car faces, from the anchors baked into the model, so the view buttons are exact.
+        if let f = car.childNode(withName: "Anchor_Frunk", recursively: true),
+           let r = car.childNode(withName: "Anchor_Trunk", recursively: true),
+           let d = car.childNode(withName: "Anchor_DriverDoor", recursively: true) {
+            let fw = f.worldPosition, rw = r.worldPosition, dw = d.worldPosition
+            c.front = Self.flatUnit(SCNVector3(fw.x - rw.x, 0, fw.z - rw.z))
+            c.left = Self.flatUnit(SCNVector3(dw.x, 0, dw.z))
         }
-        let key = SCNNode(); key.light = SCNLight(); key.light?.type = .directional; key.light?.intensity = 450
-        key.light?.castsShadow = true; key.light?.shadowMode = .deferred; key.light?.shadowRadius = 6
-        key.light?.shadowColor = UIColor(white: 0, alpha: 0.55); key.light?.shadowSampleCount = 8
-        key.light?.orthographicScale = 6; key.light?.automaticallyAdjustsShadowProjection = true
-        key.eulerAngles = SCNVector3(-1.1, 0.5, 0); scene.rootNode.addChildNode(key)
-        // Real ground under the car: the cliff road (your lane, double yellow, white edge) and the grass verge.
-        // The 360° only does the far scenery, so the car never slides over a painted road as you orbit.
-        Self.addRoad(to: scene.rootNode, y: Self.groundY(car))
+        pins.onGo = { [weak c] a in c?.go(a) }
 
         let camNode = SCNNode(); camNode.camera = SCNCamera(); camNode.camera?.fieldOfView = 34
         scene.rootNode.addChildNode(camNode)
         c.cam = camNode
-        c.apply()
+        c.go(.threeQuarter, animated: false)
         v.scene = scene
         v.pointOfView = camNode
         return v
@@ -244,32 +262,57 @@ struct CarSceneView: UIViewRepresentable {
 
         weak var turn: SCNNode?
         weak var cam: SCNNode?
-        static let homeYaw: Float = 2.35, homeTilt: Float = 0.16, homeDist: Float = 9.2
-        var yaw = homeYaw, tilt = homeTilt, dist = homeDist
+        var front = SCNVector3(0, 0, 1), left = SCNVector3(1, 0, 0)    // set from the model's anchors
+        var yaw: Float = 0, tilt: Float = 0.17, dist: Float = 9.6
         private var spin: Float = 0                     // radians per frame after a flick
-        private var startDist: Float = 9.2
+        private var startDist: Float = 9.6
         private var link: CADisplayLink?
 
         init(pins: CarPins) { self.pins = pins }
 
-        /// v33: the car stays parked on the road and the camera orbits it, so the Point Reyes scenery
-        /// swings past as you drag (same feel as the turntable: same yaw, opposite side).
+        /// Camera on a circle around the parked car. yaw = angle around it, tilt = height of the view.
         func apply() {
-            let a = -yaw, flat = dist * cos(tilt)
-            cam?.position = SCNVector3(flat * sin(a), 0.75 + dist * sin(tilt), flat * cos(a))
-            cam?.look(at: SCNVector3(0, 0.75, 0))
+            let flat = dist * cos(tilt)
+            let pos = SCNVector3(flat * sin(yaw), 0.7 + dist * sin(tilt), flat * cos(yaw))
+            cam?.position = pos
+            // Near the top, "up" on screen = away from the camera, so the view never flips or rolls.
+            let up = tilt > 1.1 ? SCNVector3(-sin(yaw), 0, -cos(yaw)) : SCNVector3(0, 1, 0)
+            cam?.look(at: SCNVector3(0, 0.7, 0), up: up, localFront: SCNVector3(0, 0, -1))
+        }
+
+        func go(_ a: CarAngle, animated: Bool = true) {
+            stopSpin()
+            let dir: SCNVector3
+            switch a {
+            case .front: dir = front
+            case .rear: dir = SCNVector3(-front.x, 0, -front.z)
+            case .side: dir = left
+            case .threeQuarter, .top: dir = CarSceneView.flatUnit(SCNVector3(front.x + left.x * 0.9, 0, front.z + left.z * 0.9))
+            }
+            var target = atan2(dir.x, dir.z)
+            while target - yaw > .pi { target -= 2 * .pi }             // turn the short way round
+            while target - yaw < -.pi { target += 2 * .pi }
+            yaw = target
+            tilt = a == .top ? 1.32 : (a == .side ? 0.08 : 0.17)
+            dist = a == .top ? 10.5 : 9.6
+            guard animated else { apply(); return }
+            SCNTransaction.begin(); SCNTransaction.animationDuration = 0.7
+            SCNTransaction.animationTimingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            apply()
+            SCNTransaction.commit()
         }
 
         @objc func pan(_ g: UIPanGestureRecognizer) {
             let t = g.translation(in: g.view); g.setTranslation(.zero, in: g.view)
             switch g.state {
-            case .began: stopSpin()
+            case .began:
+                stopSpin()
+                DispatchQueue.main.async { [pins] in pins.angle = nil }
             case .changed:
-                yaw += Float(t.x) * 0.009
-                tilt = min(1.45, max(0.03, tilt + Float(t.y) * 0.005))   // up to almost straight down on the roof, never below the road
+                yaw -= Float(t.x) * 0.009                 // spin only, like the car's screen
                 apply()
             case .ended, .cancelled:
-                spin = Float(g.velocity(in: g.view).x) * 0.009 / 60
+                spin = -Float(g.velocity(in: g.view).x) * 0.009 / 60
                 if abs(spin) > 0.002 { startSpin() }
             default: break
             }
@@ -277,17 +320,13 @@ struct CarSceneView: UIViewRepresentable {
 
         @objc func pinch(_ g: UIPinchGestureRecognizer) {
             if g.state == .began { startDist = dist; stopSpin() }
-            dist = min(13, max(6.2, startDist / Float(max(g.scale, 0.1))))
+            dist = min(14, max(6.5, startDist / Float(max(g.scale, 0.1))))
             apply()
         }
 
         @objc func reset() {
-            stopSpin()
-            yaw = Self.homeYaw; tilt = Self.homeTilt; dist = Self.homeDist
-            SCNTransaction.begin(); SCNTransaction.animationDuration = 0.6
-            SCNTransaction.animationTimingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            apply()
-            SCNTransaction.commit()
+            go(.threeQuarter)
+            DispatchQueue.main.async { [pins] in pins.angle = .threeQuarter }
         }
 
         private func startSpin() {
@@ -362,6 +401,75 @@ struct CarSceneView: UIViewRepresentable {
         let gravel = SCNMaterial(); gravel.lightingModel = .physicallyBased; gravel.diffuse.contents = UIColor(red: 0.42, green: 0.37, blue: 0.3, alpha: 1)
         gravel.roughness.contents = 1.0
         flat(2.2, length, -2.2 - 1.1, gravel, lift: -0.02)          // a strip of shoulder, then the cliff edge
+    }
+
+    static func flatUnit(_ v: SCNVector3) -> SCNVector3 {
+        let l = max(0.0001, (v.x * v.x + v.z * v.z).squareRoot())
+        return SCNVector3(v.x / l, 0, v.z / l)
+    }
+
+    /// Dark sky, a touch lighter at the horizon (the car screen's look).
+    static func skyGradient() -> UIImage {
+        let size = CGSize(width: 64, height: 256)
+        return UIGraphicsImageRenderer(size: size).image { ctx in
+            let colors = [UIColor(red: 0.05, green: 0.055, blue: 0.065, alpha: 1).cgColor,
+                          UIColor(red: 0.13, green: 0.14, blue: 0.16, alpha: 1).cgColor,
+                          UIColor(red: 0.06, green: 0.07, blue: 0.08, alpha: 1).cgColor] as CFArray
+            let g = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 0.5, 1])!
+            ctx.cgContext.drawLinearGradient(g, start: .zero, end: CGPoint(x: 0, y: size.height), options: [])
+        }
+    }
+
+    /// Low-poly grid floor: squares cut into triangles, faint lines, fading into the dark.
+    static func addGrid(to root: SCNNode, y: Float) {
+        let tile = UIGraphicsImageRenderer(size: CGSize(width: 256, height: 256)).image { ctx in
+            UIColor(red: 0.085, green: 0.09, blue: 0.1, alpha: 1).setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 256, height: 256))
+            let line = UIBezierPath(); line.lineWidth = 2
+            line.move(to: CGPoint(x: 0, y: 0)); line.addLine(to: CGPoint(x: 256, y: 0))
+            line.move(to: CGPoint(x: 0, y: 0)); line.addLine(to: CGPoint(x: 0, y: 256))
+            line.move(to: CGPoint(x: 0, y: 256)); line.addLine(to: CGPoint(x: 256, y: 0))     // the triangle cut
+            UIColor(white: 0.3, alpha: 1).setStroke(); line.stroke()
+        }
+        let m = SCNMaterial(); m.lightingModel = .lambert; m.diffuse.contents = tile
+        m.diffuse.wrapS = .repeat; m.diffuse.wrapT = .repeat; m.diffuse.contentsTransform = SCNMatrix4MakeScale(80, 80, 1)
+        m.diffuse.mipFilter = .linear
+        let plane = SCNPlane(width: 320, height: 320); plane.materials = [m]
+        let n = SCNNode(geometry: plane); n.eulerAngles.x = -.pi / 2; n.position = SCNVector3(0, y, 0)
+        root.addChildNode(n)
+    }
+
+    /// A ring of low-poly hills on the horizon, dark faces with light wire edges.
+    static func addMountains(to root: SCNNode, y: Float) {
+        var verts: [SCNVector3] = []
+        var rng = SystemRandomNumberGenerator()
+        let seg = 90, radii: [Float] = [48, 66, 88, 115]
+        var h = [[Float]](repeating: [Float](repeating: 0, count: seg), count: radii.count)
+        for i in 0..<seg {
+            let wave = 0.5 + 0.5 * sin(Float(i) / Float(seg) * .pi * 6)
+            h[1][i] = 2 + 9 * wave * Float.random(in: 0.6...1.2, using: &rng)
+            h[2][i] = 4 + 16 * wave * Float.random(in: 0.5...1.2, using: &rng)
+            h[3][i] = 1 + 6 * Float.random(in: 0.3...1.0, using: &rng)
+        }
+        func p(_ r: Int, _ i: Int) -> SCNVector3 {
+            let a = Float(i % seg) / Float(seg) * 2 * .pi
+            return SCNVector3(radii[r] * cos(a), y + h[r][i % seg], radii[r] * sin(a))
+        }
+        for r in 0..<(radii.count - 1) {
+            for i in 0..<seg {
+                verts += [p(r, i), p(r + 1, i), p(r + 1, i + 1), p(r, i), p(r + 1, i + 1), p(r, i + 1)]
+            }
+        }
+        let src = SCNGeometrySource(vertices: verts)
+        let idx = SCNGeometryElement(indices: (0..<Int32(verts.count)).map { $0 }, primitiveType: .triangles)
+        let solid = SCNGeometry(sources: [src], elements: [idx])
+        let sm = SCNMaterial(); sm.lightingModel = .constant; sm.diffuse.contents = UIColor(red: 0.07, green: 0.075, blue: 0.085, alpha: 1)
+        sm.isDoubleSided = true; solid.materials = [sm]
+        root.addChildNode(SCNNode(geometry: solid))
+        let wire = SCNGeometry(sources: [src], elements: [idx])
+        let wm = SCNMaterial(); wm.lightingModel = .constant; wm.diffuse.contents = UIColor(white: 0.42, alpha: 1)
+        wm.fillMode = .lines; wm.isDoubleSided = true; wire.materials = [wm]
+        let wn = SCNNode(geometry: wire); wn.position.y = 0.02
+        root.addChildNode(wn)
     }
 
     /// Lowest point of the car (the tyres) after it's turned upright.

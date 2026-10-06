@@ -86,7 +86,7 @@ struct LockScreenCard: View {
     private var score: String? {
         guard let total = state.totalCount, total > 0 else { return nil }
         var t = "\(state.doneCount ?? 0)/\(total) done"
-        if let f = state.focusMinutes, f > 0 { t += " · " + (f >= 60 ? "\(f / 60)h \(f % 60)m" : "\(f)m") + " focus" }
+        if let f = state.focusMinutes, f > 0 { t += " · " + (f >= 60 ? "\(f / 60)h \(f % 60)m" : "\(f)m") + " active" }
         return t
     }
 
@@ -898,14 +898,14 @@ struct DayClosedCard: View {
         func u(_ s: String) -> Text { Text(s).font(.system(size: big * 0.45, weight: .heavy)) }
         return Group {
             if compact {
-                m >= 60 ? n("\(m / 60)h \(m % 60)m") + u(" focus") : n("\(m)m") + u(" focus")
+                m >= 60 ? n("\(m / 60)h \(m % 60)m") + u(" active") : n("\(m)m") + u(" active")
             } else if m >= 60 {
                 VStack(alignment: .leading, spacing: -6) {
                     n("\(m / 60)h")
-                    n("\(m % 60)m") + u(" focus")
+                    n("\(m % 60)m") + u(" active")
                 }
             } else {
-                n("\(m)m") + u(" focus")
+                n("\(m)m") + u(" active")
             }
         }
         .foregroundStyle(DayLiveStyle.doneGreen)
