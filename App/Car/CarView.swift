@@ -328,16 +328,16 @@ struct CarSceneView: UIViewRepresentable {
         context.coordinator.anchors = Self.anchors.compactMap { car.childNode(withName: $0, recursively: true) }
 
         Self.paintPlate(in: car, text: plate)
-        Self.makeMatte(car)   // v43: matte finish everywhere, ~1–2 % reflection
+        Self.softenGloss(car)   // v46: back to the v40 gloss, 10 % less (the matte v43–v45 read as white)
 
         // v34: the car's own screen look. A low-poly grid floor and wireframe mountains, all real 3D,
         // so the world turns with you as you spin the car. v40: dark or light to match the phone.
         scene.lightingEnvironment.contents = Self.environment()     // studio light for the paint
-        scene.lightingEnvironment.intensity = 0.65                  // v40: reflections 50% lower (was 1.3)
+        scene.lightingEnvironment.intensity = 0.585                 // v46: v40's 0.65 less 10 % (v32 was 1.3)
         scene.fogStartDistance = 18; scene.fogEndDistance = 150; scene.fogDensityExponent = 1.4
         // v40: a soft, diffused spotlight from above, so the car is lit like a showroom.
         let spot = SCNNode(); spot.name = "hd-spot"
-        let sl = SCNLight(); sl.type = .spot; sl.intensity = 650   // v44: a bit softer on the matte paint
+        let sl = SCNLight(); sl.type = .spot; sl.intensity = 850   // v46: back to v40
         sl.color = UIColor(red: 1, green: 0.98, blue: 0.95, alpha: 1)
         sl.spotInnerAngle = 25; sl.spotOuterAngle = 100          // wide, soft edge = diffused
         sl.castsShadow = true; sl.shadowRadius = 14; sl.shadowSampleCount = 16; sl.shadowMode = .deferred
@@ -540,25 +540,14 @@ struct CarSceneView: UIViewRepresentable {
     }
 
     /// Low-poly grid floor: squares cut into triangles, faint lines, fading into the dark.
-    /// v43: matte car. No metal, no clear coat, very rough surfaces, so reflections drop to the
-    /// ~2 % every non-metal has (paint, trim, wheels). Glass stays a little smoother so it still reads as glass.
-    static func makeMatte(_ node: SCNNode) {
+    /// v46: the model's own glossy paint (as in v40–v42), with every clear coat and metal reflection
+    /// 10 % lower. Paired with the lighting environment at 0.585 (v40's 0.65 × 0.9).
+    static func softenGloss(_ node: SCNNode) {
         node.enumerateHierarchy { n, _ in
             guard let g = n.geometry else { return }
             for m in g.materials {
-                let name = (m.name ?? "").lowercased()
-                let glass = name.contains("vidro") || name.contains("glass") || name.contains("lens")
-                // v44: the body paint is the one material that was fully metallic. Without its dark
-                // reflections it read as white, so give it Quicksilver's real, darker grey directly.
-                let wasMetal = ((m.metalness.contents as? NSNumber)?.doubleValue ?? 0) > 0.8
-                if name.contains("pintura") || name.contains("paint") || wasMetal {
-                    m.diffuse.contents = UIColor(red: 0.30, green: 0.31, blue: 0.33, alpha: 1)
-                }
-                m.lightingModel = .physicallyBased
-                m.metalness.contents = 0.0
-                m.roughness.contents = glass ? 0.5 : 0.92
-                m.clearCoat.contents = 0.0
-                m.clearCoatRoughness.contents = 1.0
+                if let c = (m.clearCoat.contents as? NSNumber)?.doubleValue { m.clearCoat.contents = c * 0.9 }
+                if let r = (m.roughness.contents as? NSNumber)?.doubleValue { m.roughness.contents = min(1, r + (1 - r) * 0.1) }
             }
         }
     }
