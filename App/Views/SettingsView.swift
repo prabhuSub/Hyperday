@@ -43,7 +43,7 @@ struct SettingsView: View {
             Section {
                 link("Backup", "externaldrive.fill", .gray) { CardSettingsPage(title: "Backup") { BackupCard() } }
                 link("Developer", "hammer.fill", Color(white: 0.4)) { DeveloperSettings() }
-                // Car is off for now (v35). Bring back: Features.car = true.
+                // Car section: Features.car (back on in v39).
                 if Features.car {
                     link("Car", "car.fill", .red) { CardSettingsPage(title: "Car") { CarSettingsCard() } }
                 }

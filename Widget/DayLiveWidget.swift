@@ -12,7 +12,7 @@ struct DayLiveWidgetBundle: WidgetBundle {
         HyperdayCircleWidget()
         HyperdayHeatWidget()
         HyperdayCalendarWidget()
-        // CarWidgetsBundle().body   // v35: the big car widgets stay off with the Car tab
+        CarWidgetsBundle().body           // v39: big car widgets back with the Car tab
         HyperdayCarBatteryWidget()        // v38: small car widgets (A + inline J1)
         HyperdayCarBatteryLockWidget()    // v38: I
         HyperdayCarListWidget()           // v38: M

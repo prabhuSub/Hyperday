@@ -527,7 +527,7 @@ struct LiveTimerPill: View {
 /// v35: switches for whole sections of the app.
 enum Features {
     /// The Car tab, its Settings page, background reads and car widgets. Off while Prabhu reviews it.
-    static let car = false
+    static let car = true   // v39: back on (was off in v35–v38)
     /// v38: the small car widgets. Keeps car reads on (when the app opens or refreshes in the background,
     /// never waking the car) even while the Car tab is off.
     static let carWidgets = true
@@ -572,8 +572,10 @@ struct RootView: View {
                 Label { Text("Calendar") } icon: { Image("hd-tab-cal-\(calDay)").renderingMode(.template) }   // today's date
             }
             if Features.car {
-                Tab("Car", systemImage: "car", value: AppTab.car) {
+                Tab(value: AppTab.car) {
                     TabRoot(title: "Car") { CarView().tabFade(tab == .car) }
+                } label: {
+                    Label { Text("Car") } icon: { Image("hd-tab-car").renderingMode(.template) }   // your car's outline
                 }
             }
             Tab("Stats", systemImage: "chart.bar", value: AppTab.stats) {
