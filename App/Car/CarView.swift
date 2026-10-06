@@ -203,11 +203,23 @@ struct CarSceneView: UIViewRepresentable {
 
         Self.paintPlate(in: car, text: plate)
 
-        // Showroom light: soft environment for the metallic paint + one key light.
-        scene.lightingEnvironment.contents = Self.environment()
-        scene.lightingEnvironment.intensity = 1.0
-        let key = SCNNode(); key.light = SCNLight(); key.light?.type = .directional; key.light?.intensity = 350
-        key.eulerAngles = SCNVector3(-0.9, 0.6, 0); scene.rootNode.addChildNode(key)
+        // v33: parked on a Point Reyes cliff road. The 360° scenery is the background and what the paint reflects.
+        if let pano = Bundle.main.url(forResource: "PointReyes360", withExtension: "jpg").flatMap({ UIImage(contentsOfFile: $0.path) }) {
+            scene.background.contents = pano
+            scene.lightingEnvironment.contents = pano
+            scene.lightingEnvironment.intensity = 1.25
+        } else {
+            scene.lightingEnvironment.contents = Self.environment()
+            scene.lightingEnvironment.intensity = 1.0
+        }
+        let key = SCNNode(); key.light = SCNLight(); key.light?.type = .directional; key.light?.intensity = 450
+        key.light?.castsShadow = true; key.light?.shadowMode = .deferred; key.light?.shadowRadius = 6
+        key.light?.shadowColor = UIColor(white: 0, alpha: 0.55); key.light?.shadowSampleCount = 8
+        key.light?.orthographicScale = 6; key.light?.automaticallyAdjustsShadowProjection = true
+        key.eulerAngles = SCNVector3(-1.1, 0.5, 0); scene.rootNode.addChildNode(key)
+        // Real ground under the car: the cliff road (your lane, double yellow, white edge) and the grass verge.
+        // The 360° only does the far scenery, so the car never slides over a painted road as you orbit.
+        Self.addRoad(to: scene.rootNode, y: Self.groundY(car))
 
         let camNode = SCNNode(); camNode.camera = SCNCamera(); camNode.camera?.fieldOfView = 34
         scene.rootNode.addChildNode(camNode)
@@ -240,9 +252,11 @@ struct CarSceneView: UIViewRepresentable {
 
         init(pins: CarPins) { self.pins = pins }
 
+        /// v33: the car stays parked on the road and the camera orbits it, so the Point Reyes scenery
+        /// swings past as you drag (same feel as the turntable: same yaw, opposite side).
         func apply() {
-            turn?.eulerAngles.y = yaw
-            cam?.position = SCNVector3(0, 0.75 + dist * sin(tilt), dist * cos(tilt))
+            let a = -yaw, flat = dist * cos(tilt)
+            cam?.position = SCNVector3(flat * sin(a), 0.75 + dist * sin(tilt), flat * cos(a))
             cam?.look(at: SCNVector3(0, 0.75, 0))
         }
 
@@ -304,6 +318,62 @@ struct CarSceneView: UIViewRepresentable {
             }
             DispatchQueue.main.async { [pins] in pins.points = out }
         }
+    }
+
+    /// v33: 3D road along Z (the 360°'s "road ahead" is -Z). Ocean side is -X, hills +X.
+    /// The car sits in the ocean-side lane; the centre line is 2 m to its right, like the scenery's camera.
+    static func addRoad(to root: SCNNode, y: Float) {
+        let width: CGFloat = 8.4, length: CGFloat = 600
+        func flat(_ w: CGFloat, _ l: CGFloat, _ x: Float, _ m: SCNMaterial, lift: Float = 0) {
+            let p = SCNPlane(width: w, height: l); p.materials = [m]
+            let n = SCNNode(geometry: p); n.eulerAngles.x = -.pi / 2; n.position = SCNVector3(x, y + lift, 0)
+            root.addChildNode(n)
+        }
+        // asphalt tile: 8.4 m across × 8.4 m along, repeated down the road
+        let road = UIGraphicsImageRenderer(size: CGSize(width: 512, height: 512)).image { ctx in
+            UIColor(white: 0.11, alpha: 1).setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 512, height: 512))
+            for _ in 0..<2600 {                                   // grain
+                UIColor(white: CGFloat.random(in: 0.05...0.2), alpha: 0.5).setFill()
+                ctx.fill(CGRect(x: .random(in: 0...512), y: .random(in: 0...512), width: 2, height: 2))
+            }
+            let px: CGFloat = 512 / 8.4
+            UIColor(red: 0.82, green: 0.62, blue: 0.08, alpha: 1).setFill()      // double yellow at the centre
+            ctx.fill(CGRect(x: 256 - 0.2 * px, y: 0, width: 0.1 * px, height: 512))
+            ctx.fill(CGRect(x: 256 + 0.1 * px, y: 0, width: 0.1 * px, height: 512))
+            UIColor(white: 0.85, alpha: 1).setFill()                                // white edge lines
+            ctx.fill(CGRect(x: 0.25 * px, y: 0, width: 0.12 * px, height: 512))
+            ctx.fill(CGRect(x: 512 - 0.37 * px, y: 0, width: 0.12 * px, height: 512))
+        }
+        let rm = SCNMaterial(); rm.lightingModel = .physicallyBased
+        rm.diffuse.contents = road; rm.roughness.contents = 0.85
+        rm.diffuse.wrapT = .repeat; rm.diffuse.contentsTransform = SCNMatrix4MakeScale(1, Float(length / width), 1)
+        flat(width, length, 2.0, rm)                                // centre line 2 m to the car's right
+
+        let grass = UIGraphicsImageRenderer(size: CGSize(width: 256, height: 256)).image { ctx in
+            UIColor(red: 0.62, green: 0.47, blue: 0.22, alpha: 1).setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 256, height: 256))
+            for _ in 0..<3000 {
+                UIColor(red: .random(in: 0.45...0.8), green: .random(in: 0.35...0.6), blue: .random(in: 0.12...0.3), alpha: 0.6).setFill()
+                ctx.fill(CGRect(x: .random(in: 0...256), y: .random(in: 0...256), width: 1.5, height: .random(in: 2...6)))
+            }
+        }
+        let gm = SCNMaterial(); gm.lightingModel = .physicallyBased; gm.diffuse.contents = grass; gm.roughness.contents = 1.0
+        gm.diffuse.wrapS = .repeat; gm.diffuse.wrapT = .repeat; gm.diffuse.contentsTransform = SCNMatrix4MakeScale(20, Float(length / 3), 1)
+        flat(60, length, 6.2 + 30, gm, lift: -0.02)                 // hills side
+        let gravel = SCNMaterial(); gravel.lightingModel = .physicallyBased; gravel.diffuse.contents = UIColor(red: 0.42, green: 0.37, blue: 0.3, alpha: 1)
+        gravel.roughness.contents = 1.0
+        flat(2.2, length, -2.2 - 1.1, gravel, lift: -0.02)          // a strip of shoulder, then the cliff edge
+    }
+
+    /// Lowest point of the car (the tyres) after it's turned upright.
+    static func groundY(_ node: SCNNode) -> Float {
+        let (mn, mx) = node.boundingBox
+        let corners = [mn, mx]
+        var lowest = Float.greatestFiniteMagnitude
+        for x in [corners[0].x, corners[1].x] { for y in [corners[0].y, corners[1].y] { for z in [corners[0].z, corners[1].z] {
+            let w = node.convertPosition(SCNVector3(x, y, z), to: nil)
+            lowest = min(lowest, w.y)
+        } } }
+        return lowest == .greatestFiniteMagnitude ? 0 : lowest
     }
 
     /// Your plate number, drawn on the phone (never stored in the model or the repo).
