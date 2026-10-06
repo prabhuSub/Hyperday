@@ -269,7 +269,9 @@ final class LiveActivityManager: ObservableObject {
         let snap = snapshot(now: now)
         finalizePreviousDayIfNeeded(now: now)
         HistoryStore.shared.recordToday(raw: allTodayBlocks(now: now), now: now)
-        let closed = DayCloseSettings.isClosed(at: now)
+        // v34: past the close time the card only closes once nothing is left today. A block still running or
+        // still to come (an 11:30 PM email) keeps the normal card with its Done button; it closes after that.
+        let closed = DayCloseSettings.isClosed(at: now) && !snap.hasAnythingLeft
         let cal = Calendar.current
         let midnight = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: now)) ?? now
         let closeAt = DayCloseSettings.closeTime(on: now)

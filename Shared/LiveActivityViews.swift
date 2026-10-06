@@ -893,17 +893,14 @@ struct DayClosedCard: View {
     /// "3h" over "10m focus": big digits, small "focus" (v24 D).
     private var focusText: some View {
         let m = state.focusMinutes ?? 0
-        let big = compact ? 22.0 : 36.0
+        let big = compact ? 22.0 : 32.0
         func n(_ s: String) -> Text { Text(s).font(.system(size: big, weight: .heavy)) }
         func u(_ s: String) -> Text { Text(s).font(.system(size: big * 0.45, weight: .heavy)) }
         return Group {
             if compact {
                 m >= 60 ? n("\(m / 60)h \(m % 60)m") + u(" active") : n("\(m)m") + u(" active")
             } else if m >= 60 {
-                VStack(alignment: .leading, spacing: -6) {
-                    n("\(m / 60)h")
-                    n("\(m % 60)m") + u(" active")
-                }
+                n("\(m / 60)h \(m % 60)m") + u(" active")       // v34: one line, like the mockup
             } else {
                 n("\(m)m") + u(" active")
             }

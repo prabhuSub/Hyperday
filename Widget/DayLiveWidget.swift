@@ -43,7 +43,9 @@ struct DayLiveActivityWidget: Widget {
                     }
                 }
             } compactLeading: {
-                if st.closed == true || st.driving == true {
+                if st.closed == true {
+                    ClosedCheck()                                   // v34 option 1: no more clock
+                } else if st.driving == true {
                     SourceIcon(source: st.source, size: 22,
                                tint: st.source == .free ? nil : st.accentColor,
                                iconName: st.driving == true ? "car" : st.iconName)   // v30: your car's outline while driving
@@ -51,18 +53,34 @@ struct DayLiveActivityWidget: Widget {
                     IslandRingIcon(state: st, size: 22)
                 }
             } compactTrailing: {
-                if st.closed == true || st.driving == true {
+                if st.closed == true {
+                    Text("\(st.doneCount ?? 0)/\(st.totalCount ?? 0)")
+                        .font(.system(size: 14, weight: .semibold).monospacedDigit())
+                        .foregroundStyle(DayLiveStyle.doneGreen)
+                } else if st.driving == true {
                     DayRing(progress: st.dayProgress, accent: st.accentColor)
                         .frame(width: 20, height: 20)
                 } else {
                     IslandTimer(state: st)
                 }
             } minimal: {
-                IslandRingIcon(state: st, size: 20)
+                if st.closed == true { ClosedCheck() } else { IslandRingIcon(state: st, size: 20) }
             }
             .keylineTint(st.accentColor)
             .widgetURL(st.closed == true && (st.reviewCount ?? 0) > 0 ? URL(string: "hyperday://close") : nil)
         }
         .supplementalActivityFamilies([.small])   // Apple Watch Smart Stack (watchOS 11 / iOS 18)
+    }
+}
+
+
+/// v34 (Island option 1): day closed = a green check in a tinted capsule, beside "4/8".
+struct ClosedCheck: View {
+    var body: some View {
+        Image(systemName: "checkmark")
+            .font(.system(size: 12, weight: .heavy))
+            .foregroundStyle(DayLiveStyle.doneGreen)
+            .frame(width: 30, height: 22)
+            .background(Capsule().fill(DayLiveStyle.doneGreen.opacity(0.24)))
     }
 }
