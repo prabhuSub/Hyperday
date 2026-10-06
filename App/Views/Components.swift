@@ -202,17 +202,18 @@ struct Chip: View {
                     Circle().fill(color).frame(width: 8, height: 8)
                 }
                 if let icon {
-                    HDIcon(icon, size: 15).foregroundStyle(selected ? Theme.text : Theme.muted)
+                    HDIcon(icon, size: 15).foregroundStyle(selected ? (color ?? Theme.text) : Theme.muted)
                 }
                 Text(title)
-                    .font(.system(size: 13, weight: selected ? .semibold : .regular))
+                    .font(.system(size: 15, weight: selected ? .semibold : .regular))
                     .lineLimit(1)
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 13)
             .padding(.vertical, 7)
-            .foregroundStyle(Theme.text)
-            .background(Capsule().fill(Theme.card))   // v27: capsule chips
-            .overlay(Capsule().stroke(selected ? Theme.text : Theme.border, lineWidth: 1))
+            .foregroundStyle(selected ? (color ?? Theme.text) : Theme.text)
+            // v34: Apple-style tinted capsules. Selected = the category's colour at 15%, others = system fill.
+            .background(Capsule().fill(selected ? (color ?? Theme.text).opacity(color == nil ? 0.10 : 0.16)
+                                                : Color(UIColor.tertiarySystemFill)))
         }
         .buttonStyle(.plain)
     }

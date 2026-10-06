@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### v34
+- **Add / Edit block, Apple style:** round glass ✕ and blue ✓ buttons (iOS 26), Today · Tomorrow · Other segmented control with the system date pill, a plain "Ends" row.
+- **Thick ruler:** bold length readout (40 pt), ticks 4.5–6 pt wide and taller, bold labels.
+- **Chips:** tinted capsules everywhere (category colour when picked, system grey otherwise).
+
 ### v33
 - **Taller Live Activity:** the Lock Screen card is now about as tall as other apps' cards. It has a big countdown and one full-width tick strip with 4 pt ticks, so there's no empty space on the right. The same layout is used for free time and for a running block, with Pause/Done next to the countdown.
 - **Thicker ruler ticks** in Add block, Edit and Extend.

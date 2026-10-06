@@ -11,58 +11,78 @@ extension Date {
     }
 }
 
-/// Today · Tomorrow · Pick date. Comes before the time.
+/// v34: Apple style. A segmented control (Today · Tomorrow · Other) and a Date row with the system
+/// date pill. Two Form rows (the Group flattens into the Section).
 struct DayPicker: View {
     @Binding var day: Date
-    @State private var picking = false
 
+    private enum Choice: Hashable { case today, tomorrow, other }
     private var cal: Calendar { .current }
-    private var isToday: Bool { cal.isDateInToday(day) }
-    private var isTomorrow: Bool { cal.isDateInTomorrow(day) }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 6) {
-                option("Today", on: isToday && !picking) {
-                    picking = false
-                    day = .now
+    private var choice: Binding<Choice> {
+        Binding {
+            cal.isDateInToday(day) ? .today : cal.isDateInTomorrow(day) ? .tomorrow : .other
+        } set: { c in
+            switch c {
+            case .today: day = .now
+            case .tomorrow: day = cal.date(byAdding: .day, value: 1, to: .now) ?? .now
+            case .other:
+                if cal.isDateInToday(day) || cal.isDateInTomorrow(day) {
+                    day = cal.date(byAdding: .day, value: 2, to: .now) ?? .now
                 }
-                option("Tomorrow", on: isTomorrow && !picking) {
-                    picking = false
-                    day = cal.date(byAdding: .day, value: 1, to: .now) ?? .now
-                }
-                option(isToday || isTomorrow ? "Pick date" : day.formatted(.dateTime.month(.abbreviated).day()),
-                       on: picking || (!isToday && !isTomorrow), icon: "calendar") {
-                    picking.toggle()
-                }
-            }
-            if picking {
-                DatePicker("Date", selection: $day, in: Calendar.current.startOfDay(for: .now)...,
-                           displayedComponents: [.date])
-                    .datePickerStyle(.graphical)
-                    .onChange(of: day) { _, _ in picking = false }
-            } else {
-                Text(day.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
-                    .font(.system(size: 12))
-                    .foregroundStyle(Theme.muted)
             }
         }
     }
 
-    private func option(_ title: String, on: Bool, icon: String? = nil, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 5) {
-                if let icon { HDIcon(icon, size: 15) }
-                Text(title).lineLimit(1)
+    var body: some View {
+        Group {
+            Picker("Day", selection: choice) {
+                Text("Today").tag(Choice.today)
+                Text("Tomorrow").tag(Choice.tomorrow)
+                Text("Other").tag(Choice.other)
             }
-            .font(.system(size: 13, weight: .semibold))
-            .frame(maxWidth: .infinity)
-            .frame(height: 36)
-            .foregroundStyle(on ? Theme.bg : Theme.text)
-            .background(RoundedRectangle(cornerRadius: 4).fill(on ? Theme.text : Theme.card))
-            .overlay(RoundedRectangle(cornerRadius: 4).stroke(on ? Theme.text : Theme.border, lineWidth: 1))
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            DatePicker("Date", selection: $day, in: cal.startOfDay(for: .now)..., displayedComponents: [.date])
         }
-        .buttonStyle(.plain)
+    }
+}
+
+/// v34: iOS 26 sheet buttons: round glass ✕ and a blue ✓. Words on older iOS.
+struct SheetCloseButton: View {
+    var title = "Cancel"
+    let action: () -> Void
+    var body: some View {
+        if #available(iOS 26.0, *) {
+            Button(role: .close, action: action)
+        } else {
+            Button(title, action: action)
+        }
+    }
+}
+
+struct SheetConfirmButton: View {
+    var title = "Add"
+    var disabled = false
+    let action: () -> Void
+    var body: some View {
+        if #available(iOS 26.0, *) {
+            Button(role: .confirm, action: action).disabled(disabled)
+        } else {
+            Button(title, action: action).disabled(disabled)
+        }
+    }
+}
+
+/// v34: "Ends   12:20 AM" as a plain Form row, value on the right in grey.
+struct EndsRow: View {
+    let end: Date
+    var body: some View {
+        HStack {
+            Text("Ends")
+            Spacer()
+            Text(end.shortTime).foregroundStyle(.secondary).monospacedDigit()
+        }
     }
 }
 
@@ -117,20 +137,19 @@ struct QuickAddSheet: View {
                     .onSubmit(add)
 
                 Section("Date") {
-                    DayPicker(day: $day).padding(.vertical, 4)
+                    DayPicker(day: $day)
                 }
 
                 Section("Time") {
                     DatePicker("Start", selection: $start, displayedComponents: [.hourAndMinute])
                     // v32: Apple Timer–style ruler instead of fixed segments.
                     HStack(alignment: .firstTextBaseline) {
-                        Text("Length").foregroundStyle(.secondary)
+                        Text("Length")
                         Spacer()
                         DurationReadout(minutes: minutes)
                     }
                     DurationRuler(minutes: $minutes)
-                    Text("Ends at \(startOnDay.addingTimeInterval(TimeInterval(minutes * 60)).shortTime)")
-                        .foregroundStyle(.secondary)
+                    EndsRow(end: startOnDay.addingTimeInterval(TimeInterval(minutes * 60)))
                 }
 
                 Section("Categories") {
@@ -146,10 +165,9 @@ struct QuickAddSheet: View {
             .navigationTitle("Add block")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { SheetCloseButton { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Add", action: add)
-                        .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
+                    SheetConfirmButton(title: "Add", disabled: title.trimmingCharacters(in: .whitespaces).isEmpty, action: add)
                 }
             }
             .onAppear { titleFocused = true }
@@ -212,17 +230,16 @@ struct BlockEditorSheet: View {
             Form {
                 if isPlan {
                     Section { TextField("Title", text: $title) } header: { Text("Title") }
-                    Section { DayPicker(day: $day).padding(.vertical, 4) } header: { Text("1 · Date") }
+                    Section { DayPicker(day: $day) } header: { Text("1 · Date") }
                     Section {
                         DatePicker("Start", selection: $start, displayedComponents: [.hourAndMinute])
                         HStack(alignment: .firstTextBaseline) {
-                            Text("Length").foregroundStyle(.secondary)
+                            Text("Length")
                             Spacer()
                             DurationReadout(minutes: minutes)
                         }
                         DurationRuler(minutes: $minutes)
-                        Text("Ends at \(startOnDay.addingTimeInterval(TimeInterval(minutes * 60)).shortTime)")
-                            .foregroundStyle(.secondary)
+                        EndsRow(end: startOnDay.addingTimeInterval(TimeInterval(minutes * 60)))
                     } header: { Text("2 · Time") }
                 } else {
                     Section {
@@ -305,10 +322,9 @@ struct BlockEditorSheet: View {
             .navigationTitle(isPlan ? "Edit block" : "Steps")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { SheetCloseButton { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }
-                        .disabled(isPlan && title.trimmingCharacters(in: .whitespaces).isEmpty)
+                    SheetConfirmButton(title: "Save", disabled: isPlan && title.trimmingCharacters(in: .whitespaces).isEmpty) { save() }
                 }
             }
         }

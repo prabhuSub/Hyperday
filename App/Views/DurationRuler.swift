@@ -9,7 +9,7 @@ struct DurationRuler: View {
     var step: Int = 5
     var tint: Color = Theme.blue
 
-    private let perMinute: CGFloat = 9          // points per minute (v32b: wider for thicker ticks)
+    private let perMinute: CGFloat = 10         // points per minute (v34: room for thick ticks)
     @State private var dragStart: Int?
     @State private var live: CGFloat?           // un-snapped value while dragging, so the ruler glides
 
@@ -26,14 +26,14 @@ struct DurationRuler: View {
                 guard x > -2, x < size.width + 2 else { continue }
                 let fade = max(0.18, 1 - abs(x - mid) / mid * 0.85)
                 let major = m % 5 == 0
-                let tall: CGFloat = major ? 26 : 16
-                let w: CGFloat = major ? 4.5 : 4    // v33: thicker, matches the card ticks
+                let tall: CGFloat = major ? 36 : 24   // v34: taller
+                let w: CGFloat = major ? 6 : 4.5    // v34: thick, like the mockup
                 let r = CGRect(x: x - w / 2, y: tickBottom - tall, width: w, height: tall)
                 ctx.fill(Path(roundedRect: r, cornerRadius: w / 2), with: .color(tint.opacity(major ? fade : fade * 0.7)))
                 if m % 10 == 0 {
-                    let label = ctx.resolve(Text(Self.short(m)).font(.system(size: 13, weight: .semibold))
+                    let label = ctx.resolve(Text(Self.short(m)).font(.system(size: 15, weight: .bold))
                         .monospacedDigit().foregroundStyle(tint.opacity(fade)))
-                    ctx.draw(label, at: CGPoint(x: x, y: 8), anchor: .center)
+                    ctx.draw(label, at: CGPoint(x: x, y: 9), anchor: .center)
                 }
             }
             var tri = Path()
@@ -43,7 +43,7 @@ struct DurationRuler: View {
             tri.closeSubpath()
             ctx.fill(tri, with: .color(tint))
         }
-        .frame(height: 62)
+        .frame(height: 74)
         .contentShape(Rectangle())
         .gesture(
             DragGesture(minimumDistance: 2)
@@ -95,15 +95,15 @@ struct DurationReadout: View {
         let h = minutes / 60, m = minutes % 60
         HStack(alignment: .firstTextBaseline, spacing: 2) {
             if h > 0 {
-                Text("\(h)").font(.system(size: 40, weight: .light)).monospacedDigit()
-                Text("h").font(.system(size: 16, weight: .semibold))
+                Text("\(h)").font(.system(size: 40, weight: .bold)).monospacedDigit()
+                Text("h").font(.system(size: 20, weight: .bold))
                 if m > 0 {
-                    Text(" \(m)").font(.system(size: 40, weight: .light)).monospacedDigit()
-                    Text("m").font(.system(size: 16, weight: .semibold))
+                    Text(" \(m)").font(.system(size: 40, weight: .bold)).monospacedDigit()
+                    Text("m").font(.system(size: 20, weight: .bold))
                 }
             } else {
-                Text("\(m)").font(.system(size: 40, weight: .light)).monospacedDigit()
-                Text(" min").font(.system(size: 16, weight: .semibold))
+                Text("\(m)").font(.system(size: 40, weight: .bold)).monospacedDigit()
+                Text(" min").font(.system(size: 20, weight: .bold))
             }
         }
         .foregroundStyle(tint)
