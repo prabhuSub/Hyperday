@@ -29,3 +29,6 @@ server/.venv/
 # Tesla Fleet API: private key never goes to git; tesla-site is its own repo
 .tesla-keys/
 tesla-site/
+
+# 3D model source (CC-BY download); the app uses the exported USDZ
+*.glb
