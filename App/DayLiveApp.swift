@@ -16,15 +16,7 @@ struct DayLiveApp: App {
     @State private var showCloseDay = false
 
     init() {
-        // v22: small tab labels under the big icons.
-        let tabs = UITabBarAppearance()
-        tabs.configureWithDefaultBackground()
-        for layout in [tabs.stackedLayoutAppearance, tabs.inlineLayoutAppearance, tabs.compactInlineLayoutAppearance] {
-            layout.normal.titleTextAttributes = [.font: UIFont.systemFont(ofSize: 9, weight: .semibold)]
-            layout.selected.titleTextAttributes = [.font: UIFont.systemFont(ofSize: 9, weight: .bold)]
-        }
-        UITabBar.appearance().standardAppearance = tabs
-        UITabBar.appearance().scrollEdgeAppearance = tabs
+        // v35: no custom tab bar look: Apple's own bar (Liquid Glass on iOS 26).
         // Must be set before launch finishes so a tap on the Sunday recap opens it.
         UNUserNotificationCenter.current().delegate = RecapCenter.shared
         // Reality line: keep watching saved places (iOS relaunches us on arrive/leave).
@@ -75,7 +67,7 @@ struct DayLiveApp: App {
                     await RealityStore.shared.refreshWorkouts()
                     await LiveActivityManager.shared.refresh()
                     await RecapCenter.shared.schedule()
-                    await CarStore.shared.refresh()   // at most every 10 min, never wakes the car
+                    if Features.car { await CarStore.shared.refresh() }   // v35: car is off for now
                 }
             }
         }

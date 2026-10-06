@@ -516,8 +516,14 @@ struct LiveTimerPill: View {
 
 // MARK: - Floating tab bubble
 
+/// v35: switches for whole sections of the app.
+enum Features {
+    /// The Car tab, its Settings page, background reads and car widgets. Off while Prabhu reviews it.
+    static let car = false
+}
+
 enum AppTab: String, CaseIterable, Identifiable {
-    case today, calendar, car, stats, settings
+    case today, calendar, car, stats, settings, add
     var id: String { rawValue }
     var title: String { rawValue.capitalized }
     var icon: String {
@@ -527,6 +533,7 @@ enum AppTab: String, CaseIterable, Identifiable {
         case .car: return "car"
         case .stats: return "stats"
         case .settings: return "settings"
+        case .add: return "add"
         }
     }
 }
@@ -536,45 +543,46 @@ enum AppTab: String, CaseIterable, Identifiable {
 struct RootView: View {
     @State private var tab: AppTab = .today
     @State private var adding: AddMode?
-    @State private var calDay = Calendar.current.component(.day, from: .now)
     @Environment(\.scenePhase) private var scenePhase
 
     enum AddMode: String, Identifiable { case block, words, scan; var id: String { rawValue } }
 
     var body: some View {
+        // v35: Apple's own tab bar (Liquid Glass on iOS 26), SF Symbols, blue when selected.
+        // The + is a search-role tab, so iOS draws it as its own glass circle beside the bar.
+        // Tapping it never shows a page: we jump back and open Add block.
         TabView(selection: $tab) {
-            TabRoot(title: "Today") { TodayView().tabFade(tab == .today) }
-                .tabItem { Label { Text(AppTab.today.title) } icon: { Image("hd-tab-" + AppTab.today.icon).renderingMode(.template) } }
-                .tag(AppTab.today)
-            TabRoot(title: "Calendar") { CalendarTabView().tabFade(tab == .calendar) }
-                .tabItem { Label { Text(AppTab.calendar.title) } icon: { Image("hd-tab-cal-\(calDay)").renderingMode(.template) } }   // today's date
-                .tag(AppTab.calendar)
-            TabRoot(title: "Car") { CarView().tabFade(tab == .car) }   // v31: your Model Y in 3D
-                .tabItem { Label { Text(AppTab.car.title) } icon: { Image("hd-tab-car").renderingMode(.template) } }
-                .tag(AppTab.car)
-            TabRoot(title: "Stats") { StatsView().tabFade(tab == .stats) }
-                .tabItem { Label { Text(AppTab.stats.title) } icon: { Image("hd-tab-" + AppTab.stats.icon).renderingMode(.template) } }
-                .tag(AppTab.stats)
-            TabRoot(title: "Settings") { SettingsView().tabFade(tab == .settings) }
-                .tabItem { Label { Text(AppTab.settings.title) } icon: { Image("hd-tab-" + AppTab.settings.icon).renderingMode(.template) } }
-                .tag(AppTab.settings)
+            Tab("Today", systemImage: "clock", value: AppTab.today) {
+                TabRoot(title: "Today") { TodayView().tabFade(tab == .today) }
+            }
+            Tab("Calendar", systemImage: "calendar", value: AppTab.calendar) {
+                TabRoot(title: "Calendar") { CalendarTabView().tabFade(tab == .calendar) }
+            }
+            if Features.car {
+                Tab("Car", systemImage: "car", value: AppTab.car) {
+                    TabRoot(title: "Car") { CarView().tabFade(tab == .car) }
+                }
+            }
+            Tab("Stats", systemImage: "chart.bar", value: AppTab.stats) {
+                TabRoot(title: "Stats") { StatsView().tabFade(tab == .stats) }
+            }
+            Tab("Settings", systemImage: "gearshape", value: AppTab.settings) {
+                TabRoot(title: "Settings") { SettingsView().tabFade(tab == .settings) }
+            }
+            Tab("Add", systemImage: "plus", value: AppTab.add, role: .search) {
+                Color.clear
+            }
         }
-        .tint(Theme.text)   // tab bar stays full size while scrolling (Prabhu's call)
+        .tint(Theme.blue)
+        .onChange(of: tab) { old, new in
+            guard new == .add else { return }
+            tab = old == .add ? .today : old
+            adding = .block
+        }
         .onReceive(NotificationCenter.default.publisher(for: CalendarJump.notification)) { _ in
             tab = .calendar
         }
-        .onReceive(NotificationCenter.default.publisher(for: .openCarTab)) { _ in tab = .car }
-        // The Calendar tab shows today's date: redraw at midnight and whenever the app comes back.
-        .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
-            calDay = Calendar.current.component(.day, from: .now)
-        }
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active { calDay = Calendar.current.component(.day, from: .now) }
-        }
-        // v12: Tesla-style round + in thumb reach on every tab. Tap = Add block, hold = more.
-        .overlay(alignment: .bottomTrailing) {
-            AddFab { adding = $0 }   // fills the screen so the hold blur covers everything
-        }
+        .onReceive(NotificationCenter.default.publisher(for: .openCarTab)) { _ in if Features.car { tab = .car } }
         .sheet(item: $adding) { mode in
             switch mode {
             case .block: QuickAddSheet().presentationDetents([.large])

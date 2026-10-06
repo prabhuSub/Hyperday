@@ -2,279 +2,275 @@ import AppIntents
 import SwiftUI
 import UIKit
 
-/// Settings tab: appearance, categories, auto rules, Live Activity, sample data.
+/// v35: Settings like the iOS Settings app. One inset-grouped list with coloured icon squares;
+/// each row opens its own plain Apple page.
 struct SettingsView: View {
     @EnvironmentObject private var categories: CategoryStore
     @EnvironmentObject private var activity: LiveActivityManager
-    @EnvironmentObject private var history: HistoryStore
     @AppStorage("appearance") private var appearance = Appearance.system.rawValue
-
-    @State private var editingCategory: Category?
-    @State private var addingRule = false
-    @State private var editingCalendar: CalendarPick?
+    @ObservedObject private var profile = ProfileStore.shared
+    @State private var showProfile = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        SectionHeader("Appearance", icon: "sun", color: Color(hex: "#FF9F0A"))
-                        PillNav(options: Appearance.allCases,
-                                selection: Binding(get: { Appearance(rawValue: appearance) ?? .system },
-                                                   set: { appearance = $0.rawValue })) { $0.label }
+        List {
+            Section {
+                Button { showProfile = true } label: {
+                    HStack(spacing: 14) {
+                        ProfileAvatar(size: 60)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(profile.name.flatMap { $0.isEmpty ? nil : $0 } ?? "Your profile")
+                                .font(.title3.weight(.semibold)).foregroundStyle(.primary)
+                            Text("Photo and name").font(.subheadline).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
                     }
-                    .cardBox()
-
-                    VStack(alignment: .leading, spacing: 10) {
-                        SectionHeader("Categories", icon: "star", color: Color(hex: "#BF5AF2"))
-                        FlowLayout(spacing: 8) {
-                            ForEach(categories.categories) { c in
-                                Chip(title: c.name, color: c.color, icon: c.iconName) { editingCategory = c }
-                            }
-                            Chip(title: "+ New") {
-                                editingCategory = Category(id: UUID().uuidString, name: "",
-                                                           colorHex: CategoryStore.palette[categories.categories.count % CategoryStore.palette.count])
-                            }
-                        }
-                        Text("Tap a category to rename it or change its color.")
-                            .font(.system(size: 12))
-                            .foregroundStyle(Theme.faint)
-                    }
-                    .cardBox()
-
-                    CarSettingsCard()   // v32: near the top, easy to find
-
-                    calendarsCard
-
-                    rulesCard
-
-                    DayCloseSettingsCard()
-                    RealitySettingsCard()
-                    BackupCard()
-                    focusCard
-
-                    VStack(alignment: .leading, spacing: 10) {
-                        SectionHeader("Live Activity", icon: "timer", color: DayLiveStyle.doneGreen)
-                        Toggle(isOn: $activity.autoStart) {
-                            Text("Start automatically when the day has blocks")
-                                .font(.system(size: 14))
-                                .foregroundStyle(Theme.text)
-                        }
-                        .tint(Theme.blue)
-                        Text(activity.statusText)
-                            .font(.system(size: 12))
-                            .foregroundStyle(Theme.muted)
-                        Button("Open iOS Settings") {
-                            if let url = URL(string: UIApplication.openSettingsURLString) {
-                                UIApplication.shared.open(url)
-                            }
-                        }
-                        .buttonStyle(SecondaryButtonStyle())
-                        // Check every card style without waiting for the right moment of the day.
-                        Button("Preview all card styles") { Task { await activity.previewStyles() } }
-                            .buttonStyle(SecondaryButtonStyle())
-                        Text("Tap, then lock the phone: Running → Last 5 min → Free → Day closed, 7 seconds each. Then your real day comes back.")
-                            .font(.system(size: 12))
-                            .foregroundStyle(Theme.muted)
-
-                        // v28 test kit: one style for a full minute, or a real mini-day around now.
-                        Caps("Test one style for 60 s")
-                        HStack(spacing: 8) {
-                            ForEach(Array(["Running", "Last 5", "Free", "Closed"].enumerated()), id: \.offset) { i, name in
-                                Button(name) { Task { await activity.previewOne(i) } }
-                                    .buttonStyle(SecondaryButtonStyle())
-                                    .font(.system(size: 12, weight: .bold))
-                            }
-                        }
-                        Caps("Test a real mini-day")
-                        HStack(spacing: 10) {
-                            Button("Load test day") { Task { await activity.loadTestDay() } }
-                                .buttonStyle(PrimaryButtonStyle())
-                            Button("Remove") { Task { await activity.clearTestDay() } }
-                                .buttonStyle(SecondaryButtonStyle())
-                        }
-                        Text("Adds 'Test ·' blocks around now: Deep work is running (its last 5 min start in about a minute), then 3 min free, Standup at +9 min, Gym at +30. Lock the phone and watch the card change. Remove deletes only the test blocks.")
-                            .font(.system(size: 12))
-                            .foregroundStyle(Theme.muted)
-                    }
-                    .cardBox()
-
-                    VStack(alignment: .leading, spacing: 10) {
-                        SectionHeader("Sample data", icon: "recap", color: Color(white: 0.55))
-                        Text(history.hasDemo
-                             ? "Sample data is loaded: 8 weeks of history and a planned day. Your real calendars are never touched."
-                             : "Fill Today, Calendar and Stats with 8 sample weeks to preview the look. Your real calendars are never touched.")
-                            .font(.system(size: 13))
-                            .foregroundStyle(Theme.muted)
-                        Button(history.hasDemo ? "Remove sample data" : "Load sample data") {
-                            if history.hasDemo { DemoData.remove() } else { DemoData.load() }
-                            Task { await activity.refresh() }
-                        }
-                        .buttonStyle(SecondaryButtonStyle())
-                    }
-                    .cardBox()
+                    .padding(.vertical, 4)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-                .padding(.bottom, 40)
             }
-            .background(Theme.section)
+            Section {
+                link("Appearance", "sun.max.fill", .orange, value: (Appearance(rawValue: appearance) ?? .system).label) { AppearanceSettings() }
+                link("Categories", "tag.fill", .purple, value: "\(categories.categories.count)") { CategoriesSettings() }
+                link("Calendars", "calendar", .red, value: "\(CalendarService.shared.calendarList().count)") { CalendarsSettings() }
+                link("Auto rules", "bolt.fill", .indigo, value: "\(categories.rules.count)") { RulesSettings() }
+            }
+            Section {
+                link("Live Activity", "timer", .green, value: activity.autoStart ? "On" : "Off") { LiveActivitySettings() }
+                link("Close the day", "moon.fill", .indigo) { CardSettingsPage(title: "Close the day") { DayCloseSettingsCard() } }
+                link("Reality line", "mappin", .blue) { CardSettingsPage(title: "Reality line") { RealitySettingsCard() } }
+                link("Focus & Siri", "mic.fill", .purple) { FocusSettings() }
+            }
+            Section {
+                link("Backup", "externaldrive.fill", .gray) { CardSettingsPage(title: "Backup") { BackupCard() } }
+                link("Developer", "hammer.fill", Color(white: 0.4)) { DeveloperSettings() }
+                // Car is off for now (v35). Bring back: Features.car = true.
+                if Features.car {
+                    link("Car", "car.fill", .red) { CardSettingsPage(title: "Car") { CarSettingsCard() } }
+                }
+            }
         }
-        .sheet(item: $editingCategory) { c in
+        .listStyle(.insetGrouped)
+        .sheet(isPresented: $showProfile) { ProfileSheet() }
+    }
+
+    private func link<D: View>(_ title: String, _ symbol: String, _ color: Color, value: String? = nil,
+                               @ViewBuilder _ dest: @escaping () -> D) -> some View {
+        NavigationLink {
+            dest().navigationTitle(title).navigationBarTitleDisplayMode(.inline)
+        } label: {
+            HStack(spacing: 12) {
+                SettingsIcon(symbol: symbol, color: color)
+                Text(title)
+                Spacer()
+                if let value { Text(value).foregroundStyle(.secondary) }
+            }
+        }
+    }
+}
+
+/// The coloured rounded square with a white SF Symbol, like iOS Settings.
+struct SettingsIcon: View {
+    let symbol: String
+    let color: Color
+    var body: some View {
+        Image(systemName: symbol)
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(width: 30, height: 30)
+            .background(color, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+    }
+}
+
+/// Pages not yet turned into native lists: the existing card on the grouped background.
+struct CardSettingsPage<C: View>: View {
+    let title: String
+    @ViewBuilder var content: () -> C
+    var body: some View {
+        ScrollView { content().padding(16) }
+            .background(Color(UIColor.systemGroupedBackground))
+    }
+}
+
+struct AppearanceSettings: View {
+    @AppStorage("appearance") private var appearance = Appearance.system.rawValue
+    var body: some View {
+        Form {
+            Picker("Appearance", selection: $appearance) {
+                ForEach(Appearance.allCases, id: \.self) { Text($0.label).tag($0.rawValue) }
+            }
+            .pickerStyle(.inline)
+            .labelsHidden()
+        }
+    }
+}
+
+struct CategoriesSettings: View {
+    @ObservedObject private var categories = CategoryStore.shared
+    @State private var editing: Category?
+    var body: some View {
+        List {
+            Section {
+                ForEach(categories.categories) { c in
+                    Button { editing = c } label: {
+                        HStack(spacing: 12) {
+                            Circle().fill(c.color).frame(width: 12, height: 12)
+                            Text(c.name).foregroundStyle(.primary)
+                            Spacer()
+                            Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                        }
+                    }
+                }
+            } footer: { Text("Tap a category to rename it or change its color and icon.") }
+            Section {
+                Button("New category") {
+                    editing = Category(id: UUID().uuidString, name: "",
+                                       colorHex: CategoryStore.palette[categories.categories.count % CategoryStore.palette.count])
+                }
+            }
+        }
+        .sheet(item: $editing) { c in
             CategoryEditorSheet(category: c, isNew: categories.category(id: c.id) == nil)
                 .presentationDetents([.medium])
         }
-        .sheet(item: $editingCalendar) { pick in
-            CalendarColorSheet(pick: pick)
-                .presentationDetents([.medium])
-        }
-        .sheet(isPresented: $addingRule) {
-            RuleEditorSheet()
-                .presentationDetents([.medium])
-        }
     }
+}
 
-    private var focusCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            SectionHeader("Focus & Siri", icon: "siri", color: Color(hex: "#5E5CE6"))
-            Text("Focus filters: in iOS Settings › Focus › Work › Add Filter › Hyperday, choose what Hyperday shows while that Focus is on (Work only, Personal only…). Right now: \(FocusFilterState.current.rawValue).")
-                .font(.system(size: 13))
-                .foregroundStyle(Theme.muted)
-            Text("Deep Work + Focus: Apple doesn't let apps turn Focus on. In Shortcuts, make one shortcut with “Start Deep Work” (Hyperday) and “Set Focus: Work”, then run it from Siri or the Action Button.")
-                .font(.system(size: 13))
-                .foregroundStyle(Theme.muted)
-            ShortcutsLink()
-                .shortcutsLinkStyle(.automaticOutline)
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(["What's next in Hyperday", "Start my day in Hyperday", "I'm done in Hyperday", "Start deep work in Hyperday"], id: \.self) { phrase in
-                    Text("“Hey Siri, \(phrase)”")
-                        .font(.system(size: 13))
-                        .foregroundStyle(Theme.text)
-                        .padding(.vertical, 8)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .overlay(alignment: .top) { Rectangle().fill(Theme.border).frame(height: 1) }
-                }
-            }
-        }
-        .cardBox()
-    }
-
-    private var calendarsCard: some View {
+struct CalendarsSettings: View {
+    @ObservedObject private var categories = CategoryStore.shared
+    @State private var editing: CalendarPick?
+    var body: some View {
         let list = CalendarService.shared.calendarList()
-        return VStack(alignment: .leading, spacing: 0) {
-            SectionHeader("Calendars", icon: "event", color: Theme.blue).padding(.bottom, 8)
-            if list.isEmpty {
-                Text("Allow calendar access to color your calendars.")
-                    .font(.system(size: 13))
-                    .foregroundStyle(Theme.muted)
-            }
-            ForEach(list, id: \.name) { item in
-                let custom = categories.calendarColorHex(item.name)
-                Button {
-                    editingCalendar = CalendarPick(name: item.name, iosHex: item.hex)
-                } label: {
-                    HStack(spacing: 10) {
-                        Circle()
-                            .fill(custom.map { Color(hex: $0) } ?? Color.clear)
-                            .overlay(Circle().stroke(custom == nil ? Theme.faint : Color.clear, lineWidth: 1.5))
-                            .frame(width: 12, height: 12)
-                        Text(item.name)
-                            .font(.system(size: 14))
-                            .foregroundStyle(Theme.text)
-                            .lineLimit(1)
-                        Spacer()
-                        Text(custom == nil ? "By category" : "Custom")
-                            .font(.system(size: 12))
-                            .foregroundStyle(Theme.muted)
-                        HDIcon("chevron", size: 14)
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(Theme.faint)
-                    }
-                    .padding(.vertical, 10)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .overlay(alignment: .top) { Rectangle().fill(Theme.border).frame(height: 1) }
-            }
-            Text("A calendar color beats the category color everywhere except Stats. Tesla calendars start as Tesla red.")
-                .font(.system(size: 12))
-                .foregroundStyle(Theme.faint)
-                .padding(.top, 8)
-        }
-        .cardBox()
-    }
-
-    private var rulesCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Caps("Auto rules · first match wins")
-                Spacer()
-                Button("+ Add") { addingRule = true }
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Theme.blue)
-                    .buttonStyle(.plain)
-            }
-            .padding(.bottom, 8)
-
-            ForEach(Array(categories.rules.enumerated()), id: \.element.id) { index, rule in
-                HStack(spacing: 8) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("\(rule.kind.label) “\(rule.keywords)”")
-                            .font(.system(size: 13))
-                            .foregroundStyle(Theme.text)
-                            .lineLimit(2)
-                        HStack(spacing: 6) {
-                            Circle().fill(categories.category(id: rule.categoryID)?.color ?? Theme.faint)
-                                .frame(width: 8, height: 8)
-                            Text(categories.category(id: rule.categoryID)?.name ?? "—")
-                                .font(.system(size: 12))
-                                .foregroundStyle(Theme.muted)
+        List {
+            Section {
+                if list.isEmpty { Text("Allow calendar access to color your calendars.").foregroundStyle(.secondary) }
+                ForEach(list, id: \.name) { item in
+                    let custom = categories.calendarColorHex(item.name)
+                    Button { editing = CalendarPick(name: item.name, iosHex: item.hex) } label: {
+                        HStack(spacing: 12) {
+                            Circle()
+                                .fill(custom.map { Color(hex: $0) } ?? Color.clear)
+                                .overlay(Circle().stroke(custom == nil ? Color.secondary : .clear, lineWidth: 1.5))
+                                .frame(width: 12, height: 12)
+                            Text(item.name).foregroundStyle(.primary).lineLimit(1)
+                            Spacer()
+                            Text(custom == nil ? "By category" : "Custom").foregroundStyle(.secondary)
                         }
                     }
-                    Spacer()
-                    if index > 0 {
-                        iconButton("up", label: "Move up") { categories.moveRuleUp(id: rule.id) }
-                    }
-                    iconButton("close", label: "Delete rule") { categories.deleteRule(id: rule.id) }
                 }
-                .padding(.vertical, 10)
-                .overlay(alignment: .top) { Rectangle().fill(Theme.border).frame(height: 1) }
-            }
-
-            HStack {
-                Text("Everything else")
-                    .font(.system(size: 13))
-                    .foregroundStyle(Theme.text)
-                Spacer()
-                Menu {
-                    ForEach(categories.categories) { c in
-                        Button(c.name) { categories.fallbackID = c.id }
-                    }
-                } label: {
-                    HStack(spacing: 6) {
-                        Circle().fill(categories.fallback.color).frame(width: 8, height: 8)
-                        Text(categories.fallback.name).font(.system(size: 12))
-                        HDIcon("down", size: 12)
-                    }
-                    .foregroundStyle(Theme.muted)
-                }
-            }
-            .padding(.vertical, 10)
-            .overlay(alignment: .top) { Rectangle().fill(Theme.border).frame(height: 1) }
+            } footer: { Text("A calendar color beats the category color everywhere except Stats. Tesla calendars start as Tesla red.") }
         }
-        .cardBox()
+        .sheet(item: $editing) { pick in
+            CalendarColorSheet(pick: pick).presentationDetents([.medium])
+        }
     }
+}
 
-    private func iconButton(_ symbol: String, label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HDIcon(symbol, size: 15)
-                .foregroundStyle(Theme.muted)
-                .frame(width: 28, height: 28)
-                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Theme.border, lineWidth: 1))
-                .contentShape(Rectangle())
+struct RulesSettings: View {
+    @ObservedObject private var categories = CategoryStore.shared
+    @State private var adding = false
+    var body: some View {
+        List {
+            Section {
+                ForEach(Array(categories.rules.enumerated()), id: \.element.id) { index, rule in
+                    HStack(spacing: 12) {
+                        Circle().fill(categories.category(id: rule.categoryID)?.color ?? .secondary).frame(width: 10, height: 10)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("\(rule.kind.label) “\(rule.keywords)”").lineLimit(2)
+                            Text(categories.category(id: rule.categoryID)?.name ?? "—").font(.subheadline).foregroundStyle(.secondary)
+                        }
+                    }
+                    .swipeActions {
+                        Button("Delete", role: .destructive) { categories.deleteRule(id: rule.id) }
+                    }
+                    .contextMenu {
+                        if index > 0 {
+                            Button { categories.moveRuleUp(id: rule.id) } label: { Label("Move up", systemImage: "arrow.up") }
+                        }
+                        Button(role: .destructive) { categories.deleteRule(id: rule.id) } label: { Label("Delete", systemImage: "trash") }
+                    }
+                }
+            } header: { Text("First match wins") } footer: { Text("Swipe left to delete. Touch and hold to move a rule up.") }
+            Section {
+                Picker("Everything else", selection: $categories.fallbackID) {
+                    ForEach(categories.categories) { c in Text(c.name).tag(c.id) }
+                }
+            }
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(label)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { adding = true } label: { Image(systemName: "plus") }.accessibilityLabel("Add rule")
+            }
+        }
+        .sheet(isPresented: $adding) { RuleEditorSheet().presentationDetents([.medium]) }
+    }
+}
+
+struct LiveActivitySettings: View {
+    @EnvironmentObject private var activity: LiveActivityManager
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Start automatically", isOn: $activity.autoStart)
+            } footer: { Text("Starts when the day has blocks. \(activity.statusText)") }
+            Section {
+                Button("Preview all styles") { Task { await activity.previewStyles() } }
+                Button("Open iOS Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                }
+            } header: { Text("Look") } footer: {
+                Text("Tap Preview, then lock the phone: Running → Last 5 min → Free → Day closed, 7 seconds each. Then your real day comes back.")
+            }
+        }
+    }
+}
+
+struct FocusSettings: View {
+    var body: some View {
+        Form {
+            Section {
+                LabeledContent("Right now", value: FocusFilterState.current.rawValue)
+            } header: { Text("Focus filters") } footer: {
+                Text("In iOS Settings › Focus › Work › Add Filter › Hyperday, choose what Hyperday shows while that Focus is on.")
+            }
+            Section {
+                ShortcutsLink().shortcutsLinkStyle(.automaticOutline)
+            } header: { Text("Deep Work + Focus") } footer: {
+                Text("Apple doesn't let apps turn Focus on. In Shortcuts, make one shortcut with “Start Deep Work” (Hyperday) and “Set Focus: Work”, then run it from Siri or the Action Button.")
+            }
+            Section("Say to Siri") {
+                ForEach(["What's next in Hyperday", "Start my day in Hyperday", "I'm done in Hyperday", "Start deep work in Hyperday"], id: \.self) {
+                    Text("“\($0)”")
+                }
+            }
+        }
+    }
+}
+
+struct DeveloperSettings: View {
+    @EnvironmentObject private var activity: LiveActivityManager
+    @EnvironmentObject private var history: HistoryStore
+    var body: some View {
+        Form {
+            Section {
+                ForEach(Array(["Running", "Last 5 min", "Free", "Day closed"].enumerated()), id: \.offset) { i, name in
+                    Button(name) { Task { await activity.previewOne(i) } }
+                }
+            } header: { Text("Test one style for 60 s") }
+            Section {
+                Button("Load test day") { Task { await activity.loadTestDay() } }
+                Button("Remove test day", role: .destructive) { Task { await activity.clearTestDay() } }
+            } header: { Text("Test a real mini-day") } footer: {
+                Text("Adds 'Test ·' blocks around now: Deep work running (last 5 min in about a minute), 3 min free, Standup at +9 min, Gym at +30. Remove deletes only the test blocks.")
+            }
+            Section {
+                Button(history.hasDemo ? "Remove sample data" : "Load sample data", role: history.hasDemo ? .destructive : nil) {
+                    if history.hasDemo { DemoData.remove() } else { DemoData.load() }
+                    Task { await activity.refresh() }
+                }
+            } header: { Text("Sample data") } footer: {
+                Text("8 sample weeks for Today, Calendar and Stats. Your real calendars are never touched.")
+            }
+        }
     }
 }
 

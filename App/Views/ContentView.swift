@@ -252,11 +252,8 @@ struct TodayView: View {
                              pill: rowPill(block, snap: snap))
                         .contentShape(Rectangle())
                         .onTapGesture { editing = block }
-                        // v32: long-press the running Hyperday block to extend it (Live Activities can't take drags).
-                        .onLongPressGesture(minimumDuration: 0.45) {
-                            if block.source == .plan && block.id == snap.current?.id { extending = block }
-                        }
-                        .sensoryFeedback(.impact(weight: .medium), trigger: extending?.id)
+                        // v35: long-press = Apple's own menu. Calendar events: Edit and Mark done only.
+                        .contextMenu { blockMenu(block) }
                 }
             }
         }
@@ -274,6 +271,32 @@ struct TodayView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)
+    }
+
+    /// v35: the long-press menu on a block in Today.
+    @ViewBuilder
+    private func blockMenu(_ block: Block) -> some View {
+        Button { editing = block } label: { Label("Edit", systemImage: "pencil") }
+        if block.source == .plan && block.end > now {
+            Button {
+                store.extend(id: block.id, by: 15)
+                Task { await activity.refresh() }
+            } label: { Label("Extend 15 min", systemImage: "clock") }
+            Button { extending = block } label: { Label("Extend…", systemImage: "timer") }
+        }
+        if block.start <= now && store.overrides[block.id]?.end == nil {
+            Button {
+                store.finish(blockID: block.id, at: min(now, block.end))
+                Task { await activity.refresh() }
+            } label: { Label("Mark done", systemImage: "checkmark") }
+        }
+        if block.source == .plan {
+            Divider()
+            Button(role: .destructive) {
+                store.delete(id: block.id)
+                Task { await activity.refresh() }
+            } label: { Label("Delete", systemImage: "trash") }
+        }
     }
 
     /// Swipe right: Start (timer from now). Only blocks you planned; calendar events don't swipe.

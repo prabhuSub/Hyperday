@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### v35
+- **Car is off for now:** Car tab, Settings › Car, background reads and car widgets are hidden (`Features.car`). The code is kept.
+- **Apple tab bar:** iOS's own Liquid Glass bar, SF Symbols, blue when selected. The + is its own glass circle beside the bar (tap = Add block).
+- **Long-press = Apple menus:** hold a block in Today for Edit · Extend 15 min · Extend… · Mark done · Delete.
+- **Settings like iOS Settings:** one list with coloured icon squares; Appearance, Categories, Calendars, Auto rules, Live Activity, Focus & Siri and Developer are native pages. Close the day, Reality line and Backup still show their old cards for now.
+
 ### v34
 - **Add / Edit block, Apple style:** round glass ✕ and blue ✓ buttons (iOS 26), Today · Tomorrow · Other segmented control with the system date pill, a plain "Ends" row.
 - **Thick ruler:** bold length readout (40 pt), ticks 4.5–6 pt wide and taller, bold labels.
