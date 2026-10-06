@@ -64,6 +64,7 @@ targets:
       - Shared/WidgetData.swift
       - Shared/HDIcon.swift
       - Shared/Heatmap.swift
+      - Shared/CarData.swift
     info:
       path: Widget/Info.plist
       properties:
