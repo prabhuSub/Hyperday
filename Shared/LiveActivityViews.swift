@@ -311,28 +311,22 @@ struct PhasesStrip: View {
         let next = state.label.hasPrefix("Next · ")
             ? String(state.label.dropFirst(7).split(separator: " at ").first ?? "") : "Next"
         let nextCol = state.nextHex.map { Color(hex: $0) } ?? Color(white: 0.5)
-        let hasLater = state.laterTitle != nil
         let fr = widths()
         VStack(spacing: 8) {
-        GeometryReader { g in
-            let gap: CGFloat = 6
-            let w = g.size.width - gap * (hasLater ? 2 : 1)
-            HStack(alignment: .top, spacing: gap) {
-                phase("Now · Free", DayLiveStyle.doneGreen, nil, knob: true, left: state.nextStart).frame(width: w * fr[0])
-                phase(next, nextCol, t(state.nextStart)).frame(width: w * fr[1])
+            // v31: no GeometryReader. Its first pass in a widget can report 0 width, the widths went negative,
+            // and the expanded Dynamic Island rendered blank. ShareRow splits the width itself and never goes below 0.
+            ShareRow(shares: fr, spacing: 6) {
+                phase("Now · Free", DayLiveStyle.doneGreen, nil, knob: true, left: state.nextStart)
+                phase(next, nextCol, t(state.nextStart))
                 if let later = state.laterTitle {
                     phase(later, state.laterHex.map { Color(hex: $0) } ?? Color(white: 0.5), t(state.laterStart))
-                        .frame(width: w * fr[2])
                 }
             }
-        }
-        .frame(height: inIsland ? 50 : 60)
             if state.action != nil {
                 HStack { Spacer(); BlockActionButton(state: state) }
             }
         }
     }
-
 
     /// Capsule widths follow real time: free left vs the next block vs the later one,
     /// each at least 22% so its label fits. 5 free minutes before a 1-hour meeting → a short Free capsule.
@@ -370,6 +364,35 @@ struct PhasesStrip: View {
             } else {
                 Text(time ?? "").font(.system(size: 13, weight: .bold)).lineLimit(1)
             }
+        }
+    }
+}
+
+/// v31: lays children side by side, each getting its share of the width (shares sum to 1).
+/// Safe in widgets: widths are clamped at 0 and the height is the tallest child.
+struct ShareRow: Layout {
+    var shares: [CGFloat]
+    var spacing: CGFloat = 6
+
+    private func widths(_ total: CGFloat, _ n: Int) -> [CGFloat] {
+        let free = max(0, total - spacing * CGFloat(max(0, n - 1)))
+        let sh = (0..<n).map { $0 < shares.count ? max(0, shares[$0]) : 0 }
+        let sum = sh.reduce(0, +)
+        return sh.map { sum > 0 ? free * $0 / sum : free / CGFloat(max(n, 1)) }
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let total = proposal.width ?? 300
+        let ws = widths(total, subviews.count)
+        let h = zip(subviews, ws).map { $0.sizeThatFits(ProposedViewSize(width: $1, height: nil)).height }.max() ?? 0
+        return CGSize(width: total, height: h)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX
+        for (v, w) in zip(subviews, widths(bounds.width, subviews.count)) {
+            v.place(at: CGPoint(x: x, y: bounds.minY), anchor: .topLeading, proposal: ProposedViewSize(width: w, height: bounds.height))
+            x += w + spacing
         }
     }
 }
