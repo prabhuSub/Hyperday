@@ -215,8 +215,43 @@ struct LockScreenCard: View {
         return CGFloat(min(1, max(0, Date.now.timeIntervalSince(a) / b.timeIntervalSince(a))))
     }
 
+    /// v37: the long-press Island is short (iOS caps it), so it gets its own compact layout:
+    /// title · timer · ends on one line, the strip, then Next + Pause + Done. Nothing cut off at the bottom.
+    private var islandJourney: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                AppMark(size: 16)
+                Text(state.title).font(.system(size: 14, weight: .semibold)).lineLimit(1).layoutPriority(-1)
+                Text("·").font(.system(size: 14, weight: .semibold)).opacity(0.6)
+                TimerLabel(state: state, size: 15).layoutPriority(1)   // not .fixedSize(): that blanks the Island
+                Spacer(minLength: 4)
+                if let endText, state.currentEnd != nil {
+                    Text(endText).font(.system(size: 12, weight: .semibold)).opacity(0.75).lineLimit(1)
+                }
+            }
+            .foregroundStyle(nowColor)
+            ZStack(alignment: .topLeading) {
+                TickStrip(tickHeight: 14).fill(nowColor.opacity(0.28))
+                TickStrip(from: blockDone, tickHeight: 14).fill(nowColor)
+                NowMarker(at: blockDone, top: 15).fill(.white)
+            }
+            .frame(height: 22)
+            HStack(spacing: 10) {
+                bottomLeft
+                Spacer(minLength: 4)
+                PauseButton(state: state)
+                BlockActionButton(state: state)
+            }
+        }
+    }
+
+    @ViewBuilder
     private var journey: some View {
-        let h: CGFloat = inIsland ? 20 : 26
+        if inIsland { islandJourney } else { lockJourney }
+    }
+
+    private var lockJourney: some View {
+        let h: CGFloat = 26
         return VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 7) {
                 AppMark(size: inIsland ? 16 : 18)
@@ -369,7 +404,35 @@ struct PhasesStrip: View {
             ? [(0, e0 - gap / 2, DayLiveStyle.doneGreen), (e0 + gap / 2, e1 - gap / 2, nextCol), (e1 + gap / 2, 1, laterCol)]
             : [(0, e0 - gap / 2, DayLiveStyle.doneGreen), (e0 + gap / 2, 1, nextCol)]
         let now = freeDone() * (e0 - gap / 2)
-        let h: CGFloat = inIsland ? 20 : 26
+        let h: CGFloat = inIsland ? 14 : 26
+        let strip = ZStack(alignment: .topLeading) {
+            ForEach(0..<segs.count, id: \.self) { i in
+                TickStrip(from: segs[i].0, to: segs[i].1, tickHeight: h).fill(segs[i].2.opacity(0.28))
+                TickStrip(from: max(segs[i].0, now), to: segs[i].1, tickHeight: h).fill(segs[i].2)
+            }
+            NowMarker(at: now, top: h + 1).fill(.white)
+        }
+        .frame(height: h + (inIsland ? 8 : 10))
+        if inIsland {
+            // v37: compact Island version: Free · timer · until, the strip, then Next + button.
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    AppMark(size: 16)
+                    Text("Free").font(.system(size: 14, weight: .semibold)).foregroundStyle(DayLiveStyle.doneGreen)
+                    Text("·").font(.system(size: 14, weight: .semibold)).opacity(0.6)
+                    TimerLabel(state: state, size: 15).layoutPriority(1)
+                    Spacer(minLength: 4)
+                    Text("until \(t(state.nextStart))").font(.system(size: 12, weight: .semibold)).opacity(0.7).lineLimit(1)
+                }
+                strip
+                HStack(spacing: 8) {
+                    Circle().fill(nextCol).frame(width: 9, height: 9)
+                    Text("Next: \(next)").font(.system(size: 13, weight: .bold)).lineLimit(1)
+                    Spacer(minLength: 6)
+                    BlockActionButton(state: state)
+                }
+            }
+        } else {
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 7) {
                 AppMark(size: inIsland ? 16 : 18)
@@ -383,14 +446,7 @@ struct PhasesStrip: View {
                 Spacer(minLength: 4)
                 BlockActionButton(state: state)
             }
-            ZStack(alignment: .topLeading) {
-                ForEach(0..<segs.count, id: \.self) { i in
-                    TickStrip(from: segs[i].0, to: segs[i].1, tickHeight: h).fill(segs[i].2.opacity(0.28))
-                    TickStrip(from: max(segs[i].0, now), to: segs[i].1, tickHeight: h).fill(segs[i].2)
-                }
-                NowMarker(at: now, top: h + 2).fill(.white)
-            }
-            .frame(height: h + 10)
+            strip
             HStack(spacing: 8) {
                 Circle().fill(nextCol).frame(width: 9, height: 9)
                 Text("Next: \(next)").font(.system(size: 13.5, weight: .bold)).lineLimit(1)
@@ -400,6 +456,7 @@ struct PhasesStrip: View {
                         .layoutPriority(-1)
                 }
             }
+        }
         }
     }
 
