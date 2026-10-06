@@ -310,7 +310,7 @@ struct TickStrip: Shape {
     var tickHeight: CGFloat = 26
     func path(in r: CGRect) -> Path {
         var p = Path()
-        let step: CGFloat = 4.2
+        let step: CGFloat = 6        // v32b: thicker ticks, gap kept so it still reads as a strip
         guard r.width > step else { return p }
         let n = Int(r.width / step)
         for i in 0..<n {
@@ -318,8 +318,8 @@ struct TickStrip: Shape {
             let f = x / r.width
             guard f >= from && f < to else { continue }
             let tall = i % 5 == 0 ? tickHeight : tickHeight * 0.78
-            p.addRoundedRect(in: CGRect(x: r.minX + x, y: r.minY + tickHeight - tall, width: 2, height: tall),
-                             cornerSize: CGSize(width: 1, height: 1))
+            p.addRoundedRect(in: CGRect(x: r.minX + x, y: r.minY + tickHeight - tall, width: 3.2, height: tall),
+                             cornerSize: CGSize(width: 1.6, height: 1.6))
         }
         return p
     }
