@@ -203,43 +203,52 @@ struct LockScreenCard: View {
         }
         .foregroundStyle(.white)
         .padding(.horizontal, inIsland ? 4 : 14)   // v26: the same gap on every side (concentric)
-        .padding(.vertical, inIsland ? 2 : 14)
+        .padding(.vertical, inIsland ? 2 : 12)   // v33: room for the taller card (iOS caps it at 160 pt)
         .background { if !inIsland { EdgeTicks(state: state, headsUp: headsUp) } }   // v23: ticks around the card
     }
 
-    /// v24 A · "day as a journey" card (Uber / delivery style), in Hyperday's colors.
+    /// v33 A · a block is running: title · ends, big countdown + Pause/Done, a tick strip of this
+    /// block (dimmed = gone, white marker = now), then Next. As tall as other apps' cards.
+    private var blockDone: CGFloat {
+        if state.overSince != nil { return 1 }
+        guard let a = state.currentStart, let b = state.currentEnd, b > a else { return 0 }
+        return CGFloat(min(1, max(0, Date.now.timeIntervalSince(a) / b.timeIntervalSince(a))))
+    }
+
     private var journey: some View {
-        VStack(alignment: .leading, spacing: inIsland ? 6 : 8) {
-            // 1 · What's on + time left ·························· ends at
+        let h: CGFloat = inIsland ? 20 : 26
+        return VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 7) {
-                AppMark(size: 18)
+                AppMark(size: inIsland ? 16 : 18)
                 Text(state.title)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: inIsland ? 14 : 15, weight: .semibold))
                     .lineLimit(1)
                     .layoutPriority(-1)
-                Text("·").font(.system(size: 15, weight: .semibold)).opacity(0.6)
-                TimerLabel(state: state, size: 15)
-                    .layoutPriority(1)                   // not .fixedSize(): that blanks the Island
                 Spacer(minLength: 6)
                 if outOfDate && !headsUp && state.paused != true {
                     Text("Out of date").font(.system(size: 12, weight: .semibold)).opacity(0.7)
                 } else if let endText {
-                    Text(endText).font(.system(size: 13, weight: .semibold)).opacity(0.8).fixedSize()
+                    Text(state.currentEnd != nil ? "ends \(endText)" : endText)
+                        .font(.system(size: 13, weight: .semibold)).opacity(0.8).lineLimit(1)
                 }
             }
             .foregroundStyle(nowColor)
 
-            // 2 · The day as a track, a white knob at now
-            JourneyTrack(state: state, knob: nowColor)
-                .frame(height: 22)
-
-            // 3 · Next ······ Pause · Done
-            HStack(spacing: 10) {
-                bottomLeft
+            HStack(alignment: .center, spacing: 10) {
+                TimerLabel(state: state, size: inIsland ? 26 : 32)
                 Spacer(minLength: 4)
                 PauseButton(state: state)
                 BlockActionButton(state: state)
             }
+
+            ZStack(alignment: .topLeading) {
+                TickStrip(tickHeight: h).fill(nowColor.opacity(0.28))
+                TickStrip(from: blockDone, tickHeight: h).fill(nowColor)
+                NowMarker(at: blockDone, top: h + 2).fill(.white)
+            }
+            .frame(height: h + 10)
+
+            bottomLeft
         }
     }
 }
@@ -310,7 +319,7 @@ struct TickStrip: Shape {
     var tickHeight: CGFloat = 26
     func path(in r: CGRect) -> Path {
         var p = Path()
-        let step: CGFloat = 6        // v32b: thicker ticks, gap kept so it still reads as a strip
+        let step: CGFloat = 7        // v33: 4 pt ticks, 3 pt gap
         guard r.width > step else { return p }
         let n = Int(r.width / step)
         for i in 0..<n {
@@ -318,8 +327,8 @@ struct TickStrip: Shape {
             let f = x / r.width
             guard f >= from && f < to else { continue }
             let tall = i % 5 == 0 ? tickHeight : tickHeight * 0.78
-            p.addRoundedRect(in: CGRect(x: r.minX + x, y: r.minY + tickHeight - tall, width: 3.2, height: tall),
-                             cornerSize: CGSize(width: 1.6, height: 1.6))
+            p.addRoundedRect(in: CGRect(x: r.minX + x, y: r.minY + tickHeight - tall, width: 4, height: tall),
+                             cornerSize: CGSize(width: 2, height: 2))
         }
         return p
     }
@@ -346,28 +355,50 @@ struct PhasesStrip: View {
 
     private func t(_ d: Date?) -> String { d.map { $0.formatted(date: .omitted, time: .shortened) } ?? "" }
 
+    /// v33: as tall as other apps' cards. Big countdown, one full-width strip (Free → Next → Later,
+    /// sized by real time), Next underneath. Shapes fill the width on any phone: no measuring.
     var body: some View {
         let next = state.label.hasPrefix("Next · ")
             ? String(state.label.dropFirst(7).split(separator: " at ").first ?? "") : "Next"
         let nextCol = state.nextHex.map { Color(hex: $0) } ?? Color(white: 0.5)
+        let laterCol = state.laterHex.map { Color(hex: $0) } ?? Color(white: 0.5)
         let fr = widths()
-        VStack(spacing: 8) {
-            // v31: plain HStack with fixed widths from a nominal card width. GeometryReader left the Island blank
-            // (0 width on the first pass) and a custom Layout drew only the first capsule. Widths still follow real time.
-            let total: CGFloat = inIsland ? 318 : 316
-            let gap: CGFloat = 6
-            let usable = total - gap * CGFloat(fr.count - 1)
-            HStack(alignment: .top, spacing: gap) {
-                phase("Now · Free", DayLiveStyle.doneGreen, nil, knob: true, left: state.nextStart, done: freeDone()).frame(width: usable * fr[0], alignment: .leading)
-                phase(next, nextCol, t(state.nextStart)).frame(width: usable * fr[1], alignment: .leading)
-                if fr.count > 2, let later = state.laterTitle {
-                    phase(later, state.laterHex.map { Color(hex: $0) } ?? Color(white: 0.5), t(state.laterStart))
-                        .frame(width: usable * fr[2], alignment: .leading)
-                }
+        let gap: CGFloat = 0.022
+        let e0 = fr[0], e1 = fr.count > 2 ? fr[0] + fr[1] : 1
+        let segs: [(CGFloat, CGFloat, Color)] = fr.count > 2
+            ? [(0, e0 - gap / 2, DayLiveStyle.doneGreen), (e0 + gap / 2, e1 - gap / 2, nextCol), (e1 + gap / 2, 1, laterCol)]
+            : [(0, e0 - gap / 2, DayLiveStyle.doneGreen), (e0 + gap / 2, 1, nextCol)]
+        let now = freeDone() * (e0 - gap / 2)
+        let h: CGFloat = inIsland ? 20 : 26
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 7) {
+                AppMark(size: inIsland ? 16 : 18)
+                Text("Free time").font(.system(size: inIsland ? 14 : 15, weight: .semibold))
+                    .foregroundStyle(DayLiveStyle.doneGreen).lineLimit(1)
+                Spacer(minLength: 6)
+                Text("until \(t(state.nextStart))").font(.system(size: 13, weight: .semibold)).opacity(0.7).lineLimit(1)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            if state.action != nil {
-                HStack { Spacer(); BlockActionButton(state: state) }
+            HStack(alignment: .center, spacing: 8) {
+                TimerLabel(state: state, size: inIsland ? 26 : 32)
+                Spacer(minLength: 4)
+                BlockActionButton(state: state)
+            }
+            ZStack(alignment: .topLeading) {
+                ForEach(0..<segs.count, id: \.self) { i in
+                    TickStrip(from: segs[i].0, to: segs[i].1, tickHeight: h).fill(segs[i].2.opacity(0.28))
+                    TickStrip(from: max(segs[i].0, now), to: segs[i].1, tickHeight: h).fill(segs[i].2)
+                }
+                NowMarker(at: now, top: h + 2).fill(.white)
+            }
+            .frame(height: h + 10)
+            HStack(spacing: 8) {
+                Circle().fill(nextCol).frame(width: 9, height: 9)
+                Text("Next: \(next)").font(.system(size: 13.5, weight: .bold)).lineLimit(1)
+                Spacer(minLength: 6)
+                if fr.count > 2, let later = state.laterTitle, !inIsland {
+                    Text("then \(later)").font(.system(size: 12.5, weight: .semibold)).opacity(0.6).lineLimit(1)
+                        .layoutPriority(-1)
+                }
             }
         }
     }
@@ -396,30 +427,6 @@ struct PhasesStrip: View {
         return shares.map { CGFloat($0) }
     }
 
-    /// v24 mockup: name above, capsule, time under ("57:04 left" for Now, start time for the others).
-    private func phase(_ label: String, _ col: Color, _ time: String?, knob: Bool = false, left: Date? = nil, done: CGFloat = 0) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label).font(.system(size: 11, weight: .semibold)).opacity(0.75).lineLimit(1)
-            // v32: a strip of fine ticks, flat colour. Time already gone is dimmed; the white marker under it is now.
-            // Shapes only (path(in:)): no GeometryReader, no custom Layout, no .fixedSize() — those blanked the Island.
-            ZStack(alignment: .topLeading) {
-                TickStrip().fill(col.opacity(0.28))
-                TickStrip(from: done).fill(col)
-                if knob { NowMarker(at: done).fill(.white) }
-            }
-            .frame(height: 36)   // 26 of ticks + room for the marker
-            if let left, left > Date.now {
-                // Never .fixedSize() a countdown in a Live Activity: it asks for its widest possible width and the
-                // whole Island draws blank. Alone on its line it has room for the seconds.
-                Text(timerInterval: Date.now...left, countsDown: true)
-                    .monospacedDigit()
-                    .font(.system(size: 12, weight: .bold)).lineLimit(1)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                Text(time ?? "").font(.system(size: 12, weight: .bold)).lineLimit(1)
-            }
-        }
-    }
 }
 
 /// v24: today's blocks as colored segments on one track, with a white knob at now.

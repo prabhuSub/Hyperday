@@ -9,7 +9,7 @@ struct DurationRuler: View {
     var step: Int = 5
     var tint: Color = Theme.blue
 
-    private let perMinute: CGFloat = 8          // points per minute (v32b: wider for thicker ticks)
+    private let perMinute: CGFloat = 9          // points per minute (v32b: wider for thicker ticks)
     @State private var dragStart: Int?
     @State private var live: CGFloat?           // un-snapped value while dragging, so the ruler glides
 
@@ -27,7 +27,7 @@ struct DurationRuler: View {
                 let fade = max(0.18, 1 - abs(x - mid) / mid * 0.85)
                 let major = m % 5 == 0
                 let tall: CGFloat = major ? 26 : 16
-                let w: CGFloat = major ? 3.6 : 3    // v32b: thicker
+                let w: CGFloat = major ? 4.5 : 4    // v33: thicker, matches the card ticks
                 let r = CGRect(x: x - w / 2, y: tickBottom - tall, width: w, height: tall)
                 ctx.fill(Path(roundedRect: r, cornerRadius: w / 2), with: .color(tint.opacity(major ? fade : fade * 0.7)))
                 if m % 10 == 0 {

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### v33
+- **Taller Live Activity:** the Lock Screen card is now about as tall as other apps' cards. It has a big countdown and one full-width tick strip with 4 pt ticks, so there's no empty space on the right. The same layout is used for free time and for a running block, with Pause/Done next to the countdown.
+- **Thicker ruler ticks** in Add block, Edit and Extend.
+
 ### v32
 - **Time strips:** the Free card's thick bars (Lock Screen + Island) are now strips of fine ticks in flat colour; time already gone is dimmed, a white marker shows now.
 - **Apple-style duration ruler:** drag a tick ruler (snaps to 5 min, haptic) to set a block's length in Add block and Edit.
