@@ -54,10 +54,10 @@ enum TeslaError: LocalizedError {
 final class TeslaAuth: NSObject, ASWebAuthenticationPresentationContextProviding {
     static let shared = TeslaAuth()
 
-    static let redirect = "https://prabhusub.github.io/hyperday/callback"
-    static let tokenURL = URL(string: "https://fleet-auth.prd.vn.cloud.tesla.com/oauth2/v3/token")!
-    static let audience = "https://fleet-api.prd.na.vn.cloud.tesla.com"
-    static let scopes = "openid offline_access vehicle_device_data vehicle_location vehicle_cmds vehicle_charging_cmds"
+    nonisolated static let redirect = "https://prabhusub.github.io/hyperday/callback"
+    nonisolated static let tokenURL = URL(string: "https://fleet-auth.prd.vn.cloud.tesla.com/oauth2/v3/token")!
+    nonisolated static let audience = "https://fleet-api.prd.na.vn.cloud.tesla.com"
+    nonisolated static let scopes = "openid offline_access vehicle_device_data vehicle_location vehicle_cmds vehicle_charging_cmds"
 
     private var session: ASWebAuthenticationSession?
 
