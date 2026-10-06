@@ -384,21 +384,22 @@ struct AppJourney: View {
         VStack(spacing: 4) {
             GeometryReader { g in
                 let w = g.size.width
+                // v45: thick bars (16 pt, were 8) so short blocks read as blocks, not dots.
                 ZStack(alignment: .leading) {
-                    Capsule().fill(Color.white.opacity(0.15)).frame(height: 8)
+                    RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.white.opacity(0.15)).frame(height: 16)
                     ForEach(lanes) { b in
-                        Capsule().fill(color(b).opacity(b.end <= now ? 0.55 : 1))
-                            .frame(width: max(4, w * (f(b.end) - f(b.start)) - 2), height: 8)
+                        RoundedRectangle(cornerRadius: 4, style: .continuous).fill(color(b).opacity(b.end <= now ? 0.55 : 1))
+                            .frame(width: max(6, w * (f(b.end) - f(b.start)) - 2), height: 16)
                             .offset(x: w * f(b.start))
                     }
-                    Circle().fill(Color.white).frame(width: 18, height: 18)
+                    Circle().fill(Color.white).frame(width: 26, height: 26)
                         .shadow(color: .black.opacity(0.3), radius: 3)
-                        .offset(x: min(max(w * f(now) - 9, 0), w - 18))
+                        .offset(x: min(max(w * f(now) - 13, 0), w - 26))
                         .animation(.easeInOut(duration: 0.6), value: now)
                 }
-                .frame(height: 22)
+                .frame(height: 28)
             }
-            .frame(height: 22)
+            .frame(height: 28)
             HStack {
                 ForEach(Self.ticks(from, to), id: \.self) { d in
                     Text(d.formatted(.dateTime.hour(.defaultDigits(amPM: .narrow))))
