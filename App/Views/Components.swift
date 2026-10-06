@@ -543,20 +543,22 @@ enum AppTab: String, CaseIterable, Identifiable {
 struct RootView: View {
     @State private var tab: AppTab = .today
     @State private var adding: AddMode?
+    @State private var calDay = Calendar.current.component(.day, from: .now)
     @Environment(\.scenePhase) private var scenePhase
 
     enum AddMode: String, Identifiable { case block, words, scan; var id: String { rawValue } }
 
     var body: some View {
-        // v35: Apple's own tab bar (Liquid Glass on iOS 26), SF Symbols, blue when selected.
-        // The + is a search-role tab, so iOS draws it as its own glass circle beside the bar.
-        // Tapping it never shows a page: we jump back and open Add block.
+        // v35: Apple's own tab bar (Liquid Glass on iOS 26), SF Symbols (Calendar shows today's date),
+        // blue when selected.
         TabView(selection: $tab) {
             Tab("Today", systemImage: "clock", value: AppTab.today) {
                 TabRoot(title: "Today") { TodayView().tabFade(tab == .today) }
             }
-            Tab("Calendar", systemImage: "calendar", value: AppTab.calendar) {
+            Tab(value: AppTab.calendar) {
                 TabRoot(title: "Calendar") { CalendarTabView().tabFade(tab == .calendar) }
+            } label: {
+                Label { Text("Calendar") } icon: { Image("hd-tab-cal-\(calDay)").renderingMode(.template) }   // today's date
             }
             if Features.car {
                 Tab("Car", systemImage: "car", value: AppTab.car) {
@@ -569,16 +571,17 @@ struct RootView: View {
             Tab("Settings", systemImage: "gearshape", value: AppTab.settings) {
                 TabRoot(title: "Settings") { SettingsView().tabFade(tab == .settings) }
             }
-            Tab("Add", systemImage: "plus", value: AppTab.add, role: .search) {
-                Color.clear
-            }
         }
         .tint(Theme.blue)
-        .onChange(of: tab) { old, new in
-            guard new == .add else { return }
-            tab = old == .add ? .today : old
-            adding = .block
+        // The Calendar tab shows today's date: redraw at midnight and whenever the app comes back.
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+            calDay = Calendar.current.component(.day, from: .now)
         }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { calDay = Calendar.current.component(.day, from: .now) }
+        }
+        // v35b: + is a floating button again (not a tab). Tap = Add block, hold = Apple's menu.
+        .overlay(alignment: .bottomTrailing) { AddFab { adding = $0 } }
         .onReceive(NotificationCenter.default.publisher(for: CalendarJump.notification)) { _ in
             tab = .calendar
         }
@@ -711,79 +714,32 @@ struct SwipeRow<Content: View>: View {
 /// and shows Add block · Plan with words · Scan to blocks (our own menu, so the blur is strong and consistent).
 struct AddFab: View {
     let open: (RootView.AddMode) -> Void
-    @State private var menu = false
 
+    /// v35b: Apple's own pattern: Menu with a primary action. Tap = Add block; touch and hold = the system
+    /// menu (Add block · Plan with words · Scan to blocks), same as before but drawn by iOS.
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            if menu {
-                ZStack {
-                    // Glossy glass: a full-strength frosted blur, a light white wash,
-                    // and a sheen from the top-left so it reads as glass, not fog.
-                    // v23: the whole glass effect at 80% (20% less), same look.
-                    Rectangle().fill(.thinMaterial).opacity(0.8)
-                    Color.white.opacity(0.12)   // v32: flat wash, the gloss gradient is gone
-                }
-                    .contentShape(Rectangle())
-                    .ignoresSafeArea()
-                    .onTapGesture { close() }
-                    .transition(.opacity)
-                VStack(spacing: 0) {
-                    item("Add block", "add", .block)
-                    if AIPlanner.isAvailable {
-                        Divider()
-                        item("Plan with words", "siri", .words)
-                    }
-                    Divider()
-                    item("Scan to blocks", "calendar-scan", .scan)
-                }
-                .frame(width: 240)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .shadow(color: .black.opacity(0.2), radius: 20, y: 8)
-                .padding(.trailing, 20)
-                .padding(.bottom, 72 + 72)
-                .transition(.scale(scale: 0.85, anchor: .bottomTrailing).combined(with: .opacity))
+        Menu {
+            Button { open(.block) } label: { Label("Add block", systemImage: "plus") }
+            if AIPlanner.isAvailable {
+                Button { open(.words) } label: { Label("Plan with words", systemImage: "waveform") }
             }
-            // v27: Liquid Glass tinted blue (Apple's rule for the main floating action), thick white plus.
+            Button { open(.scan) } label: { Label("Scan to blocks", systemImage: "doc.viewfinder") }
+        } label: {
             Image(systemName: "plus")
                 .font(.system(size: 24, weight: .heavy))
                 .foregroundStyle(.white)
-                .rotationEffect(.degrees(menu ? 45 : 0))
                 .frame(width: 58, height: 58)
                 .modifier(BlueGlassCircle())
                 .contentShape(Circle())
-                .onTapGesture { menu ? close() : open(.block) }
-                .onLongPressGesture(minimumDuration: 0.35) {
-                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { menu = true }
-                }
-                .accessibilityLabel("Add block")
-                .accessibilityHint("Press and hold for Plan with words or Scan to blocks")
-                .accessibilityAction(named: "More ways to add") { menu = true }
-                .padding(.trailing, 20)
-                .padding(.bottom, 72)
+        } primaryAction: {
+            open(.block)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+        .menuOrder(.fixed)
+        .accessibilityLabel("Add block")
+        .accessibilityHint("Touch and hold for Plan with words or Scan to blocks")
+        .padding(.trailing, 20)
+        .padding(.bottom, 72)   // above the tab bar, in thumb reach
     }
-
-    private func item(_ title: String, _ icon: String, _ mode: RootView.AddMode) -> some View {
-        Button {
-            close()
-            open(mode)
-        } label: {
-            HStack {
-                Text(title).font(.system(size: 16))
-                Spacer()
-                HDIcon(icon, size: 20)
-            }
-            .foregroundStyle(Theme.text)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 13)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func close() { withAnimation(.easeOut(duration: 0.2)) { menu = false } }
 }
 
 
