@@ -1031,16 +1031,21 @@ struct DayClosedCard: View {
         VStack(alignment: .leading, spacing: compact ? 4 : 10) {
             HStack(alignment: .bottom, spacing: 10) {
                 focusText
+                    .layoutPriority(1)   // the hours keep their size; the bars take what's left
                 Spacer(minLength: 4)
                 if let hours = state.focusByHour, hours.contains(where: { $0 > 0 }) {
+                    // v37: thick bars like the mockup (were 4 pt in the Island). Each is up to 10–12 pt wide
+                    // and shares the space left of the hours, so many hours never push the text off.
+                    let maxH: CGFloat = compact ? 30 : 44
                     HStack(alignment: .bottom, spacing: compact ? 3 : 4) {
                         ForEach(hours.indices, id: \.self) { i in
-                            Capsule()
+                            RoundedRectangle(cornerRadius: 3, style: .continuous)
                                 .fill(hours[i] >= 15 ? DayLiveStyle.doneGreen : Color.white.opacity(0.22))
-                                .frame(width: compact ? 4 : 7,
-                                       height: max(compact ? 4 : 7, CGFloat(min(hours[i], 60) / 60) * (compact ? 24 : 40)))
+                                .frame(minWidth: 5, maxWidth: compact ? 10 : 12)
+                                .frame(height: max(6, CGFloat(min(hours[i], 60) / 60) * maxH))
                         }
                     }
+                    .frame(height: maxH, alignment: .bottom)
                 }
             }
             HStack {

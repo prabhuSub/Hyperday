@@ -67,12 +67,13 @@ struct DayLiveApp: App {
                     await RealityStore.shared.refreshWorkouts()
                     await LiveActivityManager.shared.refresh()
                     await RecapCenter.shared.schedule()
-                    if Features.car { await CarStore.shared.refresh() }   // v35: car is off for now
+                    if Features.car || Features.carWidgets { await CarStore.shared.refresh() }   // v35: car is off for now
                 }
             }
         }
         .backgroundTask(.appRefresh(BackgroundRefresh.id)) {
             await LiveActivityManager.shared.refresh()
+            if Features.car || Features.carWidgets { await CarStore.shared.refresh() }   // v38: keeps car widgets current
         }
     }
 }

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### v37–v38
+- **Island:** compact long-press layout (title · timer · ends, strip, Next + Pause/Done); nothing cut off.
+- **Day closed:** thick focus bars (up to 10–12 pt) in the Island and on the Lock Screen.
+- **Stat tiles:** labels stay on one line.
+- **Small car widgets:** Lock Screen battery gauge with your car's filled silhouette (bolt + full ring while charging), the same with a lock badge, a line above the clock ("76% · 205 mi", or "full at" while charging), and a Home Screen small list (battery/range, lock, inside temp). Car reads are back on for these only (app open + background refresh, never waking the car); the Car tab stays off.
+
 ### v36
 - **Photo task** (replaces Scan to blocks): hold + → Photo task, or the camera button on Today. The camera opens, then you set a title and time. The exact picture is attached to a normal block and nothing is read from it.
 - **Photos on blocks:** Edit shows a Photos section (add with the camera or library, tap for full screen with zoom/Share/Delete, touch and hold for Share/Delete). Today rows show a thumbnail and "1 photo".

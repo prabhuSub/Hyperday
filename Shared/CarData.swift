@@ -46,7 +46,11 @@ enum CarShared {
     static let hubKind = "HyperdayCarHub"
     static let lockKind = "HyperdayCarLock"
     static let lockReadyKind = "HyperdayCarLockReady"
-    static let allKinds = [glanceKind, readyKind, dayKind, chargeKind, hubKind, lockKind, lockReadyKind]
+    static let batteryKind = "HyperdayCarBattery"          // v38 A + J1
+    static let batteryLockKind = "HyperdayCarBatteryLock"  // v38 I
+    static let listKind = "HyperdayCarList"                // v38 M
+    static let allKinds = [glanceKind, readyKind, dayKind, chargeKind, hubKind, lockKind, lockReadyKind,
+                           batteryKind, batteryLockKind, listKind]
 
     static var url: URL? {
         FileManager.default
