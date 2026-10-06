@@ -13,6 +13,7 @@ struct TodayView: View {
     @State private var showingWords = false
     @State private var showingScan = false
     @State private var editing: Block?
+    @State private var extending: Block?   // v32: long-press the running plan block
     @State private var now = Date.now
     @State private var calendarGranted = CalendarService.shared.hasAccess
     @Environment(\.scenePhase) private var scenePhase
@@ -69,6 +70,13 @@ struct TodayView: View {
         .sheet(isPresented: $showingAdd) {
             QuickAddSheet()
                 .presentationDetents([.large])
+        }
+        .sheet(item: $extending) { block in
+            ExtendSheet(block: block) { add in
+                store.extend(id: block.id, by: add)
+                Task { await activity.refresh() }
+            }
+            .presentationDetents([.height(300)])
         }
         .sheet(item: $editing) { block in
             BlockEditorSheet(
@@ -156,8 +164,7 @@ struct TodayView: View {
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            LinearGradient(colors: [Color(red: 0.11, green: 0.15, blue: 0.22), Color(red: 0.24, green: 0.21, blue: 0.31)],
-                           startPoint: .topLeading, endPoint: .bottomTrailing),
+            Color(red: 0.15, green: 0.17, blue: 0.24),   // v32: flat, no gradients
             in: RoundedRectangle(cornerRadius: 24, style: .continuous)
         )
     }
@@ -238,16 +245,18 @@ struct TodayView: View {
             ForEach(Array(snap.all.enumerated()), id: \.element.id) { index, block in
                 if index > 0 { Rectangle().fill(Theme.border).frame(height: 1) }
                 SwipeRow(leading: leadingActions(block), trailing: trailingActions(block)) {
-                    Button {
-                        editing = block
-                    } label: {
-                        BlockRow(block: block, now: now,
-                                 color: categories.displayColor(for: block),
-                                 steps: store.steps(for: block.id),
-                                 icon: categories.category(for: block).iconName,
-                                 pill: rowPill(block, snap: snap))
-                    }
-                    .buttonStyle(.plain)
+                    BlockRow(block: block, now: now,
+                             color: categories.displayColor(for: block),
+                             steps: store.steps(for: block.id),
+                             icon: categories.category(for: block).iconName,
+                             pill: rowPill(block, snap: snap))
+                        .contentShape(Rectangle())
+                        .onTapGesture { editing = block }
+                        // v32: long-press the running Hyperday block to extend it (Live Activities can't take drags).
+                        .onLongPressGesture(minimumDuration: 0.45) {
+                            if block.source == .plan && block.id == snap.current?.id { extending = block }
+                        }
+                        .sensoryFeedback(.impact(weight: .medium), trigger: extending?.id)
                 }
             }
         }

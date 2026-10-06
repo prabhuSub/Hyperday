@@ -216,7 +216,7 @@ struct CarSceneView: UIViewRepresentable {
         // v34: the car's own screen look. Dark space, a low-poly grid floor and wireframe mountains,
         // all real 3D, so the world turns with you as you spin the car.
         let bg = UIColor(red: 0.06, green: 0.07, blue: 0.08, alpha: 1)
-        scene.background.contents = Self.skyGradient()
+        scene.background.contents = bg   // v32: flat sky, no gradients (the lighting environment stays: it lights the paint)
         scene.lightingEnvironment.contents = Self.environment()     // studio light for the paint
         scene.lightingEnvironment.intensity = 1.3
         scene.fogColor = bg; scene.fogStartDistance = 18; scene.fogEndDistance = 150; scene.fogDensityExponent = 1.4
@@ -406,18 +406,6 @@ struct CarSceneView: UIViewRepresentable {
     static func flatUnit(_ v: SCNVector3) -> SCNVector3 {
         let l = max(0.0001, (v.x * v.x + v.z * v.z).squareRoot())
         return SCNVector3(v.x / l, 0, v.z / l)
-    }
-
-    /// Dark sky, a touch lighter at the horizon (the car screen's look).
-    static func skyGradient() -> UIImage {
-        let size = CGSize(width: 64, height: 256)
-        return UIGraphicsImageRenderer(size: size).image { ctx in
-            let colors = [UIColor(red: 0.05, green: 0.055, blue: 0.065, alpha: 1).cgColor,
-                          UIColor(red: 0.13, green: 0.14, blue: 0.16, alpha: 1).cgColor,
-                          UIColor(red: 0.06, green: 0.07, blue: 0.08, alpha: 1).cgColor] as CFArray
-            let g = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 0.5, 1])!
-            ctx.cgContext.drawLinearGradient(g, start: .zero, end: CGPoint(x: 0, y: size.height), options: [])
-        }
     }
 
     /// Low-poly grid floor: squares cut into triangles, faint lines, fading into the dark.

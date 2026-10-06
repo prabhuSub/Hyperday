@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### v32
+- **Time strips:** the Free card's thick bars (Lock Screen + Island) are now strips of fine ticks in flat colour; time already gone is dimmed, a white marker shows now.
+- **Apple-style duration ruler:** drag a tick ruler (snaps to 5 min, haptic) to set a block's length in Add block and Edit.
+- **Extend:** long-press the running Hyperday block in Today to add time with the same ruler. Calendar events stay untouched.
+- **No gradients:** hero card, weekly recap, initials avatar, the + menu gloss and the Car sky are flat colours now.
+
 ### Added
 - **Widgets:** Home Screen small / medium / large and StandBy (small).
 - **Lock Screen widgets:** Now (rectangular), Day strip (rectangular), and a configurable Circle (time left / steps / next start / blocks left).

@@ -220,8 +220,7 @@ struct RecapCard: View {
         .padding(.horizontal, 24)
         .padding(.vertical, 26)
         .background(
-            LinearGradient(colors: [Color(red: 0.11, green: 0.114, blue: 0.133), Color(red: 0.063, green: 0.067, blue: 0.078)],
-                           startPoint: .topLeading, endPoint: .bottomTrailing),
+            Color(red: 0.09, green: 0.094, blue: 0.11),   // v32: flat, no gradients
             in: RoundedRectangle(cornerRadius: 28, style: .continuous)
         )
         .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).strokeBorder(line))

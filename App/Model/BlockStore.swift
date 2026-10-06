@@ -140,6 +140,14 @@ final class BlockStore: ObservableObject {
         save()
     }
 
+    /// v32 Extend: push a Hyperday block's planned end later. Keeps Start/Pause state, so a running
+    /// timer just gets longer. Calendar events are never edited.
+    func extend(id: String, by minutes: Int) {
+        guard minutes > 0, let i = planBlocks.firstIndex(where: { $0.id == id }) else { return }
+        planBlocks[i].end = planBlocks[i].end.addingTimeInterval(TimeInterval(minutes * 60))
+        save()
+    }
+
     // MARK: Steps
 
     func steps(for blockID: String) -> [Step] { steps[blockID] ?? [] }

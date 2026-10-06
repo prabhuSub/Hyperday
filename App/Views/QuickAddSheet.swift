@@ -106,7 +106,6 @@ struct QuickAddSheet: View {
     @State private var minutes = 60
     @State private var categoryIDs: [String] = []
 
-    private let lengths = [15, 30, 60, 90, 120]
     private var startOnDay: Date { start.onDay(day) }
 
     var body: some View {
@@ -123,13 +122,13 @@ struct QuickAddSheet: View {
 
                 Section("Time") {
                     DatePicker("Start", selection: $start, displayedComponents: [.hourAndMinute])
-                    Picker("Length", selection: $minutes) {
-                        ForEach(lengths, id: \.self) { m in
-                            Text(m < 60 ? "\(m)m" : (m % 60 == 0 ? "\(m / 60)h" : "\(m / 60)h\(m % 60)"))
-                                .tag(m)
-                        }
+                    // v32: Apple Timer–style ruler instead of fixed segments.
+                    HStack(alignment: .firstTextBaseline) {
+                        Text("Length").foregroundStyle(.secondary)
+                        Spacer()
+                        DurationReadout(minutes: minutes)
                     }
-                    .pickerStyle(.segmented)
+                    DurationRuler(minutes: $minutes)
                     Text("Ends at \(startOnDay.addingTimeInterval(TimeInterval(minutes * 60)).shortTime)")
                         .foregroundStyle(.secondary)
                 }
@@ -216,9 +215,12 @@ struct BlockEditorSheet: View {
                     Section { DayPicker(day: $day).padding(.vertical, 4) } header: { Text("1 · Date") }
                     Section {
                         DatePicker("Start", selection: $start, displayedComponents: [.hourAndMinute])
-                        Stepper(value: $minutes, in: 5...720, step: 5) {
-                            Text("Length  \(lengthText)")
+                        HStack(alignment: .firstTextBaseline) {
+                            Text("Length").foregroundStyle(.secondary)
+                            Spacer()
+                            DurationReadout(minutes: minutes)
                         }
+                        DurationRuler(minutes: $minutes)
                         Text("Ends at \(startOnDay.addingTimeInterval(TimeInterval(minutes * 60)).shortTime)")
                             .foregroundStyle(.secondary)
                     } header: { Text("2 · Time") }

@@ -712,13 +712,7 @@ struct AddFab: View {
                     // and a sheen from the top-left so it reads as glass, not fog.
                     // v23: the whole glass effect at 80% (20% less), same look.
                     Rectangle().fill(.thinMaterial).opacity(0.8)
-                    Color.white.opacity(0.08)
-                    LinearGradient(stops: [
-                        .init(color: .white.opacity(0.44), location: 0),
-                        .init(color: .white.opacity(0.064), location: 0.38),
-                        .init(color: .white.opacity(0), location: 0.6),
-                        .init(color: .white.opacity(0.096), location: 1),
-                    ], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    Color.white.opacity(0.12)   // v32: flat wash, the gloss gradient is gone
                 }
                     .contentShape(Rectangle())
                     .ignoresSafeArea()

@@ -302,6 +302,44 @@ struct NowNextStrip: View {
 
 /// v24 C · free time: Now (free, white knob) / Next / Later as colored capsules, times underneath.
 /// Fixed proportions so every capsule shows; the countdown lives in the top row only.
+/// v32: Apple-timer-style ticks, drawn as one path. Every 5th tick is full height.
+/// `from`/`to` pick the part of the strip to draw (0…1), so a dim copy + a bright copy show time gone vs left.
+struct TickStrip: Shape {
+    var from: CGFloat = 0
+    var to: CGFloat = 1
+    var tickHeight: CGFloat = 26
+    func path(in r: CGRect) -> Path {
+        var p = Path()
+        let step: CGFloat = 4.2
+        guard r.width > step else { return p }
+        let n = Int(r.width / step)
+        for i in 0..<n {
+            let x = CGFloat(i) * step
+            let f = x / r.width
+            guard f >= from && f < to else { continue }
+            let tall = i % 5 == 0 ? tickHeight : tickHeight * 0.78
+            p.addRoundedRect(in: CGRect(x: r.minX + x, y: r.minY + tickHeight - tall, width: 2, height: tall),
+                             cornerSize: CGSize(width: 1, height: 1))
+        }
+        return p
+    }
+}
+
+/// v32: small triangle under the tick strip at `at` (0…1) = now.
+struct NowMarker: Shape {
+    var at: CGFloat
+    var top: CGFloat = 28
+    func path(in r: CGRect) -> Path {
+        let x = r.minX + r.width * min(1, max(0, at))
+        var p = Path()
+        p.move(to: CGPoint(x: x, y: r.minY + top))
+        p.addLine(to: CGPoint(x: x + 5, y: r.minY + top + 7))
+        p.addLine(to: CGPoint(x: x - 5, y: r.minY + top + 7))
+        p.closeSubpath()
+        return p
+    }
+}
+
 struct PhasesStrip: View {
     let state: DayActivityAttributes.ContentState
     var inIsland = false
@@ -320,7 +358,7 @@ struct PhasesStrip: View {
             let gap: CGFloat = 6
             let usable = total - gap * CGFloat(fr.count - 1)
             HStack(alignment: .top, spacing: gap) {
-                phase("Now · Free", DayLiveStyle.doneGreen, nil, knob: true, left: state.nextStart).frame(width: usable * fr[0], alignment: .leading)
+                phase("Now · Free", DayLiveStyle.doneGreen, nil, knob: true, left: state.nextStart, done: freeDone()).frame(width: usable * fr[0], alignment: .leading)
                 phase(next, nextCol, t(state.nextStart)).frame(width: usable * fr[1], alignment: .leading)
                 if fr.count > 2, let later = state.laterTitle {
                     phase(later, state.laterHex.map { Color(hex: $0) } ?? Color(white: 0.5), t(state.laterStart))
@@ -332,6 +370,12 @@ struct PhasesStrip: View {
                 HStack { Spacer(); BlockActionButton(state: state) }
             }
         }
+    }
+
+    /// How much of the free gap is gone (0…1). Moves each time the card refreshes.
+    private func freeDone() -> CGFloat {
+        guard let from = state.freeStart, let to = state.nextStart, to > from else { return 0 }
+        return CGFloat(min(1, max(0, Date.now.timeIntervalSince(from) / to.timeIntervalSince(from))))
     }
 
     /// Capsule widths follow real time: free left vs the next block vs the later one,
@@ -353,15 +397,17 @@ struct PhasesStrip: View {
     }
 
     /// v24 mockup: name above, capsule, time under ("57:04 left" for Now, start time for the others).
-    private func phase(_ label: String, _ col: Color, _ time: String?, knob: Bool = false, left: Date? = nil) -> some View {
+    private func phase(_ label: String, _ col: Color, _ time: String?, knob: Bool = false, left: Date? = nil, done: CGFloat = 0) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label).font(.system(size: 11, weight: .semibold)).opacity(0.75).lineLimit(1)
-            Capsule()
-                .fill(LinearGradient(colors: [col, col.opacity(0.55)], startPoint: .leading, endPoint: .trailing))
-                .frame(height: 26)   // v34: thick like the mockup, in the Island too
-                .overlay(alignment: .leading) {
-                    if knob { Circle().fill(.white).frame(width: 20, height: 20).padding(.leading, 3) }
-                }
+            // v32: a strip of fine ticks, flat colour. Time already gone is dimmed; the white marker under it is now.
+            // Shapes only (path(in:)): no GeometryReader, no custom Layout, no .fixedSize() — those blanked the Island.
+            ZStack(alignment: .topLeading) {
+                TickStrip().fill(col.opacity(0.28))
+                TickStrip(from: done).fill(col)
+                if knob { NowMarker(at: done).fill(.white) }
+            }
+            .frame(height: 36)   // 26 of ticks + room for the marker
             if let left, left > Date.now {
                 // Never .fixedSize() a countdown in a Live Activity: it asks for its widest possible width and the
                 // whole Island draws blank. Alone on its line it has room for the seconds.

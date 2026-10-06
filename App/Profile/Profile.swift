@@ -113,8 +113,7 @@ struct ProfileAvatar: View {
             if let photo = profile.photo {
                 Image(uiImage: photo).resizable().scaledToFill()
             } else if !profile.initials.isEmpty {
-                LinearGradient(colors: [Theme.red, Color(red: 0.54, green: 0.06, blue: 0.13)],
-                               startPoint: .topLeading, endPoint: .bottomTrailing)
+                Theme.red   // v32: flat, no gradients
                     .overlay(Text(profile.initials)
                         .font(.system(size: size * 0.4, weight: .bold))
                         .foregroundStyle(.white))
