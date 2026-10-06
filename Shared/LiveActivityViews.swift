@@ -313,15 +313,20 @@ struct PhasesStrip: View {
         let nextCol = state.nextHex.map { Color(hex: $0) } ?? Color(white: 0.5)
         let fr = widths()
         VStack(spacing: 8) {
-            // v31: no GeometryReader. Its first pass in a widget can report 0 width, the widths went negative,
-            // and the expanded Dynamic Island rendered blank. ShareRow splits the width itself and never goes below 0.
-            ShareRow(shares: fr, spacing: 6) {
-                phase("Now · Free", DayLiveStyle.doneGreen, nil, knob: true, left: state.nextStart)
-                phase(next, nextCol, t(state.nextStart))
-                if let later = state.laterTitle {
+            // v31: plain HStack with fixed widths from a nominal card width. GeometryReader left the Island blank
+            // (0 width on the first pass) and a custom Layout drew only the first capsule. Widths still follow real time.
+            let total: CGFloat = inIsland ? 318 : 316
+            let gap: CGFloat = 6
+            let usable = total - gap * CGFloat(fr.count - 1)
+            HStack(alignment: .top, spacing: gap) {
+                phase("Free", DayLiveStyle.doneGreen, nil, knob: true, left: state.nextStart).frame(width: usable * fr[0], alignment: .leading)
+                phase(next, nextCol, t(state.nextStart)).frame(width: usable * fr[1], alignment: .leading)
+                if fr.count > 2, let later = state.laterTitle {
                     phase(later, state.laterHex.map { Color(hex: $0) } ?? Color(white: 0.5), t(state.laterStart))
+                        .frame(width: usable * fr[2], alignment: .leading)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             if state.action != nil {
                 HStack { Spacer(); BlockActionButton(state: state) }
             }
@@ -348,51 +353,21 @@ struct PhasesStrip: View {
 
     private func phase(_ label: String, _ col: Color, _ time: String?, knob: Bool = false, left: Date? = nil) -> some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(label).font(.system(size: 12, weight: .semibold)).opacity(0.75).lineLimit(1)
+            HStack(spacing: 4) {
+                Text(label).font(.system(size: 12, weight: .semibold)).opacity(0.75).lineLimit(1)
+                if let left, left > Date.now {
+                    Text(timerInterval: Date.now...left, countsDown: true)
+                        .font(.system(size: 12, weight: .bold)).monospacedDigit().lineLimit(1)
+                } else if let time, !time.isEmpty {
+                    Text(time).font(.system(size: 12, weight: .bold)).lineLimit(1)
+                }
+            }
             Capsule()
                 .fill(LinearGradient(colors: [col, col.opacity(0.55)], startPoint: .leading, endPoint: .trailing))
-                .frame(height: inIsland ? 20 : 26)
+                .frame(height: inIsland ? 18 : 24)
                 .overlay(alignment: .leading) {
-                    if knob { Circle().fill(.white).frame(width: inIsland ? 14 : 20, height: inIsland ? 14 : 20).padding(.leading, 3) }
+                    if knob { Circle().fill(.white).frame(width: inIsland ? 12 : 18, height: inIsland ? 12 : 18).padding(.leading, 3) }
                 }
-            if let left, left > Date.now {
-                HStack(spacing: 3) {
-                    Text(timerInterval: Date.now...left, countsDown: true).monospacedDigit().fixedSize()
-                    Text("left")
-                }
-                .font(.system(size: 13, weight: .bold)).lineLimit(1)
-            } else {
-                Text(time ?? "").font(.system(size: 13, weight: .bold)).lineLimit(1)
-            }
-        }
-    }
-}
-
-/// v31: lays children side by side, each getting its share of the width (shares sum to 1).
-/// Safe in widgets: widths are clamped at 0 and the height is the tallest child.
-struct ShareRow: Layout {
-    var shares: [CGFloat]
-    var spacing: CGFloat = 6
-
-    private func widths(_ total: CGFloat, _ n: Int) -> [CGFloat] {
-        let free = max(0, total - spacing * CGFloat(max(0, n - 1)))
-        let sh = (0..<n).map { $0 < shares.count ? max(0, shares[$0]) : 0 }
-        let sum = sh.reduce(0, +)
-        return sh.map { sum > 0 ? free * $0 / sum : free / CGFloat(max(n, 1)) }
-    }
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let total = proposal.width ?? 300
-        let ws = widths(total, subviews.count)
-        let h = zip(subviews, ws).map { $0.sizeThatFits(ProposedViewSize(width: $1, height: nil)).height }.max() ?? 0
-        return CGSize(width: total, height: h)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var x = bounds.minX
-        for (v, w) in zip(subviews, widths(bounds.width, subviews.count)) {
-            v.place(at: CGPoint(x: x, y: bounds.minY), anchor: .topLeading, proposal: ProposedViewSize(width: w, height: bounds.height))
-            x += w + spacing
         }
     }
 }
