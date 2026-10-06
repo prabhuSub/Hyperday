@@ -256,7 +256,8 @@ struct NowNextStrip: View {
     var icon: String? = nil
     var big: CGFloat = 24
 
-    private func t(_ d: Date?) -> String { d.map { $0.formatted(date: .omitted, time: .shortened) } ?? "" }
+    /// "7:30" like the mockup (no AM/PM, it fits under a narrow capsule).
+    private func t(_ d: Date?) -> String { d.map { $0.formatted(.dateTime.hour(.defaultDigits(amPM: .omitted)).minute()) } ?? "" }
 
     var body: some View {
         VStack(spacing: 3) {
@@ -319,7 +320,7 @@ struct PhasesStrip: View {
             let gap: CGFloat = 6
             let usable = total - gap * CGFloat(fr.count - 1)
             HStack(alignment: .top, spacing: gap) {
-                phase("Free", DayLiveStyle.doneGreen, nil, knob: true, left: state.nextStart).frame(width: usable * fr[0], alignment: .leading)
+                phase("Now · Free", DayLiveStyle.doneGreen, nil, knob: true, left: state.nextStart).frame(width: usable * fr[0], alignment: .leading)
                 phase(next, nextCol, t(state.nextStart)).frame(width: usable * fr[1], alignment: .leading)
                 if fr.count > 2, let later = state.laterTitle {
                     phase(later, state.laterHex.map { Color(hex: $0) } ?? Color(white: 0.5), t(state.laterStart))
@@ -351,23 +352,25 @@ struct PhasesStrip: View {
         return shares.map { CGFloat($0) }
     }
 
+    /// v24 mockup: name above, capsule, time under ("57:04 left" for Now, start time for the others).
     private func phase(_ label: String, _ col: Color, _ time: String?, knob: Bool = false, left: Date? = nil) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 4) {
-                Text(label).font(.system(size: 12, weight: .semibold)).opacity(0.75).lineLimit(1)
-                if let left, left > Date.now {
-                    Text(timerInterval: Date.now...left, countsDown: true)
-                        .font(.system(size: 12, weight: .bold)).monospacedDigit().lineLimit(1)
-                } else if let time, !time.isEmpty {
-                    Text(time).font(.system(size: 12, weight: .bold)).lineLimit(1)
-                }
-            }
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label).font(.system(size: 11, weight: .semibold)).opacity(0.75).lineLimit(1)
             Capsule()
                 .fill(LinearGradient(colors: [col, col.opacity(0.55)], startPoint: .leading, endPoint: .trailing))
-                .frame(height: inIsland ? 18 : 24)
+                .frame(height: inIsland ? 14 : 22)
                 .overlay(alignment: .leading) {
-                    if knob { Circle().fill(.white).frame(width: inIsland ? 12 : 18, height: inIsland ? 12 : 18).padding(.leading, 3) }
+                    if knob { Circle().fill(.white).frame(width: inIsland ? 10 : 16, height: inIsland ? 10 : 16).padding(.leading, 2) }
                 }
+            if let left, left > Date.now {
+                HStack(spacing: 3) {
+                    Text(timerInterval: Date.now...left, countsDown: true).monospacedDigit()
+                    Text("left")
+                }
+                .font(.system(size: 12, weight: .bold)).lineLimit(1)
+            } else {
+                Text(time ?? "").font(.system(size: 12, weight: .bold)).lineLimit(1)
+            }
         }
     }
 }

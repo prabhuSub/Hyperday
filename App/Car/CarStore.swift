@@ -20,6 +20,19 @@ final class CarStore: ObservableObject {
     }
 
     private var lastRefresh: Date?
+    private var running: Task<Void, Never>?
+
+    /// Starts a read that the screen can't cancel (a cancelled screen task was showing "cancelled").
+    @discardableResult
+    func start(force: Bool = false, wake: Bool = false) -> Task<Void, Never> {
+        if let running { return running }
+        let t = Task { [weak self] in
+            await self?.refresh(force: force, wake: wake)
+            self?.running = nil
+        }
+        running = t
+        return t
+    }
 
     init() {
         car = CarShared.load()
@@ -33,7 +46,8 @@ final class CarStore: ObservableObject {
         do {
             try await TeslaAuth.shared.signIn()
             signedIn = true
-            await refresh(force: true, wake: true)   // once, so your real numbers show right away (2¢)
+            await running?.value                          // let any read already under way finish
+            await start(force: true, wake: true).value   // once, so your real numbers show right away (2¢)
         } catch {
             message = error.localizedDescription
         }
@@ -82,6 +96,8 @@ final class CarStore: ObservableObject {
         } catch TeslaError.asleep {
             asleep = true
             message = TeslaError.asleep.localizedDescription
+        } catch is CancellationError {
+        } catch let e as URLError where e.code == .cancelled {
         } catch {
             message = error.localizedDescription
         }

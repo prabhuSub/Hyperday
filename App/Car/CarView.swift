@@ -32,8 +32,8 @@ struct CarView: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 120)
         }
-        .refreshable { await cars.refresh(force: true, wake: true) }   // pull down = wake + read (2¢)
-        .task { await cars.refresh() }
+        .refreshable { await cars.start(force: true, wake: true).value }   // pull down = wake + read (2¢)
+        .onAppear { cars.start() }
     }
 
     /// Your plate, drawn on the 3D car. Stays on this iPhone.
@@ -205,8 +205,8 @@ struct CarSceneView: UIViewRepresentable {
 
         // Showroom light: soft environment for the metallic paint + one key light.
         scene.lightingEnvironment.contents = Self.environment()
-        scene.lightingEnvironment.intensity = 1.6
-        let key = SCNNode(); key.light = SCNLight(); key.light?.type = .directional; key.light?.intensity = 700
+        scene.lightingEnvironment.intensity = 1.0
+        let key = SCNNode(); key.light = SCNLight(); key.light?.type = .directional; key.light?.intensity = 350
         key.eulerAngles = SCNVector3(-0.9, 0.6, 0); scene.rootNode.addChildNode(key)
 
         let camNode = SCNNode(); camNode.camera = SCNCamera(); camNode.camera?.fieldOfView = 34
@@ -232,10 +232,10 @@ struct CarSceneView: UIViewRepresentable {
 
         weak var turn: SCNNode?
         weak var cam: SCNNode?
-        static let homeYaw: Float = -0.8, homeTilt: Float = 0.2, homeDist: Float = 7.4
+        static let homeYaw: Float = 2.35, homeTilt: Float = 0.16, homeDist: Float = 9.2
         var yaw = homeYaw, tilt = homeTilt, dist = homeDist
         private var spin: Float = 0                     // radians per frame after a flick
-        private var startDist: Float = 7.4
+        private var startDist: Float = 9.2
         private var link: CADisplayLink?
 
         init(pins: CarPins) { self.pins = pins }
@@ -252,7 +252,7 @@ struct CarSceneView: UIViewRepresentable {
             case .began: stopSpin()
             case .changed:
                 yaw += Float(t.x) * 0.009
-                tilt = min(0.55, max(0.02, tilt + Float(t.y) * 0.004))
+                tilt = min(1.45, max(0.03, tilt + Float(t.y) * 0.005))   // up to almost straight down on the roof, never below the road
                 apply()
             case .ended, .cancelled:
                 spin = Float(g.velocity(in: g.view).x) * 0.009 / 60
@@ -263,7 +263,7 @@ struct CarSceneView: UIViewRepresentable {
 
         @objc func pinch(_ g: UIPinchGestureRecognizer) {
             if g.state == .began { startDist = dist; stopSpin() }
-            dist = min(11, max(5.2, startDist / Float(max(g.scale, 0.1))))
+            dist = min(13, max(6.2, startDist / Float(max(g.scale, 0.1))))
             apply()
         }
 

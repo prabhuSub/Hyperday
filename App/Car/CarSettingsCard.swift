@@ -6,6 +6,7 @@ struct CarSettingsCard: View {
     @State private var clientID = ""
     @State private var secret = ""
     @State private var showKeys = false
+    @State private var saved = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -21,6 +22,27 @@ struct CarSettingsCard: View {
                 Button("Sign in with Tesla") { Task { await cars.connect() } }
                     .buttonStyle(PrimaryButtonStyle())
                     .disabled(!cars.hasClientID)
+            }
+
+            // What's set up, and what Tesla last said (so problems aren't silent).
+            VStack(alignment: .leading, spacing: 3) {
+                Label(cars.hasClientID ? "Client ID saved" : "No Client ID yet",
+                      systemImage: cars.hasClientID ? "checkmark.circle.fill" : "exclamationmark.circle")
+                Label(TeslaKeychain.get("clientSecret") != nil ? "Client secret saved" : "No client secret (only needed if Tesla asks)",
+                      systemImage: TeslaKeychain.get("clientSecret") != nil ? "checkmark.circle.fill" : "circle")
+                if let m = cars.message { Label(m, systemImage: "info.circle").foregroundStyle(.orange) }
+                if let c = cars.car, !c.isSample {
+                    Label("Last read \(c.updatedAt.formatted(.relative(presentation: .named))): \(c.battery)% · \(c.rangeMiles) mi",
+                          systemImage: "car")
+                }
+            }
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(Theme.muted)
+
+            if cars.signedIn {
+                Button(cars.busy ? "Reading…" : "Read my car now (wakes it, 2¢)") { cars.start(force: true, wake: true) }
+                    .buttonStyle(SecondaryButtonStyle())
+                    .disabled(cars.busy)
             }
 
             // This month's Tesla calls (Hyperday stops before Tesla's $10 free credit runs out).
@@ -50,9 +72,11 @@ struct CarSettingsCard: View {
                     Button("Save to Keychain") {
                         if !clientID.isEmpty { TeslaKeychain.set(clientID, for: "clientID") }
                         if !secret.isEmpty { TeslaKeychain.set(secret, for: "clientSecret") }
-                        clientID = ""; secret = ""; showKeys = false
+                        clientID = ""; secret = ""; saved = true
+                        cars.objectWillChange.send()
                     }
                     .buttonStyle(SecondaryButtonStyle())
+                    if saved { Text("✓ Saved. The fields clear on purpose; the keys are in the Keychain.").foregroundStyle(DayLiveStyle.doneGreen).font(.system(size: 12, weight: .semibold)) }
                     Text("Saved only in this iPhone's Keychain (never synced, never in a backup).")
                         .font(.system(size: 11)).foregroundStyle(Theme.faint)
                 }
