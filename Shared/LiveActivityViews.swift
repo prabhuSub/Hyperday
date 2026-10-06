@@ -219,7 +219,7 @@ struct LockScreenCard: View {
                     .layoutPriority(-1)
                 Text("·").font(.system(size: 15, weight: .semibold)).opacity(0.6)
                 TimerLabel(state: state, size: 15)
-                    .fixedSize()
+                    .layoutPriority(1)                   // not .fixedSize(): that blanks the Island
                 Spacer(minLength: 6)
                 if outOfDate && !headsUp && state.paused != true {
                     Text("Out of date").font(.system(size: 12, weight: .semibold)).opacity(0.7)
@@ -288,7 +288,7 @@ struct NowNextStrip: View {
                 if let e = end, e > Date.now {
                     HStack(spacing: 3) {
                         Text("Ends in")
-                        Text(timerInterval: Date.now...e, countsDown: true).monospacedDigit().fixedSize()
+                        Text(timerInterval: Date.now...e, countsDown: true).monospacedDigit().layoutPriority(1)
                     }
                     .foregroundStyle(color)
                 }
@@ -363,12 +363,12 @@ struct PhasesStrip: View {
                     if knob { Circle().fill(.white).frame(width: 20, height: 20).padding(.leading, 3) }
                 }
             if let left, left > Date.now {
-                HStack(spacing: 3) {
-                    Text(timerInterval: Date.now...left, countsDown: true).monospacedDigit().fixedSize()   // keeps its seconds
-                    Text("left").fixedSize()
-                    Spacer(minLength: 0)
-                }
-                .font(.system(size: 12, weight: .bold)).lineLimit(1)
+                // Never .fixedSize() a countdown in a Live Activity: it asks for its widest possible width and the
+                // whole Island draws blank. Alone on its line it has room for the seconds.
+                Text(timerInterval: Date.now...left, countsDown: true)
+                    .monospacedDigit()
+                    .font(.system(size: 12, weight: .bold)).lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             } else {
                 Text(time ?? "").font(.system(size: 12, weight: .bold)).lineLimit(1)
             }
@@ -490,7 +490,7 @@ struct HeadsUpBand: View {
             Text(title).lineLimit(1)
             if start > Date.now {
                 Text("in")
-                Text(timerInterval: Date.now...start, countsDown: true).monospacedDigit().fixedSize()
+                Text(timerInterval: Date.now...start, countsDown: true).monospacedDigit().layoutPriority(1)
             } else {
                 Text("now")
             }
