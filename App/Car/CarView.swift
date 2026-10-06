@@ -248,6 +248,7 @@ struct CarSceneView: UIViewRepresentable {
         context.coordinator.anchors = Self.anchors.compactMap { car.childNode(withName: $0, recursively: true) }
 
         Self.paintPlate(in: car, text: plate)
+        Self.makeMatte(car)   // v43: matte finish everywhere, ~1–2 % reflection
 
         // v34: the car's own screen look. A low-poly grid floor and wireframe mountains, all real 3D,
         // so the world turns with you as you spin the car. v40: dark or light to match the phone.
@@ -459,6 +460,23 @@ struct CarSceneView: UIViewRepresentable {
     }
 
     /// Low-poly grid floor: squares cut into triangles, faint lines, fading into the dark.
+    /// v43: matte car. No metal, no clear coat, very rough surfaces, so reflections drop to the
+    /// ~2 % every non-metal has (paint, trim, wheels). Glass stays a little smoother so it still reads as glass.
+    static func makeMatte(_ node: SCNNode) {
+        node.enumerateHierarchy { n, _ in
+            guard let g = n.geometry else { return }
+            for m in g.materials {
+                let name = (m.name ?? "").lowercased()
+                let glass = name.contains("vidro") || name.contains("glass") || name.contains("lens")
+                m.lightingModel = .physicallyBased
+                m.metalness.contents = 0.0
+                m.roughness.contents = glass ? 0.5 : 0.92
+                m.clearCoat.contents = 0.0
+                m.clearCoatRoughness.contents = 1.0
+            }
+        }
+    }
+
     /// v40: the surroundings in dark or light. Flat colours only.
     struct WorldTheme { let sky, gridFill, gridLine, hill, wire: UIColor }
     static func theme(dark: Bool) -> WorldTheme {

@@ -8,7 +8,8 @@ struct RealityCard: View {
     @EnvironmentObject private var categories: CategoryStore
     @ObservedObject private var reality = RealityStore.shared
 
-    private let hourHeight: CGFloat = 30
+    private let hourHeight: CGFloat = 56   // v42: taller so 15–30 min blocks are readable; time stays proportional
+    private let inset: CGFloat = 10        // room above the first hour line, so the header never overlaps
 
     /// One box on either side of the card.
     private struct Item: Identifiable {
@@ -67,8 +68,8 @@ struct RealityCard: View {
         let firstHour = min(7, all.map { cal.component(.hour, from: $0.start) }.min() ?? 7)
         let lastHour = max(21, all.map { cal.component(.hour, from: $0.end) + 1 }.max() ?? 21)
         let top = dayStart.addingTimeInterval(TimeInterval(firstHour * 3600))
-        let y: (Date) -> CGFloat = { CGFloat($0.timeIntervalSince(top) / 3600) * hourHeight }
-        let height = CGFloat(lastHour - firstHour) * hourHeight
+        let y: (Date) -> CGFloat = { inset + CGFloat($0.timeIntervalSince(top) / 3600) * hourHeight }
+        let height = inset + CGFloat(lastHour - firstHour) * hourHeight + 6
 
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -82,10 +83,10 @@ struct RealityCard: View {
                 let laneW = (geo.size.width - 30 - 8) / 2
                 ZStack(alignment: .topLeading) {
                     ForEach(firstHour...lastHour, id: \.self) { h in
-                        let yy = CGFloat(h - firstHour) * hourHeight
+                        let yy = inset + CGFloat(h - firstHour) * hourHeight
                         Rectangle().fill(Theme.border).frame(height: 1).offset(y: yy)
                         Text(h % 12 == 0 ? "12\(h < 12 ? "a" : "p")" : "\(h % 12)\(h < 12 ? "a" : "p")")
-                            .font(.system(size: 9)).foregroundStyle(Theme.faint)
+                            .font(.system(size: 10, weight: .medium)).foregroundStyle(Theme.faint)
                             .offset(y: yy - 6)
                     }
                     ForEach(planned) { it in
@@ -124,11 +125,11 @@ struct RealityCard: View {
     }
 
     private func lane(_ title: String, color: Color, from: CGFloat, to: CGFloat) -> some View {
-        let h = max(12, to - from - 2)
+        let h = max(16, to - from - 2)
         return Text(title)
-            .font(.system(size: 10, weight: .semibold))
+            .font(.system(size: 12, weight: .semibold))
             .foregroundStyle(Theme.text)
-            .lineLimit(h > 24 ? 2 : 1)
+            .lineLimit(h > 34 ? 2 : 1)
             .padding(.horizontal, 5)
             .padding(.vertical, 2)
             .frame(maxWidth: .infinity, alignment: .topLeading)
