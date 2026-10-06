@@ -59,7 +59,7 @@ ICONS = {
 }
 
 # The widget extension only needs what the Live Activity, Island and widgets draw.
-WIDGET = ["edit", "work", "meetings", "deepwork", "fitness", "family", "personal", "learning", "health", "travel",
+WIDGET = ["car", "edit", "work", "meetings", "deepwork", "fitness", "family", "personal", "learning", "health", "travel",
           "errands", "social", "code", "star", "done", "start", "step-done", "free", "event"]
 
 
@@ -69,6 +69,10 @@ def svg(body: str) -> str:
 
 
 TABS = ["today", "calendar", "stats", "settings"]
+
+# v30: Prabhu's own car, traced from the side of the Quicksilver Model Y 3D model (nose right).
+_CAR = json.load(open(Path(__file__).with_name("car_icon.json")))
+ICONS["car"] = _CAR["icon"]
 
 
 def tab_svg(body: str) -> str:
@@ -88,6 +92,7 @@ def write(catalog: Path, names, tabs=False):
     items = [(n, f"hd-{n}", svg(ICONS[n])) for n in names]
     if tabs:
         items += [(n, f"hd-tab-{n}", tab_svg(ICONS[n])) for n in TABS]
+        items.append(("car", "hd-tab-car", tab_svg(_CAR["tab"]).replace('stroke-width="2.8"', 'stroke-width="1.9"')))
     if tabs:
         # v27: Calendar tab with today's date, Outlook-style: a rounded page with a header band and no ring tabs,
         # the date big and bold in the body, condensed for two digits so it never looks squeezed.

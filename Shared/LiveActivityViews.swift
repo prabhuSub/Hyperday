@@ -1005,7 +1005,7 @@ struct DriveCard: View {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(DayLiveStyle.calendarBlue)
                     .frame(width: 44, height: 44)
-                    .overlay(Image(systemName: "car.fill").font(.system(size: 20)).foregroundStyle(.white))
+                    .overlay(HDIcon("car", size: 34).foregroundStyle(.white))   // v30: your own car's outline
             }
             if let since = state.driveSince, let a = state.arriveAt, a > since {
                 ProgressView(timerInterval: since...a, countsDown: false) { EmptyView() } currentValueLabel: { EmptyView() }

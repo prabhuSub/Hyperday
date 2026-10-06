@@ -45,7 +45,7 @@ struct DayLiveActivityWidget: Widget {
                 if st.closed == true || st.driving == true {
                     SourceIcon(source: st.source, size: 22,
                                tint: st.source == .free ? nil : st.accentColor,
-                               iconName: st.iconName)
+                               iconName: st.driving == true ? "car" : st.iconName)   // v30: your car's outline while driving
                 } else {
                     IslandRingIcon(state: st, size: 22)
                 }
