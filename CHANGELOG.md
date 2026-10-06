@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### v36
+- **Photo task** (replaces Scan to blocks): hold + → Photo task, or the camera button on Today. The camera opens, then you set a title and time. The exact picture is attached to a normal block and nothing is read from it.
+- **Photos on blocks:** Edit shows a Photos section (add with the camera or library, tap for full screen with zoom/Share/Delete, touch and hold for Share/Delete). Today rows show a thumbnail and "1 photo".
+- **Privacy:** photos are kept in the app's private storage, are locked while the phone is locked, are left out of iCloud device backup and Hyperday's weekly backup, and are deleted with their block.
+
 ### v35
 - **Car is off for now:** Car tab, Settings › Car, background reads and car widgets are hidden (`Features.car`). The code is kept.
 - **Apple tab bar:** iOS's own Liquid Glass bar, SF Symbols (Calendar keeps today's date), blue when selected.

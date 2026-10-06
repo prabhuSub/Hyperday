@@ -56,6 +56,7 @@ final class BlockStore: ObservableObject {
     }
 
     func delete(id: String) {
+        PhotoStore.shared.removeAll(for: id)   // v36: a deleted block's photos go with it
         planBlocks.removeAll { $0.id == id }
         overrides[id] = nil
         steps[id] = nil

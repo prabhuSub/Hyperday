@@ -13,6 +13,7 @@ struct TodayView: View {
     @State private var showingWords = false
     @State private var showingScan = false
     @State private var editing: Block?
+    @ObservedObject private var photos = PhotoStore.shared   // v36: rows show photo thumbnails
     @State private var extending: Block?   // v32: long-press the running plan block
     @State private var now = Date.now
     @State private var calendarGranted = CalendarService.shared.hasAccess
@@ -63,7 +64,7 @@ struct TodayView: View {
             .background(Theme.section)
         }
         .sheet(isPresented: $showingWords) { PlanWithWordsSheet().presentationDetents([.large]) }
-        .sheet(isPresented: $showingScan) { ScanSheet().presentationDetents([.large]) }
+        .sheet(isPresented: $showingScan) { PhotoTaskSheet().presentationDetents([.large]) }   // v36
         .sheet(isPresented: $showingClose) {
             CloseDaySheet().presentationDetents([.large])
         }
@@ -180,9 +181,19 @@ struct TodayView: View {
                 }
             }
             .buttonStyle(SecondaryButtonStyle())
-            // #5 Plan with words · #8 Scan to blocks
+            // #5 Plan with words · v36 Photo task (replaces Scan to blocks)
             iconButton("siri", label: "Plan with words") { showingWords = true }
-            iconButton("calendar-scan", label: "Scan to blocks") { showingScan = true }
+            Button { showingScan = true } label: {
+                Image(systemName: "camera")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(Theme.text)
+                    .frame(width: 40, height: 40)
+                    .background(Circle().fill(Theme.card))
+                    .overlay(Circle().stroke(Theme.border, lineWidth: 1))
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Photo task")
         }
     }
 

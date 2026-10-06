@@ -250,6 +250,7 @@ struct BlockEditorSheet: View {
                         Text("From your calendar. Change the time in the Calendar app; steps and categories are saved in Hyperday.")
                     }
                 }
+                PhotosSection(blockID: block.id)   // v36: photos kept as is
 
                 Section {
                     MultiCategoryChips(

@@ -355,6 +355,8 @@ struct BlockRow: View {
         parts.append(block.end.timeIntervalSince(block.start).hoursMinutes)
         if !steps.isEmpty { parts.append("\(steps.filter(\.done).count)/\(steps.count) steps") }
         if block.declined { parts.append("Declined") }
+        let n = PhotoStore.shared.names(for: block.id).count
+        if n > 0 { parts.append(n == 1 ? "1 photo" : "\(n) photos") }   // v36
         return parts.joined(separator: " · ")
     }
 
@@ -380,6 +382,9 @@ struct BlockRow: View {
                     .lineLimit(1)
             }
             Spacer(minLength: 6)
+            if let first = PhotoStore.shared.names(for: block.id).first {
+                PhotoThumb(name: first, width: 30, radius: 6)   // v36: the photo, small
+            }
             if let pill {
                 RowPillView(pill: pill, now: now)
             } else if block.source == .calendar && !isNow {
@@ -546,7 +551,7 @@ struct RootView: View {
     @State private var calDay = Calendar.current.component(.day, from: .now)
     @Environment(\.scenePhase) private var scenePhase
 
-    enum AddMode: String, Identifiable { case block, words, scan; var id: String { rawValue } }
+    enum AddMode: String, Identifiable { case block, words, photo; var id: String { rawValue } }
 
     var body: some View {
         // v35: Apple's own tab bar (Liquid Glass on iOS 26), SF Symbols (Calendar shows today's date),
@@ -590,7 +595,7 @@ struct RootView: View {
             switch mode {
             case .block: QuickAddSheet().presentationDetents([.large])
             case .words: PlanWithWordsSheet().presentationDetents([.large])
-            case .scan: ScanSheet().presentationDetents([.large])
+            case .photo: PhotoTaskSheet().presentationDetents([.large])   // v36: replaces Scan to blocks
             }
         }
     }
@@ -716,14 +721,14 @@ struct AddFab: View {
     let open: (RootView.AddMode) -> Void
 
     /// v35b: Apple's own pattern: Menu with a primary action. Tap = Add block; touch and hold = the system
-    /// menu (Add block · Plan with words · Scan to blocks), same as before but drawn by iOS.
+    /// menu (Add block · Plan with words · Photo task), same as before but drawn by iOS.
     var body: some View {
         Menu {
             Button { open(.block) } label: { Label("Add block", systemImage: "plus") }
             if AIPlanner.isAvailable {
                 Button { open(.words) } label: { Label("Plan with words", systemImage: "waveform") }
             }
-            Button { open(.scan) } label: { Label("Scan to blocks", systemImage: "doc.viewfinder") }
+            Button { open(.photo) } label: { Label("Photo task", systemImage: "camera") }
         } label: {
             Image(systemName: "plus")
                 .font(.system(size: 24, weight: .heavy))
@@ -736,7 +741,7 @@ struct AddFab: View {
         }
         .menuOrder(.fixed)
         .accessibilityLabel("Add block")
-        .accessibilityHint("Touch and hold for Plan with words or Scan to blocks")
+        .accessibilityHint("Touch and hold for Plan with words or Photo task")
         .padding(.trailing, 20)
         .padding(.bottom, 72)   // above the tab bar, in thumb reach
     }

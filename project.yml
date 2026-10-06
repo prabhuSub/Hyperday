@@ -36,7 +36,7 @@ targets:
         NSHealthShareUsageDescription: "Hyperday reads your sleep and workouts to suggest a bedtime, tick workout blocks and show what makes your good days. It stays on your iPhone."
         NSLocationWhenInUseUsageDescription: "Hyperday uses your location to save Home, Office and Gym, so it can show when you actually arrived and left. It stays on your iPhone."
         NSLocationAlwaysAndWhenInUseUsageDescription: "Hyperday notices when you arrive at or leave Home, Office and Gym, even when it's closed, to fill in what really happened and learn your commute. It stays on your iPhone."
-        NSCameraUsageDescription: "Hyperday reads dates and times from a whiteboard, flyer or ticket to turn them into blocks. Photos aren't saved."
+        NSCameraUsageDescription: "Take a photo to attach to a task. It stays in Hyperday on this iPhone and is never read or uploaded."
         TeslaClientID: $(TESLA_CLIENT_ID)   # deploy.sh fills this from .tesla-keys/client.env (not a secret)
         HyperdaySignInWithApple: false   # true after joining the Apple Developer Program
         CFBundleURLTypes:
