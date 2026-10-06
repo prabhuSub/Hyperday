@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### v39–v40
+- **Car section back** (tab with your car's outline, Settings › Car, all car widgets).
+- **Front view in every car widget:** a new matte (no gloss) straight-on render of your Quicksilver Model Y replaces the side/3⁄4 picture, including the Lock Screen gauges.
+- **Lock icon instead of "Locked"** (red open lock when unlocked).
+- **New widgets:** Lock Screen rectangular (78% · lock + range · the car), Home Screen medium "Car" (name, big %, lock + range, car on the right), and G "Big car" (small, the car fills it).
+- **3D Car tab:** reflections halved, dark or light surroundings following the phone, and a soft diffused spotlight from above.
+
 ### v37–v38
 - **Island:** compact long-press layout (title · timer · ends, strip, Next + Pause/Done); nothing cut off.
 - **Day closed:** thick focus bars (up to 10–12 pt) in the Island and on the Lock Screen.

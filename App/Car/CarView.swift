@@ -4,6 +4,7 @@ import UIKit
 
 /// v31 Car tab (v29 mockup): your Quicksilver Model Y in 3D, badges pinned to the car, battery / range / inside.
 struct CarView: View {
+    @Environment(\.colorScheme) private var scheme   // v40: light / dark surroundings
     @EnvironmentObject private var cars: CarStore
     @StateObject private var pins = CarPins()
 
@@ -72,7 +73,7 @@ struct CarView: View {
 
     private var stage: some View {
         ZStack(alignment: .topLeading) {
-            CarSceneView(pins: pins, plate: cars.plate)
+            CarSceneView(pins: pins, plate: cars.plate, dark: scheme == .dark)
             ForEach(badges, id: \.id) { b in
                 if let p = pins.points[b.id] {
                     CarBadge(icon: b.icon, text: b.text, color: b.color)
@@ -178,6 +179,7 @@ final class CarPins: ObservableObject {
 struct CarSceneView: UIViewRepresentable {
     @ObservedObject var pins: CarPins
     var plate: String
+    var dark = true
 
     static let anchors = ["Anchor_DriverDoor", "Anchor_ChargePort", "Anchor_Roof"]
 
@@ -213,13 +215,20 @@ struct CarSceneView: UIViewRepresentable {
 
         Self.paintPlate(in: car, text: plate)
 
-        // v34: the car's own screen look. Dark space, a low-poly grid floor and wireframe mountains,
-        // all real 3D, so the world turns with you as you spin the car.
-        let bg = UIColor(red: 0.06, green: 0.07, blue: 0.08, alpha: 1)
-        scene.background.contents = bg   // v32: flat sky, no gradients (the lighting environment stays: it lights the paint)
+        // v34: the car's own screen look. A low-poly grid floor and wireframe mountains, all real 3D,
+        // so the world turns with you as you spin the car. v40: dark or light to match the phone.
         scene.lightingEnvironment.contents = Self.environment()     // studio light for the paint
-        scene.lightingEnvironment.intensity = 1.3
-        scene.fogColor = bg; scene.fogStartDistance = 18; scene.fogEndDistance = 150; scene.fogDensityExponent = 1.4
+        scene.lightingEnvironment.intensity = 0.65                  // v40: reflections 50% lower (was 1.3)
+        scene.fogStartDistance = 18; scene.fogEndDistance = 150; scene.fogDensityExponent = 1.4
+        // v40: a soft, diffused spotlight from above, so the car is lit like a showroom.
+        let spot = SCNNode(); spot.name = "hd-spot"
+        let sl = SCNLight(); sl.type = .spot; sl.intensity = 850
+        sl.color = UIColor(red: 1, green: 0.98, blue: 0.95, alpha: 1)
+        sl.spotInnerAngle = 25; sl.spotOuterAngle = 100          // wide, soft edge = diffused
+        sl.castsShadow = true; sl.shadowRadius = 14; sl.shadowSampleCount = 16; sl.shadowMode = .deferred
+        sl.shadowColor = UIColor(white: 0, alpha: 0.45)
+        spot.light = sl; spot.position = SCNVector3(0, 7.5, 0.6); spot.eulerAngles = SCNVector3(-Float.pi / 2, 0, 0)
+        scene.rootNode.addChildNode(spot)
         let key = SCNNode(); key.light = SCNLight(); key.light?.type = .directional; key.light?.intensity = 500
         key.light?.castsShadow = true; key.light?.shadowMode = .deferred; key.light?.shadowRadius = 8
         key.light?.shadowColor = UIColor(white: 0, alpha: 0.7); key.light?.shadowSampleCount = 8
@@ -228,6 +237,8 @@ struct CarSceneView: UIViewRepresentable {
         let ground = Self.groundY(car)
         Self.addGrid(to: scene.rootNode, y: ground)
         Self.addMountains(to: scene.rootNode, y: ground)
+        Self.applyTheme(scene, dark: dark)
+        c.dark = dark
 
         // Which way the car faces, from the anchors baked into the model, so the view buttons are exact.
         if let f = car.childNode(withName: "Anchor_Frunk", recursively: true),
@@ -249,6 +260,10 @@ struct CarSceneView: UIViewRepresentable {
     }
 
     func updateUIView(_ v: SCNView, context: Context) {
+        if dark != context.coordinator.dark, let scene = v.scene {
+            context.coordinator.dark = dark
+            Self.applyTheme(scene, dark: dark)
+        }
         guard plate != context.coordinator.plate, let root = v.scene?.rootNode else { return }
         context.coordinator.plate = plate
         Self.paintPlate(in: root, text: plate)
@@ -258,6 +273,7 @@ struct CarSceneView: UIViewRepresentable {
         let pins: CarPins
         var anchors: [SCNNode] = []
         var plate = ""
+        var dark = true
         private var last: TimeInterval = 0
 
         weak var turn: SCNNode?
@@ -409,20 +425,47 @@ struct CarSceneView: UIViewRepresentable {
     }
 
     /// Low-poly grid floor: squares cut into triangles, faint lines, fading into the dark.
-    static func addGrid(to root: SCNNode, y: Float) {
-        let tile = UIGraphicsImageRenderer(size: CGSize(width: 256, height: 256)).image { ctx in
-            UIColor(red: 0.085, green: 0.09, blue: 0.1, alpha: 1).setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 256, height: 256))
+    /// v40: the surroundings in dark or light. Flat colours only.
+    struct WorldTheme { let sky, gridFill, gridLine, hill, wire: UIColor }
+    static func theme(dark: Bool) -> WorldTheme {
+        dark
+            ? WorldTheme(sky: UIColor(red: 0.06, green: 0.07, blue: 0.08, alpha: 1),
+                         gridFill: UIColor(red: 0.085, green: 0.09, blue: 0.1, alpha: 1), gridLine: UIColor(white: 0.3, alpha: 1),
+                         hill: UIColor(red: 0.07, green: 0.075, blue: 0.085, alpha: 1), wire: UIColor(white: 0.42, alpha: 1))
+            : WorldTheme(sky: UIColor(red: 0.93, green: 0.94, blue: 0.95, alpha: 1),
+                         gridFill: UIColor(red: 0.87, green: 0.88, blue: 0.9, alpha: 1), gridLine: UIColor(white: 0.7, alpha: 1),
+                         hill: UIColor(red: 0.9, green: 0.91, blue: 0.92, alpha: 1), wire: UIColor(white: 0.62, alpha: 1))
+    }
+
+    static func gridTile(_ t: WorldTheme) -> UIImage {
+        UIGraphicsImageRenderer(size: CGSize(width: 256, height: 256)).image { ctx in
+            t.gridFill.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 256, height: 256))
             let line = UIBezierPath(); line.lineWidth = 2
             line.move(to: CGPoint(x: 0, y: 0)); line.addLine(to: CGPoint(x: 256, y: 0))
             line.move(to: CGPoint(x: 0, y: 0)); line.addLine(to: CGPoint(x: 0, y: 256))
             line.move(to: CGPoint(x: 0, y: 256)); line.addLine(to: CGPoint(x: 256, y: 0))     // the triangle cut
-            UIColor(white: 0.3, alpha: 1).setStroke(); line.stroke()
+            t.gridLine.setStroke(); line.stroke()
         }
+    }
+
+    static func applyTheme(_ scene: SCNScene, dark: Bool) {
+        let t = theme(dark: dark)
+        scene.background.contents = t.sky
+        scene.fogColor = t.sky
+        let root = scene.rootNode
+        root.childNode(withName: "hd-grid", recursively: false)?.geometry?.firstMaterial?.diffuse.contents = gridTile(t)
+        root.childNode(withName: "hd-hills", recursively: false)?.geometry?.firstMaterial?.diffuse.contents = t.hill
+        root.childNode(withName: "hd-wire", recursively: false)?.geometry?.firstMaterial?.diffuse.contents = t.wire
+    }
+
+    static func addGrid(to root: SCNNode, y: Float) {
+        let tile = gridTile(theme(dark: true))
         let m = SCNMaterial(); m.lightingModel = .lambert; m.diffuse.contents = tile
         m.diffuse.wrapS = .repeat; m.diffuse.wrapT = .repeat; m.diffuse.contentsTransform = SCNMatrix4MakeScale(80, 80, 1)
         m.diffuse.mipFilter = .linear
         let plane = SCNPlane(width: 320, height: 320); plane.materials = [m]
         let n = SCNNode(geometry: plane); n.eulerAngles.x = -.pi / 2; n.position = SCNVector3(0, y, 0)
+        n.name = "hd-grid"
         root.addChildNode(n)
     }
 
@@ -452,11 +495,12 @@ struct CarSceneView: UIViewRepresentable {
         let solid = SCNGeometry(sources: [src], elements: [idx])
         let sm = SCNMaterial(); sm.lightingModel = .constant; sm.diffuse.contents = UIColor(red: 0.07, green: 0.075, blue: 0.085, alpha: 1)
         sm.isDoubleSided = true; solid.materials = [sm]
-        root.addChildNode(SCNNode(geometry: solid))
+        let hills = SCNNode(geometry: solid); hills.name = "hd-hills"
+        root.addChildNode(hills)
         let wire = SCNGeometry(sources: [src], elements: [idx])
         let wm = SCNMaterial(); wm.lightingModel = .constant; wm.diffuse.contents = UIColor(white: 0.42, alpha: 1)
         wm.fillMode = .lines; wm.isDoubleSided = true; wire.materials = [wm]
-        let wn = SCNNode(geometry: wire); wn.position.y = 0.02
+        let wn = SCNNode(geometry: wire); wn.position.y = 0.02; wn.name = "hd-wire"
         root.addChildNode(wn)
     }
 

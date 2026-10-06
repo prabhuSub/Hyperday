@@ -31,7 +31,7 @@ private func ago(_ d: Date, now: Date) -> String {
 }
 
 private struct CarPicture: View {
-    var body: some View { Image("CarRender").resizable().scaledToFit() }
+    var body: some View { Image("CarFront").resizable().scaledToFit() }   // v40: front view, matte
 }
 
 private struct NotConnected: View {
@@ -63,7 +63,7 @@ struct CarGlanceView: View {
                 HStack(spacing: 4) {
                     Image(systemName: c.locked == false ? "lock.open.fill" : "lock.fill").font(.system(size: 9, weight: .bold))
                         .foregroundStyle(c.locked == false ? .red : carGreen)
-                    Text((c.locked == false ? "Unlocked" : "Locked") + " · " + ago(c.updatedAt, now: entry.date))
+                    Text(ago(c.updatedAt, now: entry.date))   // v40: the lock icon says it
                         .font(.system(size: 10, weight: .bold)).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
                 }
             }
@@ -104,8 +104,12 @@ struct CarDayView: View {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(c.battery)% · \(c.rangeMiles) mi").font(.system(size: 15, weight: .heavy)).foregroundStyle(carGreen)
-                    Text([c.place, c.locked == false ? "Unlocked" : "Locked"].compactMap { $0 }.joined(separator: " · "))
-                        .font(.system(size: 11, weight: .semibold)).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
+                    HStack(spacing: 5) {   // v40: lock icon instead of the word
+                        Image(systemName: c.locked == false ? "lock.open.fill" : "lock.fill")
+                            .foregroundStyle(c.locked == false ? Color.red : .white.opacity(0.6))
+                        if let place = c.place { Text(place) }
+                    }
+                    .font(.system(size: 11, weight: .semibold)).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
                     Spacer(minLength: 0)
                     CarPicture()
                 }
