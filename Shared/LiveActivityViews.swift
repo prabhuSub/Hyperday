@@ -945,8 +945,6 @@ struct DayClosedCard: View {
         .foregroundStyle(.white)
         .padding(.horizontal, compact ? 6 : 16)
         .padding(.vertical, compact ? 4 : 14)
-        // The Review link left the card (not in the mockup): tapping the card opens the day review.
-        .widgetURL(URL(string: (state.reviewCount ?? 0) > 0 ? "hyperday://close" : "hyperday://today"))
     }
 
     private func stat(_ label: String, _ value: String, _ color: Color) -> some View {
@@ -1100,7 +1098,7 @@ struct IslandTimer: View {
                 if let c = Self.coarse(until: r.upperBound) {
                     Self.bigSmall(c).foregroundStyle(DayLiveStyle.doneGreen)
                 } else {
-                    sized(Date.now...r.upperBound, down: true).foregroundStyle(DayLiveStyle.doneGreen)
+                    sized(Date.now...max(Date.now, r.upperBound), down: true).foregroundStyle(DayLiveStyle.doneGreen)
                 }
             case .over(let since):
                 HStack(spacing: 0) {
@@ -1111,7 +1109,7 @@ struct IslandTimer: View {
             case .upNext(let next):
                 HStack(spacing: 3) {
                     Text("in")
-                    if let c = Self.coarse(until: next) { Self.bigSmall(c) } else { sized(Date.now...next, down: true) }
+                    if let c = Self.coarse(until: next) { Self.bigSmall(c) } else { sized(Date.now...max(Date.now, next), down: true) }
                 }
                 .foregroundStyle(.white.opacity(0.85))
             case .paused(let left):

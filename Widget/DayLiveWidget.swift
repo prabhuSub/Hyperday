@@ -22,6 +22,9 @@ struct DayLiveActivityWidget: Widget {
             ActivityFamilyCard(state: context.state, isStale: context.isStale)
                 .activityBackgroundTint(DayLiveStyle.cardTint.opacity(DayLiveStyle.glassOpacity))
                 .activitySystemActionForegroundColor(.white)
+                // Day closed: tapping the card opens the day review (set here, on the whole activity view;
+                // a widgetURL inside the card left the expanded Dynamic Island blank).
+                .widgetURL(context.state.closed == true && (context.state.reviewCount ?? 0) > 0 ? URL(string: "hyperday://close") : nil)
         } dynamicIsland: { context in
             let live = context.state.selfSwitched(isStale: context.isStale)
             let st = live.state
@@ -57,6 +60,7 @@ struct DayLiveActivityWidget: Widget {
                 IslandRingIcon(state: st, size: 20)
             }
             .keylineTint(st.accentColor)
+            .widgetURL(st.closed == true && (st.reviewCount ?? 0) > 0 ? URL(string: "hyperday://close") : nil)
         }
         .supplementalActivityFamilies([.small])   // Apple Watch Smart Stack (watchOS 11 / iOS 18)
     }
