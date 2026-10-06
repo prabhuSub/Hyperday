@@ -38,7 +38,13 @@ enum TeslaAPI {
                              query: [URLQueryItem] = [], retried: Bool = false) async throws -> [String: Any] {
         try TeslaMeter.spend(kind)
         var c = URLComponents(url: base.appendingPathComponent(path), resolvingAgainstBaseURL: false)!
-        if !query.isEmpty { c.queryItems = query }
+        if !query.isEmpty {
+            // v42: Tesla wants the ";" between endpoints encoded (%3B). Left raw, only the first one
+            // (charge_state) came back, so lock, Sentry, inside temp and place were always empty.
+            c.percentEncodedQueryItems = query.map {
+                URLQueryItem(name: $0.name, value: $0.value?
+                    .addingPercentEncoding(withAllowedCharacters: .alphanumerics.union(CharacterSet(charactersIn: "-._~")))) }
+        }
         var req = URLRequest(url: c.url!)
         req.httpMethod = method
         req.timeoutInterval = 20
