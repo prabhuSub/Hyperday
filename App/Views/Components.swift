@@ -247,8 +247,7 @@ struct SectionHeader: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Circle().fill(color).frame(width: 28, height: 28)
-                .overlay(HDIcon(icon, size: 15).foregroundStyle(.white))
+            HDIcon(icon, size: 22).foregroundStyle(color)   // v47: solid icon, no circle
             Text(title).font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text)
         }
         .padding(.bottom, 2)
@@ -368,11 +367,10 @@ struct BlockRow: View {
         let done = block.end <= now
 
         HStack(spacing: 12) {
-            // v24: the block's icon on a dot of its category color.
-            Circle()
-                .fill(color.opacity(done ? 0.35 : 1))
+            // v47: the block's solid icon in its category colour, no dot behind it.
+            HDIcon(icon ?? "event", size: 24)
+                .foregroundStyle(color.opacity(done ? 0.4 : 1))
                 .frame(width: 30, height: 30)
-                .overlay(HDIcon(icon ?? "event", size: 16).foregroundStyle(.white))
             VStack(alignment: .leading, spacing: 2) {
                 Text(block.title)
                     .font(.system(size: 15, weight: isNow ? .semibold : .regular))

@@ -11,6 +11,11 @@ struct WidgetBlock: Codable, Hashable, Identifiable {
     var stepsTotal: Int
     var detail: String        // "Tesla" / "My plan"
     var nextStep: String? = nil   // first unchecked step, for the Lock Screen "Now" widget
+    // v47 dock-style widgets
+    var icon: String? = nil       // category icon name (solid)
+    var done: Bool? = nil         // marked Done
+    var isPlan: Bool? = nil       // your own block (can Pause)
+    var paused: Bool? = nil
 }
 
 struct WidgetDay: Codable, Equatable {

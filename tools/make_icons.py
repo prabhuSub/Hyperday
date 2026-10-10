@@ -1,4 +1,4 @@
-"""Builds Hyperday's line icons (24pt grid, 1.75pt stroke, round caps) into the asset catalogs as
+"""Builds Hyperday's line icons (24pt grid, 2pt stroke, round caps and joins; v47 Amicons-style Round) into the asset catalogs as
 vector PDFs with template rendering, so SwiftUI tints them like SF Symbols.
 
     pip install cairosvg && python3 tools/make_icons.py
@@ -59,16 +59,23 @@ ICONS = {
 }
 
 # The widget extension only needs what the Live Activity, Island and widgets draw.
-WIDGET = ["car", "edit", "work", "meetings", "deepwork", "fitness", "family", "personal", "learning", "health", "travel",
+WIDGET = ["lock", "bolt", "timer", "car", "edit", "work", "meetings", "deepwork", "fitness", "family", "personal", "learning", "health", "travel",
           "errands", "social", "code", "star", "done", "start", "step-done", "free", "event"]
 
 
 def svg(body: str) -> str:
     return ('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" '
-            'stroke="#000" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">' + body + '</svg>')
+            'stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + body + '</svg>')
 
 
 TABS = ["today", "calendar", "stats", "settings"]
+
+# v47: solid icons (Prabhu: filled, not line). Same names; ICONS keeps the line versions for the tab bar.
+FILLED = json.load(open(Path(__file__).with_name("filled_icons.json")))
+
+
+def fsvg(body: str) -> str:
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#000">' + body + '</svg>'
 
 # v30: Prabhu's own car, traced from the side of the Quicksilver Model Y 3D model (nose right).
 _CAR = json.load(open(Path(__file__).with_name("car_icon.json")))
@@ -85,11 +92,11 @@ def tab_svg(body: str) -> str:
 
 def write(catalog: Path, names, tabs=False):
     folder = catalog / "Icons"
-    if folder.exists():
-        shutil.rmtree(folder)
-    folder.mkdir(parents=True)
+    # v47: never wipe the folder: hand-made sets (e.g. hd-tab-car-front) live here too.
+    folder.mkdir(parents=True, exist_ok=True)
     (folder / "Contents.json").write_text(json.dumps({"info": {"author": "xcode", "version": 1}}, indent=2))
-    items = [(n, f"hd-{n}", svg(ICONS[n])) for n in names]
+    # v47: content and status icons are solid (filled, rounded) from filled_icons.json; controls stay 2pt lines.
+    items = [(n, f"hd-{n}", fsvg(FILLED[n]) if n in FILLED else svg(ICONS[n])) for n in names]
     if tabs:
         items += [(n, f"hd-tab-{n}", tab_svg(ICONS[n])) for n in TABS]
         items.append(("car", "hd-tab-car", tab_svg(_CAR["tab"]).replace('stroke-width="2.8"', 'stroke-width="1.9"')))
@@ -105,7 +112,7 @@ def write(catalog: Path, names, tabs=False):
             items.append((f"cal-{day}", f"hd-tab-cal-{day}", tab_svg(body)))
     for name, asset, source in items:
         d = folder / f"{asset}.imageset"
-        d.mkdir()
+        d.mkdir(exist_ok=True)
         cairosvg.svg2pdf(bytestring=source.encode(), write_to=str(d / f"{asset}.pdf"))
         (d / "Contents.json").write_text(json.dumps({
             "images": [{"filename": f"{asset}.pdf", "idiom": "universal"}],
@@ -116,6 +123,6 @@ def write(catalog: Path, names, tabs=False):
 
 if __name__ == "__main__":
     root = Path(__file__).resolve().parent.parent
-    write(root / "App/Assets.xcassets", list(ICONS), tabs=True)
+    write(root / "App/Assets.xcassets", sorted(set(ICONS) | set(FILLED)), tabs=True)
     write(root / "Widget/Assets.xcassets", WIDGET)
     print(f"{len(ICONS)} app icons, {len(WIDGET)} widget icons")

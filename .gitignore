@@ -32,3 +32,4 @@ tesla-site/
 
 # 3D model source (CC-BY download); the app uses the exported USDZ
 *.glb
+.agenttrail/

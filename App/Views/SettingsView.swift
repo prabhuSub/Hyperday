@@ -73,11 +73,10 @@ struct SettingsIcon: View {
     let symbol: String
     let color: Color
     var body: some View {
-        Image(systemName: symbol)
-            .font(.system(size: 15, weight: .semibold))
-            .foregroundStyle(.white)
+        Image(systemName: symbol)   // v47: solid symbol in colour, no square behind
+            .font(.system(size: 19, weight: .semibold))
+            .foregroundStyle(color)
             .frame(width: 30, height: 30)
-            .background(color, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
     }
 }
 
@@ -218,7 +217,7 @@ struct LiveActivitySettings: View {
                     if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
                 }
             } header: { Text("Look") } footer: {
-                Text("Tap Preview, then lock the phone: Running → Last 5 min → Free → Day closed, 7 seconds each. Then your real day comes back.")
+                Text("Tap Preview, then lock the phone: all 11 states (running, last 5 min, free, closed, paused, overtime, steps, calendar event, free with Next only, closed with tasks left, driving), 5 seconds each. Then your real day comes back.")
             }
         }
     }
@@ -252,7 +251,9 @@ struct DeveloperSettings: View {
     var body: some View {
         Form {
             Section {
-                ForEach(Array(["Running", "Last 5 min", "Free", "Day closed"].enumerated()), id: \.offset) { i, name in
+                ForEach(Array(["Running", "Last 5 min", "Free (Next + Later)", "Day closed",
+                                      "Paused", "Overtime", "Steps", "Calendar event",
+                                      "Free (Next only)", "Day closed, tasks left", "Driving"].enumerated()), id: \.offset) { i, name in
                     Button(name) { Task { await activity.previewOne(i) } }
                 }
             } header: { Text("Test one style for 60 s") }
@@ -260,7 +261,7 @@ struct DeveloperSettings: View {
                 Button("Load test day") { Task { await activity.loadTestDay() } }
                 Button("Remove test day", role: .destructive) { Task { await activity.clearTestDay() } }
             } header: { Text("Test a real mini-day") } footer: {
-                Text("Adds 'Test ·' blocks around now: Deep work running (last 5 min in about a minute), 3 min free, Standup at +9 min, Gym at +30. Remove deletes only the test blocks.")
+                Text("Adds 'Test ·' blocks around now: Inbox zero done earlier, Deep work running with steps (1 of 4, last 5 min in about a minute), a short free gap, a photo task at +9 min, Standup at +20, Gym at +45. Remove deletes only the test blocks and their photo.")
             }
             Section {
                 Button(history.hasDemo ? "Remove sample data" : "Load sample data", role: history.hasDemo ? .destructive : nil) {

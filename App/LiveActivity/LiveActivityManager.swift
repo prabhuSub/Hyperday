@@ -339,7 +339,11 @@ final class LiveActivityManager: ObservableObject {
                 colorHex: CategoryStore.shared.displayColorHex(for: b),
                 stepsDone: steps.filter(\.done).count, stepsTotal: steps.count,
                 detail: b.source == .calendar ? (b.calendarName ?? "Calendar") : "My plan",
-                nextStep: steps.first { !$0.done }?.title
+                nextStep: steps.first { !$0.done }?.title,
+                icon: CategoryStore.shared.category(for: b).iconName,
+                done: store.overrides[b.id]?.end != nil,
+                isPlan: b.source == .plan,
+                paused: store.isPaused(b.id)
             )
         }
         let day = WidgetDay(day: Calendar.current.startOfDay(for: now), blocks: blocks)   // not `now`: it never matched
@@ -404,7 +408,7 @@ final class LiveActivityManager: ObservableObject {
         defer { UIApplication.shared.endBackgroundTask(bg) }
         for (state, stale) in Self.previewStates(now: .now) {
             await activity.update(ActivityContent(state: state, staleDate: stale))
-            try? await Task.sleep(for: .seconds(7))
+            try? await Task.sleep(for: .seconds(5))   // v48: 11 states now, 5 s each
         }
         await refresh()
     }
@@ -432,12 +436,37 @@ final class LiveActivityManager: ObservableObject {
         func at(_ m: Double) -> Date { now.addingTimeInterval(m * 60) }
         let store = BlockStore.shared
         removeTestDay()
-        _ = store.add(title: "Test · Deep work", start: at(-24), minutes: 30, categoryIDs: ["deepwork"])
-        _ = store.add(title: "Test · Standup", start: at(9), minutes: 15, categoryIDs: ["meetings"])
-        _ = store.add(title: "Test · Gym", start: at(30), minutes: 30, categoryIDs: ["fitness"])
+        // v48: one test day that walks through every case in about an hour.
+        // Done earlier → running now with steps (Step button) → short free gap → a photo task → Standup → Gym.
+        if let id = store.add(title: "Test · Inbox zero", start: at(-70), minutes: 20, categoryIDs: ["work"]) {
+            store.finish(blockID: id, at: at(-52))                       // marked done, a bit early
+        }
+        if let id = store.add(title: "Test · Deep work", start: at(-24), minutes: 30, categoryIDs: ["deepwork"]) {
+            store.setSteps([Step(title: "Outline", done: true), Step(title: "Draft the intro"),
+                            Step(title: "Charts"), Step(title: "Send for review")], for: id)
+        }
+        if let id = store.add(title: "Test · Read the letter", start: at(9), minutes: 10, categoryIDs: ["learning"]) {
+            PhotoStore.shared.add(Self.testPhoto(), to: id)              // a photo task (never read)
+        }
+        _ = store.add(title: "Test · Standup", start: at(20), minutes: 15, categoryIDs: ["meetings"])
+        _ = store.add(title: "Test · Gym", start: at(45), minutes: 30, categoryIDs: ["fitness"])
         autoStart = true
         forceStart = true
         await refresh()
+    }
+
+    /// A plain test picture for the photo task, drawn on the phone (no real photo needed).
+    private static func testPhoto() -> UIImage {
+        let size = CGSize(width: 900, height: 1200)
+        return UIGraphicsImageRenderer(size: size).image { ctx in
+            UIColor(white: 0.96, alpha: 1).setFill(); ctx.fill(CGRect(origin: .zero, size: size))
+            UIColor(red: 0.76, green: 0.31, blue: 0.16, alpha: 1).setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 900, height: 200))
+            let title = NSAttributedString(string: "Test letter", attributes: [
+                .font: UIFont.systemFont(ofSize: 72, weight: .bold), .foregroundColor: UIColor.white])
+            title.draw(at: CGPoint(x: 60, y: 60))
+            UIColor(white: 0.75, alpha: 1).setFill()
+            for i in 0..<14 { ctx.fill(CGRect(x: 60, y: 280 + i * 60, width: i % 4 == 3 ? 420 : 780, height: 18)) }
+        }
     }
 
     func removeTestDay() {
@@ -468,6 +497,8 @@ final class LiveActivityManager: ObservableObject {
                       TrackSeg(s: 0.47, e: 0.53, hex: purple), TrackSeg(s: 0.62, e: 0.78, hex: blue),
                       TrackSeg(s: 0.86, e: 0.97, hex: orange)]
 
+        base.canPause = true
+
         // A · running
         let a = base
 
@@ -496,7 +527,43 @@ final class LiveActivityManager: ObservableObject {
         d.tomorrowTitle = "Standup"
         d.bedBy = cal.date(bySettingHour: 23, minute: 0, second: 0, of: now)
 
-        return [(a, nil), (b, now.addingTimeInterval(1)), (c, nil), (d, nil)]
+        // v48 · every other state, so each can be checked without waiting for the moment of the day.
+        // E · paused (timer frozen at 25:30, Resume in yellow)
+        var e = base
+        e.paused = true; e.pausedLeft = 25 * 60 + 30
+
+        // F · overtime (ran 6 min past its end; yellow, +6:00 OVER)
+        var f = base
+        f.currentStart = t(-66); f.currentEnd = t(-6); f.overSince = t(-6)
+
+        // G · steps (Step 2/4 button, the next step under the title)
+        var g = base
+        g.title = "Write the report"; g.iconName = "work"; g.accentHex = blue
+        g.stepsDone = 1; g.stepsTotal = 4; g.action = .checkStep
+        g.also = "Step 2 · Draft the intro"; g.alsoIsStep = true
+
+        // H · a calendar event (no Pause: Hyperday never edits your calendar)
+        var h = base
+        h.title = "Design review"; h.source = .calendar; h.iconName = "meetings"; h.accentHex = purple
+        h.canPause = false; h.currentStart = t(-10); h.currentEnd = t(20)
+
+        // I · free time with only a Next (no Later)
+        var i = c
+        i.laterTitle = nil; i.laterStart = nil; i.laterEnd = nil; i.laterHex = nil
+        i.freeStart = t(-30); i.nextStart = t(25); i.nextEnd = t(55)
+        i.label = "Next · Standup at \(time(t(25)))"
+
+        // J · day closed with 3 tasks still to review
+        var j = d
+        j.reviewCount = 3; j.doneCount = 4; j.totalCount = 7
+
+        // K · driving to the next place
+        var k = base
+        k.driving = true; k.title = "Drive to Office"; k.source = .free; k.action = nil; k.actionBlockID = nil
+        k.driveSince = t(-12); k.arriveAt = t(18); k.spareMinutes = 7
+
+        return [(a, nil), (b, now.addingTimeInterval(1)), (c, nil), (d, nil),
+                (e, nil), (f, nil), (g, nil), (h, nil), (i, nil), (j, nil), (k, nil)]
     }
 
     func stop() async {

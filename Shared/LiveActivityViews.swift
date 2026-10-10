@@ -173,8 +173,7 @@ struct LockScreenCard: View {
         } else if let n = nextParts {
             HStack(spacing: 8) {
                 let col = state.nextHex.map { Color(hex: $0) } ?? Color(white: 0.5)
-                Circle().fill(col).frame(width: 24, height: 24)
-                    .overlay(HDIcon(state.nextIcon ?? "event", size: 14).foregroundStyle(.white))
+                HDIcon(state.nextIcon ?? "event", size: 20).foregroundStyle(col)   // v47: solid icon, no circle
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Next: \(n.title)").font(.system(size: 14, weight: .bold)).lineLimit(1)
                     Text(score.map { "\(n.time) · \($0)" } ?? n.time)
@@ -220,7 +219,7 @@ struct LockScreenCard: View {
     private var islandJourney: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
-                AppMark(size: 16)
+                HDIcon(state.iconName ?? "event", size: 17)
                 Text(state.title).font(.system(size: 14, weight: .semibold)).lineLimit(1).layoutPriority(-1)
                 Text("·").font(.system(size: 14, weight: .semibold)).opacity(0.6)
                 TimerLabel(state: state, size: 15).layoutPriority(1)   // not .fixedSize(): that blanks the Island
@@ -254,7 +253,7 @@ struct LockScreenCard: View {
         let h: CGFloat = 26
         return VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 7) {
-                AppMark(size: inIsland ? 16 : 18)
+                HDIcon(state.iconName ?? "event", size: inIsland ? 17 : 20)
                 Text(state.title)
                     .font(.system(size: inIsland ? 14 : 15, weight: .semibold))
                     .lineLimit(1)
@@ -320,8 +319,8 @@ struct NowNextStrip: View {
                         ProgressView(timerInterval: s...e, countsDown: false) { EmptyView() } currentValueLabel: { EmptyView() }
                             .progressViewStyle(.linear).tint(color)
                     }
-                    Circle().fill(color).frame(width: 22, height: 22)
-                        .overlay(HDIcon(icon ?? "event", size: 12).foregroundStyle(.white))
+                    HDIcon(icon ?? "event", size: 18).foregroundStyle(color)   // v47: solid icon, no circle
+                        .shadow(color: .black.opacity(0.5), radius: 2)
                 }
                 .frame(minWidth: 44)
                 Text(next).font(.system(size: big, weight: .heavy)).lineLimit(1).minimumScaleFactor(0.6)
@@ -417,7 +416,7 @@ struct PhasesStrip: View {
             // v37: compact Island version: Free · timer · until, the strip, then Next + button.
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
-                    AppMark(size: 16)
+                    HDIcon("free", size: 17).foregroundStyle(DayLiveStyle.doneGreen)
                     Text("Free").font(.system(size: 14, weight: .semibold)).foregroundStyle(DayLiveStyle.doneGreen)
                     Text("·").font(.system(size: 14, weight: .semibold)).opacity(0.6)
                     TimerLabel(state: state, size: 15).layoutPriority(1)
@@ -435,7 +434,7 @@ struct PhasesStrip: View {
         } else {
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 7) {
-                AppMark(size: inIsland ? 16 : 18)
+                HDIcon("free", size: inIsland ? 17 : 20).foregroundStyle(DayLiveStyle.doneGreen)
                 Text("Free time").font(.system(size: inIsland ? 14 : 15, weight: .semibold))
                     .foregroundStyle(DayLiveStyle.doneGreen).lineLimit(1)
                 Spacer(minLength: 6)
@@ -924,7 +923,7 @@ struct WatchCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 5) {
-                AppMark(size: 14)
+                HDIcon(state.iconName ?? "event", size: 15)   // v47: solid icon instead of the app square
                 TimerLabel(state: state, size: 13)
                     .foregroundStyle(state.paused == true ? Color(white: 0.75) : .white)
                     .lineLimit(1)
@@ -1087,7 +1086,7 @@ struct DriveCard: View {
         let late = (spare ?? 0) < 0
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 7) {
-                AppMark(size: 20)
+                HDIcon("car", size: 26).foregroundStyle(DayLiveStyle.calendarBlue)   // v47
                 if let a = state.arriveAt {
                     Text("Arrive \(a.formatted(date: .omitted, time: .shortened))")
                         .font(.system(size: 16, weight: .heavy))
@@ -1116,10 +1115,7 @@ struct DriveCard: View {
                     }
                 }
                 Spacer(minLength: 0)
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(DayLiveStyle.calendarBlue)
-                    .frame(width: 44, height: 44)
-                    .overlay(HDIcon("car", size: 34).foregroundStyle(.white))   // v30: your own car's outline
+                HDIcon("car", size: 44).foregroundStyle(DayLiveStyle.calendarBlue)   // v47: your car, solid, no square
             }
             if let since = state.driveSince, let a = state.arriveAt, a > since {
                 ProgressView(timerInterval: since...a, countsDown: false) { EmptyView() } currentValueLabel: { EmptyView() }
@@ -1177,13 +1173,11 @@ struct IslandRingIcon: View {
         Group {
             switch phase {
             case .free:
-                Circle().fill(DayLiveStyle.doneGreen)
-                    .overlay(Text("F").font(.system(size: size * 0.5, weight: .black)).foregroundStyle(.white))
+                HDIcon("free", size: size * 0.86).foregroundStyle(DayLiveStyle.doneGreen)   // v47: solid, no circle
                     .frame(width: size, height: size)
             default:
-                Capsule().fill(col.opacity(0.24))
-                    .overlay(HDIcon(state.iconName ?? "event", size: size * 0.55).foregroundStyle(col))
-                    .frame(width: size * 1.36, height: size)   // v26: concentric with the Island end
+                HDIcon(state.iconName ?? "event", size: size * 0.86).foregroundStyle(col)   // v47: solid, no capsule
+                    .frame(width: size * 1.36, height: size)
             }
         }
     }

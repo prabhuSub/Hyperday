@@ -17,6 +17,10 @@ struct DayLiveWidgetBundle: WidgetBundle {
         HyperdayCarBatteryLockWidget()    // v38: I
         HyperdayCarListWidget()           // v38: M (+ medium, v40)
         HyperdayCarBigWidget()            // v40: G
+        HyperdayDockNowWidget()           // v47 dock-style widgets
+        HyperdayDockDayWidget()
+        HyperdayDockSmallNowWidget()
+        HyperdayDockTilesWidget()
     }
 }
 

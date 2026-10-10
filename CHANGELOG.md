@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### v48
+- **Every Live Activity state in the test kit:** Settings › Developer now previews 11 states: Running, Last 5 min, Free (Next + Later), Day closed, Paused, Overtime, Steps, Calendar event, Free (Next only), Day closed with tasks left, Driving. "Preview all styles" plays all 11, 5 s each.
+- **Richer test day:** a done block, a running block with steps, a free gap, a photo task with a test picture, Standup and Gym. Remove deletes the test blocks and their photo.
+- **Simulator:** `zsh tools/sim.sh` builds and runs on the iPhone 17 Pro Max simulator (Xcode 27 Device Hub).
+
+### v45–v47
+- **Thicker day bars** on the Today card; **glossy car back** (10 % less than v40).
+- **Solid icons everywhere:** filled, rounded icons for categories and status (tools/filled_icons.json); controls (arrows, +, ×) stay as 2 pt lines. No circles or squares behind icons: Today rows, Live Activity, Island, Settings, widgets.
+- **Dock-style widgets (CoolDock look):** Now strip and Day strip (medium), Now with Pause / Done buttons and 4 tiles (small): black tray, darker tiles, big numbers, ring gauges.
+
 ### v42–v44
 - **Tesla data fix:** endpoints are sent encoded, so lock, Sentry, inside temperature and place come back.
 - **Plan vs real:** 56 pt per hour, bigger text, header no longer overlaps.
