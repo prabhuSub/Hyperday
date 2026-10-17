@@ -10,6 +10,13 @@ extension Font {
     }
 }
 
+extension Font {
+    /// v55: SF Mono readouts that follow Text Size.
+    static func hdMono(size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        .system(size: HDType.scaled(size), weight: weight, design: .monospaced)
+    }
+}
+
 enum HDType {
     static let maxCategory: UIContentSizeCategory = .extraExtraExtraLarge
 

@@ -303,7 +303,7 @@ struct CircleView: View {
                 .rotationEffect(.degrees(-90))
             VStack(spacing: 0) {
                 Text(big)
-                    .font(.system(size: 14, weight: .bold).monospacedDigit())
+                    .font(.mono(14, .bold))
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)
                 Text(small)

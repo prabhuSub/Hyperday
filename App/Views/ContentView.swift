@@ -128,9 +128,9 @@ struct TodayView: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Text("\(date) · \(state)")
-                        .font(.hd(size: 11, weight: .heavy))
-                        .kerning(1.4)
-                        .foregroundStyle(.white.opacity(0.7))
+                        .font(.hdMono(size: 11, weight: .medium))   // v55: instrument caps
+                        .kerning(2)
+                        .foregroundStyle(HDTone.instrumentMuted)
                     Spacer(minLength: 8)
                     heroTimer(snap: snap)
                 }
@@ -164,10 +164,7 @@ struct TodayView: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            Color(red: 0.15, green: 0.17, blue: 0.24),   // v32: flat, no gradients
-            in: RoundedRectangle(cornerRadius: 24, style: .continuous)
-        )
+        .background(InstrumentBackground().clipShape(Chamfer(cut: 14)))   // v55: instrument panel, no gradient
     }
 
     /// Add block · Go/Stop Live · Plan with words · Scan — one row under the card.

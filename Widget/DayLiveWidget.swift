@@ -63,7 +63,7 @@ struct DayLiveActivityWidget: Widget {
             } compactTrailing: {
                 if st.closed == true {
                     Text("\(st.doneCount ?? 0)/\(st.totalCount ?? 0)")
-                        .font(.system(size: 14, weight: .semibold).monospacedDigit())
+                        .font(.mono(14, .semibold))
                         .foregroundStyle(DayLiveStyle.doneGreen)
                 } else if st.driving == true {
                     DayRing(progress: st.dayProgress, accent: st.accentColor)

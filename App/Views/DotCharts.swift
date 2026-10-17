@@ -62,7 +62,7 @@ private struct ChartHeader: View {
         HStack(alignment: .firstTextBaseline) {
             Text(title).font(.hd(size: 15, weight: .bold)).foregroundStyle(Theme.text)
             Spacer()
-            Text(right).font(.hd(size: 12.5, weight: .semibold)).foregroundStyle(Theme.muted)
+            Text(right.uppercased()).font(.hdMono(size: 10.5, weight: .medium)).kerning(1.5).foregroundStyle(Theme.muted).lineLimit(1)
         }
     }
 }
@@ -73,7 +73,7 @@ private func hoursText(_ h: Double) -> String {
 
 private func bigNumber(_ value: String, _ note: String?, good: Bool, trailing: String? = nil) -> some View {
     HStack(alignment: .firstTextBaseline, spacing: 6) {
-        Text(value).font(.hd(size: 30, weight: .heavy)).foregroundStyle(Theme.text)
+        Text(value.uppercased()).font(.hdMono(size: 30, weight: .light)).foregroundStyle(Theme.text)
         if let note {
             Text(note).font(.hd(size: 13, weight: .bold))
                 .foregroundStyle(good ? DayLiveStyle.doneGreen : missColor)

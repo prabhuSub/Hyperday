@@ -587,7 +587,7 @@ struct WeekGrid: View {
 
         if active != nil {
             Text("\(ps.shortTime) – \(pe.shortTime)")
-                .font(.hd(size: 10, weight: .bold).monospacedDigit())
+                .font(.hdMono(size: 10, weight: .bold))
                 .foregroundStyle(Theme.bg)
                 .padding(.horizontal, 7)
                 .padding(.vertical, 3)

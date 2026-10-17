@@ -87,7 +87,7 @@ struct OnboardingView: View {
                     Text("Next: Standup at 10:30").font(.hd(size: 12.5)).foregroundStyle(Color(.systemGray))
                 }
                 Spacer()
-                Text("42:10").font(.hd(size: 26, weight: .bold)).monospacedDigit()
+                Text("42:10").font(.hdMono(size: 26, weight: .bold))
             }
             HStack(alignment: .bottom, spacing: 3) {
                 ForEach(0..<36, id: \.self) { k in
@@ -104,7 +104,7 @@ struct OnboardingView: View {
         }
         .foregroundStyle(.white)
         .padding(16)
-        .background(Color(white: 0.11), in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .background(Color(white: 0.11), in: Chamfer(cut: 12))
         .environment(\.colorScheme, .dark)
     }
 
@@ -141,7 +141,7 @@ struct OnboardingView: View {
                     if let url = URL(string: UIApplication.openSettingsURLString) { await UIApplication.shared.open(url) }
                 }
             }
-            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .background(Color(.secondarySystemBackground), in: Chamfer(cut: 12))
             .padding(.top, 34)
             Label("Your plan stays on this iPhone. No account needed.", systemImage: "lock.fill")
                 .font(.hd(size: 13)).foregroundStyle(.secondary).padding(.top, 24)

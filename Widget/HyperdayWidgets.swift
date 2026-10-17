@@ -76,7 +76,8 @@ struct HyperdayWidgetView: View {
                 }
             }
         }
-        .containerBackground(for: .widget) { Color(UIColor.systemBackground) }
+        .environment(\.colorScheme, .dark)   // v55: instrument plate in both modes
+        .containerBackground(for: .widget) { InstrumentBackground() }
     }
 }
 
@@ -117,7 +118,7 @@ private struct WRow: View {
         let isNow = block.start <= date && date < block.end
         let done = block.end <= date
         HStack(spacing: 8) {
-            RoundedRectangle(cornerRadius: 2)
+            Chamfer(cut: 8)
                 .fill(Color(hex: block.colorHex))
                 .opacity(done ? 0.4 : 1)
                 .frame(width: 3, height: 26)
@@ -153,7 +154,7 @@ private struct Mark: View {
         Image("HyperdayMark")
             .resizable()
             .frame(width: 16, height: 16)
-            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+            .clipShape(Chamfer(cut: 8))
     }
 }
 
@@ -182,7 +183,7 @@ private struct SmallWidget: View {
                 VStack(alignment: .leading, spacing: 1) {
                     if let c = current {
                         Text(timerInterval: entry.date...c.end, countsDown: true)
-                            .font(.system(size: 18, weight: .bold).monospacedDigit())
+                            .font(.mono(18, .bold))
                             .lineLimit(1)
                         Text(c.stepsTotal > 0 ? "left · \(c.stepsDone)/\(c.stepsTotal) steps" : "left")
                             .font(.system(size: 10))

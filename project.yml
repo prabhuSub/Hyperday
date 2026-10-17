@@ -62,6 +62,7 @@ targets:
       - Shared/DayActivityAttributes.swift
       - Shared/BlockActionIntent.swift
       - Shared/LiveActivityViews.swift
+      - Shared/HDTheme.swift
       - Shared/WidgetData.swift
       - Shared/HDIcon.swift
       - Shared/Heatmap.swift

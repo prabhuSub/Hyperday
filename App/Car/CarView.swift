@@ -15,10 +15,11 @@ struct CarView: View {
             VStack(spacing: 0) {
                 teslaHeader
                 stage
+                    .clipShape(Chamfer(cut: 16))   // v55: stainless stage with cut corners
+                    .padding(.horizontal, 12)
                 angleRow
-                Rectangle().fill(Theme.border).frame(height: 1).padding(.horizontal, 20).padding(.top, 10)
+                alertStrips
                 statusGrid
-                Rectangle().fill(Theme.border).frame(height: 1).padding(.horizontal, 20)
                 batteryBlock
                 VStack(alignment: .leading, spacing: 12) {
                     plateRow
@@ -67,18 +68,16 @@ struct CarView: View {
 
     private var teslaHeader: some View {
         VStack(spacing: 6) {
-            Text(cars.car?.name ?? "Your car").font(.system(size: 26, weight: .medium)).tracking(0.5)
+            Text(cars.car?.name ?? "Your car").font(.hd(size: 26, weight: .semibold)).tracking(0.2)
                 .foregroundStyle(Theme.text)
             HStack(spacing: 8) {
-                Image(systemName: cars.car?.charging == true ? "battery.100.bolt" : "battery.75")
-                    .font(.system(size: 17, weight: .light))
-                if let c = cars.car { Text("\(c.rangeMiles) mi").fontWeight(.medium).foregroundStyle(Theme.text); Text("·") }
-                Text(statusText)
+                Text(statusText.uppercased())
                 if cars.busy { ProgressView().controlSize(.mini) }
             }
-            .font(.system(size: 15))
+            .font(.hdMono(size: 12, weight: .medium)).kerning(2)   // v55: instrument caps
             .foregroundStyle(Theme.muted)
             .lineLimit(1)
+            .minimumScaleFactor(0.8)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 4)
@@ -91,7 +90,7 @@ struct CarView: View {
                 let on = pins.angle == a
                 Button { pins.go(a) } label: {
                     Text(a.title.uppercased())
-                        .font(.system(size: 12, weight: on ? .semibold : .regular)).tracking(1.5)
+                        .font(.hdMono(size: 11, weight: on ? .semibold : .regular)).tracking(2)
                         .foregroundStyle(on ? Theme.text : Theme.muted)
                         .padding(.bottom, 4)
                         .overlay(alignment: .bottom) { if on { Rectangle().fill(Theme.text).frame(height: 2) } }
@@ -104,56 +103,99 @@ struct CarView: View {
 
     private var statusGrid: some View {
         let c = cars.car
-        var items: [(String, String)] = []
-        if let l = c?.locked { items.append((l ? "lock" : "lock.open", l ? "Locked" : "Unlocked")) }
-        if let s = c?.sentry { items.append(("shield", s ? "Sentry On" : "Sentry Off")) }
-        if let c { items.append(("bolt", c.charging ? "Charging" + (c.chargeKW.map { " \(Int($0)) kW" } ?? "") : "Port Closed")) }
-        if let f = c?.insideF { items.append(("thermometer.medium", "\(f)° Inside")) }
-        if let w = c?.windowsOpen { items.append((w ? "window.vertical.open" : "window.vertical.closed", w ? "Window Open" : "Windows Closed")) }
-        if let t = c?.tiresLow { items.append(("circle.circle", t ? "Check Tires" : "Tires OK")) }
+        // v55: solid icons; colour only where it needs attention.
+        var items: [(String, String, Color)] = []
+        if let l = c?.locked { items.append((l ? "lock.fill" : "lock.open.fill", l ? "Locked" : "Unlocked", l ? Theme.text : HDTone.alert)) }
+        if let s = c?.sentry { items.append(("shield.fill", s ? "Sentry on" : "Sentry off", s ? HDTone.accentText : Theme.text)) }
+        if let c { items.append(("bolt.fill", c.charging ? "Charging" + (c.chargeKW.map { " \(Int($0)) kW" } ?? "") : "Port closed", c.charging ? HDTone.ok : Theme.text)) }
+        if let f = c?.insideF { items.append(("thermometer.medium", "\(f)° inside", Theme.text)) }
+        if let w = c?.windowsOpen { items.append((w ? "window.vertical.open" : "window.vertical.closed", w ? "Window open" : "Windows closed", w ? HDTone.warn : Theme.text)) }
+        if let t = c?.tiresLow { items.append(("circle.circle.fill", t ? "Check tires" : "Tires OK", t ? HDTone.warn : Theme.text)) }
         return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 3), spacing: 0) {
             ForEach(items.indices, id: \.self) { i in
-                VStack(spacing: 7) {
-                    Image(systemName: items[i].0).font(.system(size: 22, weight: .light)).foregroundStyle(Theme.text)
+                VStack(spacing: 6) {
+                    Image(systemName: items[i].0).font(.hd(size: 21, weight: .semibold)).foregroundStyle(items[i].2)
                         .frame(height: 26)
-                    Text(items[i].1).font(.system(size: 12)).foregroundStyle(Theme.muted).lineLimit(1).minimumScaleFactor(0.8)
+                    Text(items[i].1).font(.hd(size: 12, weight: .semibold)).foregroundStyle(items[i].2)
+                        .lineLimit(1).minimumScaleFactor(0.8)
                 }
-                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 11)
+                .overlay(alignment: .trailing) { if i % 3 != 2 { Rectangle().fill(HDTone.line).frame(width: 1) } }
+                .overlay(alignment: .bottom) { if i < 3 && items.count > 3 { Rectangle().fill(HDTone.line).frame(height: 1) } }
             }
         }
-        .padding(.horizontal, 14)
+        .background(HDTone.panel, in: Chamfer(cut: 10))
+        .padding(.horizontal, 12)
+        .padding(.top, 8)
     }
 
     @ViewBuilder
     private var batteryBlock: some View {
         if let c = cars.car {
+            // v55: instrument readouts (zero-padded), segmented bar with the charge-limit mark.
+            let low = c.battery < 10, mid = c.battery < 20
+            let battColor: Color = low ? HDTone.alert : (mid ? HDTone.warn : Theme.text)
             VStack(spacing: 8) {
                 HStack(alignment: .lastTextBaseline) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        (Text("\(c.battery)").font(.system(size: 44, weight: .light)) + Text("%").font(.system(size: 20, weight: .light)))
-                        Text("Battery").font(.system(size: 12)).foregroundStyle(Theme.muted)
+                    VStack(alignment: .leading, spacing: 2) {
+                        (Text(String(format: "%02d", c.battery)).font(.hdMono(size: 46, weight: .light)) + Text("%").font(.hdMono(size: 18, weight: .light)))
+                            .foregroundStyle(battColor)
+                        Caps("Battery")
                     }
                     Spacer()
-                    VStack(alignment: .trailing, spacing: 0) {
-                        (Text("\(c.rangeMiles)").font(.system(size: 44, weight: .light)) + Text(" mi").font(.system(size: 18, weight: .light)))
-                        Text("Range").font(.system(size: 12)).foregroundStyle(Theme.muted)
+                    VStack(alignment: .trailing, spacing: 2) {
+                        (Text(String(format: "%03d", c.rangeMiles)).font(.hdMono(size: 46, weight: .light)) + Text(" MI").font(.hdMono(size: 16, weight: .light)))
+                            .foregroundStyle(Theme.text)
+                        Caps("Range")
                     }
                 }
-                .foregroundStyle(Theme.text)
-                Capsule().fill(Theme.border).frame(height: 4)
-                    .overlay(alignment: .leading) {
-                        GeometryReader { g in Capsule().fill(Theme.text).frame(width: g.size.width * CGFloat(c.battery) / 100) }
-                    }
-                    .frame(height: 4)
+                SegmentedCharge(level: c.battery, limit: c.chargeLimit, fill: low ? HDTone.alert : Theme.text)
+                    .frame(height: 14)
+                    .accessibilityHidden(true)
                 HStack {
-                    Text([c.place, c.isSample ? nil : c.updatedAt.formatted(.relative(presentation: .named))].compactMap { $0 }.joined(separator: " · "))
+                    Text("0")
                     Spacer()
-                    if let lim = c.chargeLimit { Text("Limit \(lim)%") }
+                    if let lim = c.chargeLimit { Text("LIMIT \(lim)%") }
                 }
-                .font(.system(size: 11)).foregroundStyle(Theme.muted)
+                .font(.hdMono(size: 10.5, weight: .medium)).kerning(1.5).foregroundStyle(Theme.muted)
             }
+            .accessibilityElement(children: .combine)
             .padding(.horizontal, 24)
             .padding(.top, 14)
+        }
+    }
+
+    /// v55: what needs attention, as chamfered strips (low battery, window open, unlocked, tires).
+    @ViewBuilder
+    private var alertStrips: some View {
+        if let c = cars.car {
+            let alerts: [(String, String, Color)] = [
+                c.battery < 10 ? ("Battery low", "Charge now · \(c.rangeMiles) mi left", HDTone.alert) : nil,
+                c.locked == false ? ("Unlocked", "Car is not locked", HDTone.alert) : nil,
+                c.windowsOpen == true ? ("Window open", "Check the windows", HDTone.warn) : nil,
+                c.tiresLow == true ? ("Tire pressure", "Check tires", HDTone.warn) : nil,
+            ].compactMap { $0 }
+            if !alerts.isEmpty {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                    ForEach(alerts.indices, id: \.self) { i in
+                        HStack(spacing: 0) {
+                            Rectangle().fill(alerts[i].2).frame(width: 3)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(alerts[i].0.uppercased()).font(.hdMono(size: 10.5, weight: .bold)).kerning(1.5)
+                                    .foregroundStyle(alerts[i].2)
+                                Text(alerts[i].1).font(.hd(size: 13, weight: .semibold)).foregroundStyle(Theme.text)
+                                    .lineLimit(1).minimumScaleFactor(0.8)
+                            }
+                            .padding(.horizontal, 10).padding(.vertical, 8)
+                            Spacer(minLength: 0)
+                        }
+                        .background(HDTone.panel, in: Chamfer(cut: 8))
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.top, 12)
+            }
         }
     }
 
@@ -556,22 +598,23 @@ struct CarSceneView: UIViewRepresentable {
     struct WorldTheme { let sky, gridFill, gridLine, hill, wire: UIColor }
     static func theme(dark: Bool) -> WorldTheme {
         dark
-            ? WorldTheme(sky: UIColor(red: 0.06, green: 0.07, blue: 0.08, alpha: 1),
+            // v55: stainless stage colours (HDTone.stage), the floor becomes brushed hairlines.
+            ? WorldTheme(sky: UIColor(hd: 0x1D1F22),
                          gridFill: UIColor(red: 0.085, green: 0.09, blue: 0.1, alpha: 1), gridLine: UIColor(white: 0.3, alpha: 1),
                          hill: UIColor(red: 0.07, green: 0.075, blue: 0.085, alpha: 1), wire: UIColor(white: 0.42, alpha: 1))
-            : WorldTheme(sky: UIColor(red: 0.93, green: 0.94, blue: 0.95, alpha: 1),
-                         gridFill: UIColor(red: 0.87, green: 0.88, blue: 0.9, alpha: 1), gridLine: UIColor(white: 0.7, alpha: 1),
+            : WorldTheme(sky: UIColor(hd: 0xE6E7E9),
+                         gridFill: UIColor(hd: 0xDFE0E3), gridLine: UIColor(white: 0.7, alpha: 1),
                          hill: UIColor(red: 0.9, green: 0.91, blue: 0.92, alpha: 1), wire: UIColor(white: 0.62, alpha: 1))
     }
 
     static func gridTile(_ t: WorldTheme) -> UIImage {
         UIGraphicsImageRenderer(size: CGSize(width: 256, height: 256)).image { ctx in
             t.gridFill.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 256, height: 256))
-            let line = UIBezierPath(); line.lineWidth = 2
-            line.move(to: CGPoint(x: 0, y: 0)); line.addLine(to: CGPoint(x: 256, y: 0))
-            line.move(to: CGPoint(x: 0, y: 0)); line.addLine(to: CGPoint(x: 0, y: 256))
-            line.move(to: CGPoint(x: 0, y: 256)); line.addLine(to: CGPoint(x: 256, y: 0))     // the triangle cut
-            t.gridLine.setStroke(); line.stroke()
+            // v55: brushed stainless: fine parallel lines only (no triangle grid).
+            let line = UIBezierPath(); line.lineWidth = 1
+            var y: CGFloat = 0
+            while y < 256 { line.move(to: CGPoint(x: 0, y: y)); line.addLine(to: CGPoint(x: 256, y: y)); y += 8 }
+            t.gridLine.withAlphaComponent(0.35).setStroke(); line.stroke()
         }
     }
 
@@ -583,6 +626,9 @@ struct CarSceneView: UIViewRepresentable {
         root.childNode(withName: "hd-grid", recursively: false)?.geometry?.firstMaterial?.diffuse.contents = gridTile(t)
         root.childNode(withName: "hd-hills", recursively: false)?.geometry?.firstMaterial?.diffuse.contents = t.hill
         root.childNode(withName: "hd-wire", recursively: false)?.geometry?.firstMaterial?.diffuse.contents = t.wire
+        // v55: a clean stainless stage: no horizon mountains.
+        root.childNode(withName: "hd-hills", recursively: false)?.isHidden = true
+        root.childNode(withName: "hd-wire", recursively: false)?.isHidden = true
     }
 
     static func addGrid(to root: SCNNode, y: Float) {
@@ -682,5 +728,32 @@ private extension UIFont {
     func withCondensed() -> UIFont {
         guard let d = fontDescriptor.withSymbolicTraits(.traitCondensed) else { return self }
         return UIFont(descriptor: d, size: pointSize)
+    }
+}
+
+
+/// v55: 20-segment battery bar with the charge-limit mark (instrument style). A Shape, so no GeometryReader.
+struct SegmentedCharge: View {
+    let level: Int
+    let limit: Int?
+    var fill: Color
+    var body: some View {
+        ZStack(alignment: .leading) {
+            HStack(spacing: 2) {
+                ForEach(0..<20, id: \.self) { k in
+                    Rectangle().fill(k < max(1, Int((Double(level) / 5).rounded())) ? fill : HDTone.line)
+                }
+            }
+            if let limit {
+                LimitMark(at: CGFloat(limit) / 100).fill(Theme.muted)
+            }
+        }
+    }
+}
+
+private struct LimitMark: Shape {
+    var at: CGFloat
+    func path(in rect: CGRect) -> Path {
+        Path(CGRect(x: rect.minX + rect.width * at - 1, y: rect.minY - 4, width: 2, height: rect.height + 8))
     }
 }

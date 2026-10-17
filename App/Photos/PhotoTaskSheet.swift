@@ -31,7 +31,7 @@ struct PhotoTaskSheet: View {
                         HStack(alignment: .top, spacing: 14) {
                             Image(uiImage: images[0]).resizable().scaledToFill()
                                 .frame(width: 110, height: 146)
-                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                .clipShape(Chamfer(cut: 8))
                             VStack(alignment: .leading, spacing: 10) {
                                 Text(images.count > 1 ? "\(images.count) photos · saved as is, not read." : "Saved as is, not read.")
                                     .font(.subheadline).foregroundStyle(.secondary)

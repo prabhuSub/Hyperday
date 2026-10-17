@@ -5,7 +5,9 @@ import WidgetKit
 // v47 dock-style widgets (CoolDock look, Prabhu approved): a black tray, slightly lighter rounded tiles,
 // big light numbers, thin ring gauges, solid icons with no background.
 
-private let tray = Color(red: 0.06, green: 0.063, blue: 0.07)
+private let trayFill = Color(red: 0.06, green: 0.063, blue: 0.07)
+/// v55: the tray gets brushed hairlines.
+private var tray: some View { ZStack { trayFill; Hairlines().fill(HDTone.instrumentHair) } }
 private let tileFill = Color(red: 0.12, green: 0.125, blue: 0.14)
 private let ink = Color(white: 0.95)
 private let muted = Color(white: 0.55)
@@ -19,7 +21,7 @@ private struct Tile<C: View>: View {
         content()
             .padding(padding)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(RoundedRectangle(cornerRadius: 15, style: .continuous).fill(tileFill))
+            .background(Chamfer(cut: 8).fill(tileFill))
     }
 }
 
@@ -56,12 +58,12 @@ struct DockNowView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     if let cur {
                         Text(timerInterval: now...max(now, cur.end), countsDown: true)
-                            .font(.system(size: 24, weight: .semibold)).monospacedDigit()
+                            .font(.mono(24, .semibold))
                             .lineLimit(1).minimumScaleFactor(0.7)
                         Text("\(cur.title) left").font(.system(size: 10.5)).foregroundStyle(muted).lineLimit(1)
                     } else if let next {
                         Text(timerInterval: now...max(now, next.start), countsDown: true)
-                            .font(.system(size: 24, weight: .semibold)).monospacedDigit()
+                            .font(.mono(24, .semibold))
                             .lineLimit(1).minimumScaleFactor(0.7)
                         Text("free").font(.system(size: 10.5)).foregroundStyle(muted)
                     } else {
@@ -141,7 +143,7 @@ struct DockDayView: View {
                 HStack(spacing: 8) {
                     HDIcon("done", size: 20).foregroundStyle(green)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("\(done)/\(blocks.count)").font(.system(size: 20, weight: .semibold)).monospacedDigit()
+                        Text("\(done)/\(blocks.count)").font(.mono(20, .semibold))
                         Text("blocks done").font(.system(size: 10.5)).foregroundStyle(muted)
                     }
                     Spacer(minLength: 0)
@@ -157,7 +159,7 @@ struct DockDayView: View {
                     .font(.system(size: 10.5))
                     HStack(alignment: .bottom, spacing: 3) {
                         ForEach(bars.indices, id: \.self) { i in
-                            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            Chamfer(cut: 8)
                                 .fill(bars[i] >= 15 ? green : Color(white: 0.24))
                                 .frame(height: max(6, CGFloat(bars[i] / 60) * 28))
                         }
@@ -204,7 +206,7 @@ struct DockSmallNowView: View {
                 Spacer(minLength: 2)
                 if let b = cur ?? next {
                     Text(timerInterval: now...max(now, cur?.end ?? b.start), countsDown: true)
-                        .font(.system(size: 30, weight: .semibold)).monospacedDigit()
+                        .font(.mono(30, .semibold))
                         .lineLimit(1).minimumScaleFactor(0.6)
                     Text(cur == nil ? "until \(b.title)" : b.title).font(.system(size: 12)).foregroundStyle(muted).lineLimit(1)
                 } else {

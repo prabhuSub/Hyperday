@@ -256,18 +256,34 @@ struct CarBigView: View {
     let entry: CarEntry
     var body: some View {
         if let c = entry.car {
+            // v55 (approved v54): instrument numerals, 10-segment battery, amber mark when a window is open.
+            let low = c.battery < 10
             ZStack(alignment: .top) {
                 Image("CarFront").resizable().scaledToFit()
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                    .padding(.horizontal, -4)
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 14)
                 HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        (Text("\(c.battery)").font(.system(size: 28, weight: .bold)) + Text("%").font(.system(size: 13, weight: .bold)))
-                            .foregroundStyle(homeGreen)
-                        Text("\(c.rangeMiles) mi").font(.system(size: 12, weight: .semibold)).foregroundStyle(.white.opacity(0.75))
+                    VStack(alignment: .leading, spacing: 2) {
+                        (Text(String(format: "%02d", c.battery)).font(.mono(26, .light)) + Text("%").font(.mono(12, .light)))
+                            .foregroundStyle(low ? Color(UIColor(hd: 0xFF6B5E)) : homeGreen)
+                        Text(String(format: "%03d MI", c.rangeMiles)).font(.mono(10.5, .medium)).kerning(1.5)
+                            .foregroundStyle(HDTone.instrumentMuted)
                     }
                     Spacer()
-                    lockIcon(c, size: 15)
+                    VStack(alignment: .trailing, spacing: 6) {
+                        lockIcon(c, size: 15)
+                        if c.windowsOpen == true { Rectangle().fill(Color(UIColor(hd: 0xFFB340))).frame(width: 8, height: 8) }
+                    }
+                }
+                VStack {
+                    Spacer()
+                    HStack(spacing: 2) {
+                        ForEach(0..<10, id: \.self) { k in
+                            Rectangle().fill(k < max(1, Int((Double(c.battery) / 10).rounded())) ? (low ? Color(UIColor(hd: 0xFF6B5E)) : homeGreen) : Color.white.opacity(0.14))
+                        }
+                    }
+                    .frame(height: 6)
                 }
             }
         } else {
@@ -304,7 +320,7 @@ struct HyperdayCarListWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: CarShared.listKind, provider: CarProvider()) {
             CarListView(entry: $0)
-                .containerBackground(for: .widget) { Color(red: 0.11, green: 0.114, blue: 0.13) }
+                .containerBackground(for: .widget) { ZStack { Color(red: 0.11, green: 0.114, blue: 0.13); Hairlines().fill(HDTone.instrumentHair) } }   // v55
         }
         .configurationDisplayName("Car").description("Your car from the front, battery, range and lock.")
         .supportedFamilies([.systemSmall, .systemMedium])
@@ -315,7 +331,7 @@ struct HyperdayCarBigWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: CarShared.bigKind, provider: CarProvider()) {
             CarBigView(entry: $0)
-                .containerBackground(for: .widget) { Color(red: 0.11, green: 0.114, blue: 0.13) }
+                .containerBackground(for: .widget) { ZStack { Color(red: 0.11, green: 0.114, blue: 0.13); Hairlines().fill(HDTone.instrumentHair) } }   // v55
         }
         .configurationDisplayName("Big car").description("Your car fills the widget, with battery and lock.")
         .supportedFamilies([.systemSmall])

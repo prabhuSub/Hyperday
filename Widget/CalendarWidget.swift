@@ -97,7 +97,7 @@ struct CalendarWidgetView: View {
         }
         .padding(.horizontal, big ? 0 : 1)
         .containerBackground(for: .widget) {
-            if family == .accessoryRectangular { Color.clear } else { Color(UIColor.systemBackground) }
+            if family == .accessoryRectangular { Color.clear } else { ZStack { Color(UIColor.systemBackground); Hairlines().fill(HDTone.hair.opacity(0.5)) } }   // v55
         }
         .widgetURL(URL(string: "hyperday://calendar"))
     }

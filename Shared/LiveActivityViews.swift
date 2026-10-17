@@ -5,8 +5,8 @@ import WidgetKit
 /// Shared by the widget extension (real Live Activity) and the app (preview card).
 enum DayLiveStyle {
     static let accent = Color(red: 52 / 255, green: 199 / 255, blue: 89 / 255)      // #34c759
-    static let cardTint = Color(red: 40 / 255, green: 44 / 255, blue: 66 / 255)
-    static let glassOpacity = 0.42
+    static let cardTint = Color(red: 20 / 255, green: 21 / 255, blue: 24 / 255)   // v55: instrument plate
+    static let glassOpacity = 0.9
     static let calendarBlue = Color(red: 10 / 255, green: 132 / 255, blue: 255 / 255)
     static let planGreen = Color(red: 36 / 255, green: 138 / 255, blue: 61 / 255)
     static let stepYellow = Color(red: 255 / 255, green: 214 / 255, blue: 10 / 255)   // #FFD60A
@@ -205,7 +205,7 @@ struct LockScreenCard: View {
         .foregroundStyle(.white)
         .padding(.horizontal, inIsland ? 4 : 14)   // v26: the same gap on every side (concentric)
         .padding(.vertical, inIsland ? 2 : 12)   // v33: room for the taller card (iOS caps it at 160 pt)
-        .background { if !inIsland { EdgeTicks(state: state, headsUp: headsUp) } }   // v23: ticks around the card
+        .background { if !inIsland { ZStack { Hairlines().fill(HDTone.instrumentHair.opacity(0.8)); EdgeTicks(state: state, headsUp: headsUp) } } }   // v55: hairline plate   // v23: ticks around the card
     }
 
     /// Nothing running and nothing coming up (free, no next block, no timer).
@@ -289,8 +289,8 @@ struct LockScreenCard: View {
                 if outOfDate && !headsUp && state.paused != true {
                     Text("Out of date").font(.system(size: 12, weight: .semibold)).opacity(0.7)
                 } else if let endText {
-                    Text(state.currentEnd != nil ? "ends \(endText)" : endText)
-                        .font(.system(size: 13, weight: .semibold)).opacity(0.8).lineLimit(1)
+                    Text((state.currentEnd != nil ? "ends \(endText)" : endText).uppercased())
+                        .font(.mono(11, .medium)).kerning(1.5).opacity(0.8).lineLimit(1)   // v55
                 }
             }
             .foregroundStyle(nowColor)
@@ -834,7 +834,7 @@ struct TimerLabel: View {
                 }
             }
         }
-        .font(.system(size: size, weight: .semibold).monospacedDigit())   // v26: modest, not heavy
+        .font(.mono(size, .medium))   // v55: SF Mono readout
         .lineLimit(1)
     }
 }
@@ -878,7 +878,7 @@ struct PauseButton: View {
                     .contentTransition(.symbolEffect(.replace.downUp))
                     .frame(width: 34, height: 34)
                     // Paused: yellow so Resume stands out; running: quiet grey.
-                    .background(paused ? DayLiveStyle.stepYellow : Color.white.opacity(0.18), in: Circle())
+                    .background(paused ? DayLiveStyle.stepYellow : Color.white.opacity(0.18), in: Chamfer(cut: 8))   // v55
             }
             .buttonStyle(.plain)
             .accessibilityLabel(paused ? "Resume" : "Pause")
@@ -905,7 +905,7 @@ struct BlockActionButton: View {
                     .font(.system(size: 14, weight: action == .startNext ? .semibold : .bold))
                     .padding(.horizontal, 14)
                     .frame(height: 34)
-                    .background(fill, in: Capsule())
+                    .background(fill, in: Chamfer(cut: 8))   // v55
             }
             .buttonStyle(.plain)
             .foregroundStyle(.white)
@@ -1094,7 +1094,7 @@ struct DayClosedCard: View {
                 .kerning(1)
                 .foregroundStyle(.white.opacity(0.6))
             Text(value)
-                .font(.system(size: compact ? 14 : 16, weight: .heavy).monospacedDigit())
+                .font(.mono(compact ? 14 : 16, .heavy))
                 .foregroundStyle(color)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
@@ -1253,7 +1253,7 @@ struct IslandTimer: View {
                 DayRing(progress: state.dayProgress, accent: state.accentColor).frame(width: 20, height: 20)
             }
         }
-        .font(.system(size: 14, weight: .semibold).monospacedDigit())   // v26: small and tight to the camera
+        .font(.mono(14, .semibold))   // v26: small and tight to the camera
     }
 
     /// "1d 4h" → big digits, small letters (v23 #3).

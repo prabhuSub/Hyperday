@@ -17,10 +17,11 @@ enum Theme {
         Color(UIColor { $0.userInterfaceStyle == .dark ? UIColor(rgb: dark) : UIColor(rgb: light) })
     }
 
-    static let bg = dyn(0xFFFFFF, 0x111112)
-    static let section = dyn(0xF4F4F4, 0x18181A)
-    static let card = dyn(0xFFFFFF, 0x1E1E20)
-    static let border = dyn(0xE0E0E0, 0x2E2E31)
+    // v55: deeper "instrument" darks; light stays white/stainless.
+    static let bg = dyn(0xFFFFFF, 0x0E0F11)
+    static let section = dyn(0xF4F5F6, 0x0E0F11)
+    static let card = dyn(0xFFFFFF, 0x17181B)
+    static let border = dyn(0xDCDDE0, 0x2A2D31)
     static let text = dyn(0x171A20, 0xF4F4F4)
     static let muted = dyn(0x5C5E62, 0xA2A3A5)
     static let faint = dyn(0xA2A3A5, 0x5C5E62)
@@ -92,8 +93,8 @@ struct Caps: View {
 
     var body: some View {
         Text(text.uppercased())
-            .font(.hd(size: 10, weight: .bold))
-            .kerning(1.4)
+            .font(.hdMono(size: 11, weight: .medium))   // v55: instrument caps
+            .kerning(2)
             .foregroundStyle(color)
     }
 }
@@ -134,8 +135,8 @@ struct InfoRow: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Theme.card))
-                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Theme.border, lineWidth: 1))
+                .background(Chamfer(cut: 12).fill(Theme.card))
+                .overlay(Chamfer(cut: 12).stroke(Theme.border, lineWidth: 1))
             }
         }
     }
@@ -151,7 +152,7 @@ struct PrimaryButtonStyle: ButtonStyle {
             .foregroundStyle(Color.white)
             .frame(maxWidth: width ?? .infinity)
             .frame(height: 40)
-            .background(Capsule().fill(Theme.blue))   // v24: pill buttons
+            .background(Chamfer(cut: 8).fill(Theme.blue))   // v55: chamfered
             .opacity(configuration.isPressed ? 0.8 : 1)
     }
 }
@@ -164,8 +165,8 @@ struct SecondaryButtonStyle: ButtonStyle {
             .foregroundStyle(Theme.text)
             .frame(maxWidth: width ?? .infinity)
             .frame(height: 40)
-            .background(Capsule().fill(Theme.card))
-            .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
+            .background(Chamfer(cut: 8).fill(Theme.card))
+            .overlay(Chamfer(cut: 8).stroke(Theme.border, lineWidth: 1))
             .opacity(configuration.isPressed ? 0.7 : 1)
     }
 }
@@ -179,9 +180,9 @@ struct CardBox: ViewModifier {
         content
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Theme.card))   // v24: rounder
-            .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.border, lineWidth: 1))
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(Chamfer(cut: 12).fill(Theme.card))   // v55: chamfered panels
+            .overlay(Chamfer(cut: 12).stroke(Theme.border, lineWidth: 1))
+            .clipShape(Chamfer(cut: 12))
     }
 }
 
@@ -226,10 +227,10 @@ struct Chip: View {
 struct BlueGlassCircle: ViewModifier {
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
-            content.glassEffect(.regular.tint(Theme.blue).interactive(), in: Circle())
+            content.glassEffect(.regular.tint(Theme.blue).interactive(), in: Chamfer(cut: 14))   // v55
         } else {
             content
-                .background(Circle().fill(Theme.blue))
+                .background(Chamfer(cut: 14).fill(Theme.blue))
                 .shadow(color: .black.opacity(0.25), radius: 10, y: 6)
         }
     }
@@ -505,18 +506,18 @@ struct LiveTimerPill: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Circle().fill(text).frame(width: 7, height: 7)
+            Rectangle().fill(text).frame(width: 6, height: 6)
             HStack(spacing: 0) {
                 if !prefix.isEmpty { Text(prefix) }
-                Text(timerInterval: range, countsDown: down).monospacedDigit()
+                Text(timerInterval: range, countsDown: down)
             }
         }
-        .font(.hd(size: 13, weight: .heavy))
+        .font(.hdMono(size: 14, weight: .semibold))   // v55: mono readout
         .foregroundStyle(text)
         .fixedSize()
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .background(Capsule().fill(fill))
+        .background(Chamfer(cut: 6).fill(fill))
     }
 }
 
@@ -737,12 +738,12 @@ struct AddFab: View {
             }
             Button { open(.photo) } label: { Label("Photo task", systemImage: "camera") }
         } label: {
-            Image(systemName: "plus")
-                .font(.hd(size: 24, weight: .heavy))
-                .foregroundStyle(.white)
+            PlusMark(weight: 3.2)   // v55: drawn, so it's exactly centred
+                .fill(.white)
+                .frame(width: 24, height: 24)
                 .frame(width: 58, height: 58)
                 .modifier(BlueGlassCircle())
-                .contentShape(Circle())
+                .contentShape(Chamfer(cut: 14))
         } primaryAction: {
             open(.block)
         }

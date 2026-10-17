@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### v55: instrument look, whole app (approved v54/v55 mockups)
+- **Shared theme** (`Shared/HDTheme.swift`): chamfered panels, brushed hairline plates, SF Mono readouts and caps, AA-checked tokens. Used by the app, every widget and every Live Activity.
+- **App:** cards, buttons, stat tiles and the + button are chamfered (the + is drawn, so it's exactly centred); section caps are mono; the Now card is a dark hairline instrument panel in both modes; deeper darks.
+- **Live Activities:** instrument plate with hairlines, SF Mono countdowns and "ENDS" caps, chamfered Pause/Done.
+- **Widgets:** hairline plates (Hyperday, Dock, Car, Calendar, Heatmap), mono numbers, chamfered tiles.
+- **Car tab:** stainless stage (no mountains, brushed floor) with cut corners, mono status line, alert strips (battery low, unlocked, window open, tires), solid status icons coloured only when they need attention, zero-padded readouts with a 20-segment bar and limit mark. v46 gloss values unchanged. Small car widget: mono, 10 segments, amber mark for an open window.
+
 ### v52: deeper, not bigger
 - **Usage audit:** `tools/usage_audit.py` reads the data pulled from the iPhone into `audit/` (git-ignored). North-star: days per week with at least one planned block done.
 - **Fix: skipped days vanished from history.** If the app didn't run on a day (e.g. Fri Oct 16), that day was never recorded. Now every missed day (up to 14) is filled when the app next runs.
