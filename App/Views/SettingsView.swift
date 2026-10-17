@@ -258,6 +258,9 @@ struct DeveloperSettings: View {
                 }
             } header: { Text("Test one style for 60 s") }
             Section {
+                Button("Show onboarding") { NotificationCenter.default.post(name: .showOnboarding, object: nil) }
+            } header: { Text("First run") }
+            Section {
                 Button("Load test day") { Task { await activity.loadTestDay() } }
                 Button("Remove test day", role: .destructive) { Task { await activity.clearTestDay() } }
             } header: { Text("Test a real mini-day") } footer: {

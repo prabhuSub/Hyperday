@@ -32,6 +32,9 @@ struct StatsView: View {
                     .background(Theme.bg)
 
                     VStack(spacing: 12) {
+                        WeekDotsCard()        // v51
+                        AheadBehindCard()     // v51
+                        CumulativeLineCard()  // v51
                         HeatmapCard()
                         GoodDayCard()
                         if s.isEmpty {

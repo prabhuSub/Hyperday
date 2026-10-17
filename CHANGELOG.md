@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### v50–v51
+- **Onboarding (v50):** 3 pages on first run only: Welcome (sample Live Activity), Permissions (Calendar read-only, Notifications, Live Activities), Shape your day (picked categories are added; nothing is removed). Existing installs skip it. Test: Settings › Developer › Show onboarding, or `hyperday://onboarding`.
+- **Stats charts (v51):** Focus this week (square-dot columns, today in blue), Ahead / behind plan (dots above = done as planned, orange below = missed or over, 30 days; 14 on narrow screens), Focus hours month to date (this month solid vs last month dashed). Existing Stats cards stay.
+
 ### v48
 - **Every Live Activity state in the test kit:** Settings › Developer now previews 11 states: Running, Last 5 min, Free (Next + Later), Day closed, Paused, Overtime, Steps, Calendar event, Free (Next only), Day closed with tasks left, Driving. "Preview all styles" plays all 11, 5 s each.
 - **Richer test day:** a done block, a running block with steps, a free gap, a photo task with a test picture, Standup and Gym. Remove deletes the test blocks and their photo.

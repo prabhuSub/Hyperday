@@ -14,6 +14,8 @@ struct DayLiveApp: App {
     @StateObject private var recap = RecapCenter.shared
     @StateObject private var cars = CarStore.shared
     @State private var showCloseDay = false
+    @AppStorage("onboarded") private var onboarded = false
+    @State private var showOnboarding = false
 
     init() {
         // v35: no custom tab bar look: Apple's own bar (Liquid Glass on iOS 26).
@@ -39,9 +41,19 @@ struct DayLiveApp: App {
                 .environmentObject(history)
                 .environmentObject(cars)
                 .fullScreenCover(isPresented: $recap.showing) { WeeklyRecapView() }
+                // v50: first run only. Existing installs (any history or blocks) skip it.
+                .fullScreenCover(isPresented: $showOnboarding) { OnboardingView() }
+                .onAppear {
+                    if !onboarded {
+                        if HistoryStore.shared.days.isEmpty && BlockStore.shared.planBlocks.isEmpty { showOnboarding = true }
+                        else { onboarded = true }
+                    }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .showOnboarding)) { _ in showOnboarding = true }
                 // "Day closed · Review" on the Lock Screen opens hyperday://close
                 .onOpenURL { url in
                     if url.host == "close" { showCloseDay = true }
+                    if url.host == "onboarding" { showOnboarding = true }   // v50 test link
                     if url.host == "calendar" { CalendarJump.open(.now) }
                     if url.host == "car" { NotificationCenter.default.post(name: .openCarTab, object: nil) }   // car widgets   // calendar widget → Calendar tab, today
                 }
@@ -76,4 +88,8 @@ struct DayLiveApp: App {
             if Features.car || Features.carWidgets { await CarStore.shared.refresh() }   // v38: keeps car widgets current
         }
     }
+}
+
+extension Notification.Name {
+    static let showOnboarding = Notification.Name("hd.showOnboarding")   // Settings › Developer › Show onboarding
 }
