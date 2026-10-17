@@ -137,7 +137,7 @@ struct CalendarTabView: View {
     private var accessNote: some View {
         if !CalendarService.shared.hasAccess {
             Text("Calendar access is off. Turn it on in Settings › Hyperday › Calendars.")
-                .font(.system(size: 13))
+                .font(.hd(size: 13))
                 .foregroundStyle(Theme.muted)
         }
     }
@@ -203,13 +203,13 @@ struct CalendarTabView: View {
     private var titleRow: some View {
         HStack(alignment: .firstTextBaseline) {
             Text(titleText)
-                .font(.system(size: 20, weight: .heavy))   // v27: the big title is the nav bar's; this is the month
+                .font(.hd(size: 20, weight: .heavy))   // v27: the big title is the nav bar's; this is the month
                 .foregroundStyle(Theme.text)
             Spacer()
             HStack(spacing: 6) {
                 navButton("back") { shift(-1) }
                 Button("Today") { tapDay(cal.startOfDay(for: .now), fromTodayButton: true) }
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.hd(size: 13, weight: .bold))
                     .foregroundStyle(Theme.text)
                     .buttonStyle(.plain)
                     .padding(.horizontal, 12)
@@ -283,7 +283,7 @@ struct CalendarTabView: View {
                 Button { tapDay(day) } label: {
                     VStack(spacing: 4) {
                         Text(day.formatted(.dateTime.weekday(.narrow)))
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.hd(size: 10, weight: .bold))
                             .foregroundStyle(Theme.muted)
                         dayNumber(day, size: 34)
                         dots(byDay[day] ?? [], faded: false)
@@ -308,7 +308,7 @@ struct CalendarTabView: View {
             HStack(spacing: 0) {
                 ForEach(Array(ordered.enumerated()), id: \.offset) { _, s in
                     Text(s)
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.hd(size: 10, weight: .bold))
                         .foregroundStyle(Theme.muted)
                         .frame(maxWidth: .infinity)
                 }
@@ -342,7 +342,7 @@ struct CalendarTabView: View {
         let isSelected = cal.isDate(day, inSameDayAs: selected)
         let past = day < cal.startOfDay(for: .now)
         return Text(day.formatted(.dateTime.day()))
-            .font(.system(size: size > 30 ? 16 : 14, weight: isToday ? .bold : .medium))
+            .font(.hd(size: size > 30 ? 16 : 14, weight: isToday ? .bold : .medium))
             .foregroundStyle(isToday ? Theme.bg : (dimPast && past ? Theme.faint : Theme.text))
             .frame(width: size, height: size)
             .background(RoundedRectangle(cornerRadius: size * 0.34, style: .continuous).fill(isToday ? Theme.text : Color.clear))   // v27
@@ -383,7 +383,7 @@ struct CalendarTabView: View {
             VStack(spacing: 0) {
                 if items.isEmpty {
                     Text("Nothing scheduled")
-                        .font(.system(size: 13))
+                        .font(.hd(size: 13))
                         .foregroundStyle(Theme.faint)
                         .padding(14)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -511,7 +511,7 @@ struct WeekGrid: View {
                 ForEach(startHour...endHour, id: \.self) { h in
                     let y = CGFloat(h - startHour) * hourHeight
                     Text(hourLabel(h))
-                        .font(.system(size: 9))
+                        .font(.hd(size: 9))
                         .foregroundStyle(Theme.faint)
                         .frame(width: Self.labelWidth - 6, alignment: .trailing)
                         .offset(y: y - 6)
@@ -587,7 +587,7 @@ struct WeekGrid: View {
 
         if active != nil {
             Text("\(ps.shortTime) – \(pe.shortTime)")
-                .font(.system(size: 10, weight: .bold).monospacedDigit())
+                .font(.hd(size: 10, weight: .bold).monospacedDigit())
                 .foregroundStyle(Theme.bg)
                 .padding(.horizontal, 7)
                 .padding(.vertical, 3)
@@ -643,7 +643,7 @@ struct WeekGrid: View {
     private func cellBody(_ b: Block, height: CGFloat, width: CGFloat, past: Bool, selected: Bool) -> some View {
         let c: Color = color(b)
         return Text(b.title)
-            .font(.system(size: 9, weight: .semibold))
+            .font(.hd(size: 9, weight: .semibold))
             .foregroundStyle(past ? Theme.faint : Theme.text)
             .lineLimit(max(1, Int(height / 11)))
             .padding(.horizontal, 3)

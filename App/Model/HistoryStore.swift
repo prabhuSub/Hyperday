@@ -115,10 +115,8 @@ final class HistoryStore: ObservableObject {
             let o = bs.overrides[b.id]
             let st = bs.steps(for: b.id)
             // Only the part of the block inside this day (blocks can cross midnight).
-            let dayStart = Calendar.current.startOfDay(for: now)
-            let dayEnd = Calendar.current.date(byAdding: .day, value: 1, to: dayStart) ?? now
-            let start = max(a.start, dayStart)
-            let end = min(a.end, now, dayEnd)
+            // v52: Done tapped after the planned end is overtime; apply() caps the end, so take the tap.
+            let (start, end) = Self.window(start: a.start, end: Self.recordedEnd(applied: a.end, doneAt: o?.end), now: now)
             guard end > start || a.start <= now else { return nil }
             let allSteps = !st.isEmpty && st.allSatisfy(\.done)
             let cats = cs.categories(for: b).map(\.id)
@@ -135,6 +133,26 @@ final class HistoryStore: ObservableObject {
         guard days[key] != record else { return }
         days[key] = record
         save()
+    }
+
+    /// v52: the part of a block that falls inside `now`'s day, cut at `now` (blocks can cross midnight).
+    nonisolated static func window(start: Date, end: Date, now: Date, calendar: Calendar = .current) -> (Date, Date) {
+        let dayStart = calendar.startOfDay(for: now)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? now
+        return (max(start, dayStart), min(end, now, dayEnd))
+    }
+
+    /// v52: when Done was tapped, that's the real end, even past the plan (overtime). Before, history
+    /// always capped it at the planned end, so "ran over" was never recorded.
+    nonisolated static func recordedEnd(applied: Date, doneAt: Date?) -> Date { doneAt ?? applied }
+
+    /// v52: every day from the last recorded one up to (not including) today, at most 14, oldest first.
+    nonisolated static func daysToFinalize(last: Date, now: Date, calendar: Calendar = .current) -> [Date] {
+        let from = calendar.startOfDay(for: last), to = calendar.startOfDay(for: now)
+        guard from < to else { return [] }
+        let n = min(calendar.dateComponents([.day], from: from, to: to).day ?? 0, 14)
+        let first = calendar.date(byAdding: .day, value: -n, to: to)!
+        return (0..<n).compactMap { calendar.date(byAdding: .day, value: $0, to: first) }
     }
 
     // MARK: Heatmap

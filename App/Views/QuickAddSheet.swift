@@ -106,7 +106,7 @@ struct MultiCategoryChips: View {
             }
             if selection.count > 1 {
                 Text("The first one you picked sets the color. Stats split the time evenly between them.")
-                    .font(.system(size: 12))
+                    .font(.hd(size: 12))
                     .foregroundStyle(Theme.muted)
             }
         }

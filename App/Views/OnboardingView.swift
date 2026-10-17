@@ -19,7 +19,7 @@ struct OnboardingView: View {
         VStack(spacing: 0) {
             HStack {
                 Spacer()
-                if page < 2 { Button("Skip") { finish() }.font(.system(size: 16, weight: .medium)) }
+                if page < 2 { Button("Skip") { finish() }.font(.hd(size: 16, weight: .medium)) }
             }
             .frame(height: 44).padding(.horizontal, 22)
 
@@ -42,11 +42,11 @@ struct OnboardingView: View {
                     if page < 2 { page += 1 } else { finish() }
                 } label: {
                     Text(["Get started", "Continue", "Start my day"][page])
-                        .font(.system(size: 17, weight: .semibold)).frame(maxWidth: .infinity).frame(height: 52)
+                        .font(.hd(size: 17, weight: .semibold)).frame(maxWidth: .infinity).frame(height: 52)
                 }
                 .buttonStyle(.borderedProminent).buttonBorderShape(.capsule)
                 if page == 2 {
-                    Button("Try Pro free for 7 days") { showPro = true }.font(.system(size: 15, weight: .medium))
+                    Button("Try Pro free for 7 days") { showPro = true }.font(.hd(size: 15, weight: .medium))
                 }
             }
             .padding(.horizontal, 24).padding(.bottom, 20)
@@ -60,13 +60,13 @@ struct OnboardingView: View {
 
     private var welcome: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("ON YOUR LOCK SCREEN").font(.system(size: 13, weight: .semibold)).tracking(0.3)
+            Text("ON YOUR LOCK SCREEN").font(.hd(size: 13, weight: .semibold)).tracking(0.3)
                 .foregroundStyle(.secondary).frame(maxWidth: .infinity)
             sampleActivity.padding(.top, 12)
             (Text("Your day,\n") + Text("live.").foregroundColor(.accentColor))
-                .font(.system(size: 38, weight: .heavy)).tracking(-0.6).padding(.top, 36)
+                .font(.hd(size: 38, weight: .heavy)).tracking(-0.6).padding(.top, 36)
             Text("Plan your day in blocks. Hyperday keeps the current one on your Lock Screen until it's done.")
-                .font(.system(size: 16)).foregroundStyle(.secondary).padding(.top, 10)
+                .font(.hd(size: 16)).foregroundStyle(.secondary).padding(.top, 10)
             HStack(alignment: .top, spacing: 8) {
                 value(Image(systemName: "square.grid.2x2.fill"), "#5E5CE6", "Plan in", "blocks")
                 value(Image("hd-lock").renderingMode(.template), "#30D158", "Live on", "Lock Screen")
@@ -83,11 +83,11 @@ struct OnboardingView: View {
             HStack(spacing: 10) {
                 HDIcon("deepwork", size: 22).foregroundStyle(Color(hex: "#30D158"))
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Deep work").font(.system(size: 16, weight: .bold))
-                    Text("Next: Standup at 10:30").font(.system(size: 12.5)).foregroundStyle(Color(.systemGray))
+                    Text("Deep work").font(.hd(size: 16, weight: .bold))
+                    Text("Next: Standup at 10:30").font(.hd(size: 12.5)).foregroundStyle(Color(.systemGray))
                 }
                 Spacer()
-                Text("42:10").font(.system(size: 26, weight: .bold)).monospacedDigit()
+                Text("42:10").font(.hd(size: 26, weight: .bold)).monospacedDigit()
             }
             HStack(alignment: .bottom, spacing: 3) {
                 ForEach(0..<36, id: \.self) { k in
@@ -100,7 +100,7 @@ struct OnboardingView: View {
                 Text("Done").foregroundStyle(.black).frame(maxWidth: .infinity).frame(height: 34)
                     .background(Color(hex: "#30D158"), in: Capsule())
             }
-            .font(.system(size: 14, weight: .semibold))
+            .font(.hd(size: 14, weight: .semibold))
         }
         .foregroundStyle(.white)
         .padding(16)
@@ -112,16 +112,16 @@ struct OnboardingView: View {
         VStack(spacing: 8) {
             icon.resizable().scaledToFit().frame(width: 28, height: 28).foregroundStyle(Color(hex: hex))
             (Text(a + "\n") + Text(b).foregroundColor(.secondary).fontWeight(.medium))
-                .font(.system(size: 12.5, weight: .semibold)).multilineTextAlignment(.center)
+                .font(.hd(size: 12.5, weight: .semibold)).multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
     }
 
     private var permissions: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Three things to\nmake it work").font(.system(size: 34, weight: .heavy)).tracking(-0.5)
+            Text("Three things to\nmake it work").font(.hd(size: 34, weight: .heavy)).tracking(-0.5)
             Text("You can change any of these later in Settings.")
-                .font(.system(size: 16)).foregroundStyle(.secondary).padding(.top, 10)
+                .font(.hd(size: 16)).foregroundStyle(.secondary).padding(.top, 10)
             VStack(spacing: 0) {
                 permRow(HDIcon("event", size: 28).foregroundStyle(Color(hex: "#FF3B30")), "Calendar",
                         "Shows your events between blocks. Read-only: Hyperday never edits them.", calendarOn) {
@@ -130,12 +130,12 @@ struct OnboardingView: View {
                     await LiveActivityManager.shared.refresh()
                 }
                 Divider().padding(.leading, 58)
-                permRow(Image(systemName: "bell.fill").font(.system(size: 24)).foregroundStyle(Color(hex: "#FF9F0A")),
+                permRow(Image(systemName: "bell.fill").font(.hd(size: 24)).foregroundStyle(Color(hex: "#FF9F0A")),
                         "Notifications", "A nudge when a block starts or runs over.", notificationsOn) {
                     _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
                 }
                 Divider().padding(.leading, 58)
-                permRow(Image(systemName: "platter.filled.bottom.iphone").font(.system(size: 24)).foregroundStyle(Color(hex: "#30D158")),
+                permRow(Image(systemName: "platter.filled.bottom.iphone").font(.hd(size: 24)).foregroundStyle(Color(hex: "#30D158")),
                         "Live Activities", "The current block on your Lock Screen and Dynamic Island.", liveOn) {
                     // iOS has no prompt for this: it's on by default; if it was turned off, send them to Settings.
                     if let url = URL(string: UIApplication.openSettingsURLString) { await UIApplication.shared.open(url) }
@@ -144,7 +144,7 @@ struct OnboardingView: View {
             .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
             .padding(.top, 34)
             Label("Your plan stays on this iPhone. No account needed.", systemImage: "lock.fill")
-                .font(.system(size: 13)).foregroundStyle(.secondary).padding(.top, 24)
+                .font(.hd(size: 13)).foregroundStyle(.secondary).padding(.top, 24)
             Spacer()
         }
         .padding(.horizontal, 24).padding(.top, 20)
@@ -155,12 +155,12 @@ struct OnboardingView: View {
         HStack(spacing: 14) {
             icon.frame(width: 28)
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.system(size: 16, weight: .semibold))
-                Text(detail).font(.system(size: 13)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Text(title).font(.hd(size: 16, weight: .semibold))
+                Text(detail).font(.hd(size: 13)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 8)
             if on {
-                Image(systemName: "checkmark").font(.system(size: 18, weight: .bold)).foregroundStyle(Color(hex: "#30D158"))
+                Image(systemName: "checkmark").font(.hd(size: 18, weight: .bold)).foregroundStyle(Color(hex: "#30D158"))
             } else {
                 Button("Allow") { Task { await action(); await refreshStatus() } }
                     .buttonStyle(.borderedProminent).buttonBorderShape(.capsule).controlSize(.small)
@@ -176,10 +176,10 @@ struct OnboardingView: View {
 
     private var shape: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Shape your day").font(.system(size: 34, weight: .heavy)).tracking(-0.5)
+            Text("Shape your day").font(.hd(size: 34, weight: .heavy)).tracking(-0.5)
             Text("Pick what fills your day. Each one becomes a category with its own color. Change them anytime in Settings.")
-                .font(.system(size: 16)).foregroundStyle(.secondary).padding(.top, 10)
-            Text("WHAT FILLS YOUR DAY?").font(.system(size: 13, weight: .semibold)).tracking(0.3)
+                .font(.hd(size: 16)).foregroundStyle(.secondary).padding(.top, 10)
+            Text("WHAT FILLS YOUR DAY?").font(.hd(size: 13, weight: .semibold)).tracking(0.3)
                 .foregroundStyle(.secondary).padding(.top, 30)
             ChipFlow(spacing: 8) {
                 ForEach(Self.suggestions, id: \.0) { s in
@@ -187,7 +187,7 @@ struct OnboardingView: View {
                     Button {
                         if on { picked.remove(s.0) } else { picked.insert(s.0) }
                     } label: {
-                        Text(s.0).font(.system(size: 15, weight: .semibold))
+                        Text(s.0).font(.hd(size: 15, weight: .semibold))
                             .padding(.horizontal, 15).padding(.vertical, 9)
                             .foregroundStyle(on ? Color.white : Color.primary)
                             .background(on ? Color.accentColor : Color(.secondarySystemBackground), in: Capsule())

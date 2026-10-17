@@ -53,12 +53,12 @@ struct HeaderBar: View {
     var body: some View {
         HStack(spacing: 10) {
             Text("HYPERDAY")
-                .font(.system(size: 14, weight: .heavy))
+                .font(.hd(size: 14, weight: .heavy))
                 .kerning(5)
                 .foregroundStyle(Theme.text)
             Rectangle().fill(Theme.border).frame(width: 1, height: 16)
             Text(section)
-                .font(.system(size: 14))
+                .font(.hd(size: 14))
                 .foregroundStyle(Theme.muted)
             Spacer()
             Button {
@@ -92,7 +92,7 @@ struct Caps: View {
 
     var body: some View {
         Text(text.uppercased())
-            .font(.system(size: 10, weight: .bold))
+            .font(.hd(size: 10, weight: .bold))
             .kerning(1.4)
             .foregroundStyle(color)
     }
@@ -108,7 +108,7 @@ struct InfoItem: Identifiable {
 /// "3h 10m" → big digits, small letters (v24 card language).
 func bigSmallText(_ s: String, size: CGFloat) -> Text {
     s.reduce(Text("")) { acc, ch in
-        acc + Text(String(ch)).font(.system(size: (ch.isNumber || ch == "—") ? size : size * 0.5, weight: .heavy))
+        acc + Text(String(ch)).font(.hd(size: (ch.isNumber || ch == "—") ? size : size * 0.5, weight: .heavy))
     }
 }
 
@@ -147,7 +147,7 @@ struct PrimaryButtonStyle: ButtonStyle {
     var width: CGFloat? = nil   // nil = full width
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 14, weight: .semibold))
+            .font(.hd(size: 14, weight: .semibold))
             .foregroundStyle(Color.white)
             .frame(maxWidth: width ?? .infinity)
             .frame(height: 40)
@@ -160,7 +160,7 @@ struct SecondaryButtonStyle: ButtonStyle {
     var width: CGFloat? = nil   // nil = full width
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 14, weight: .semibold))
+            .font(.hd(size: 14, weight: .semibold))
             .foregroundStyle(Theme.text)
             .frame(maxWidth: width ?? .infinity)
             .frame(height: 40)
@@ -208,7 +208,7 @@ struct Chip: View {
                     HDIcon(icon, size: 15).foregroundStyle(selected ? (color ?? Theme.text) : Theme.muted)
                 }
                 Text(title)
-                    .font(.system(size: 15, weight: selected ? .semibold : .regular))
+                    .font(.hd(size: 15, weight: selected ? .semibold : .regular))
                     .lineLimit(1)
             }
             .padding(.horizontal, 13)
@@ -248,7 +248,7 @@ struct SectionHeader: View {
     var body: some View {
         HStack(spacing: 10) {
             HDIcon(icon, size: 22).foregroundStyle(color)   // v47: solid icon, no circle
-            Text(title).font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text)
+            Text(title).font(.hd(size: 15, weight: .bold)).foregroundStyle(Theme.text)
         }
         .padding(.bottom, 2)
     }
@@ -323,7 +323,7 @@ struct PillNav<T: Hashable>: View {
                     withAnimation(.snappy(duration: 0.2)) { selection = option }
                 } label: {
                     Text(label(option))
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.hd(size: 13, weight: .bold))
                         .foregroundStyle(on ? Theme.bg : Theme.muted)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 7)
@@ -373,12 +373,12 @@ struct BlockRow: View {
                 .frame(width: 30, height: 30)
             VStack(alignment: .leading, spacing: 2) {
                 Text(block.title)
-                    .font(.system(size: 15, weight: isNow ? .semibold : .regular))
+                    .font(.hd(size: 15, weight: isNow ? .semibold : .regular))
                     .foregroundStyle(done ? Theme.faint : Theme.text)
                     .strikethrough(block.declined)
                     .lineLimit(1)
                 Text(detail)
-                    .font(.system(size: 12))
+                    .font(.hd(size: 12))
                     .foregroundStyle(done ? Theme.faint : Theme.muted)
                     .lineLimit(1)
             }
@@ -396,7 +396,7 @@ struct BlockRow: View {
             }
             if isNow && pill == nil {
                 Text("NOW")
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.hd(size: 10, weight: .bold))
                     .kerning(1.2)
                     .foregroundStyle(Theme.red)
             }
@@ -421,7 +421,7 @@ struct AppearanceButton: View {
         } label: {
             HDIcon(current == .system ? "auto" : current == .light ? "sun" : "moon", size: 16)
                 .foregroundStyle(Theme.text)
-                .frame(width: 32, height: 32)   // no background: just the icon
+                .frame(width: 44, height: 44)   // v52: 44 pt tap target (HIG), icon unchanged
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
@@ -484,7 +484,7 @@ private struct PillShape: ViewModifier {
     var stroke: Color? = nil
     func body(content: Content) -> some View {
         content
-            .font(.system(size: 12, weight: .bold))
+            .font(.hd(size: 12, weight: .bold))
             .foregroundStyle(text)
             .lineLimit(1)
             .fixedSize()
@@ -511,7 +511,7 @@ struct LiveTimerPill: View {
                 Text(timerInterval: range, countsDown: down).monospacedDigit()
             }
         }
-        .font(.system(size: 13, weight: .heavy))
+        .font(.hd(size: 13, weight: .heavy))
         .foregroundStyle(text)
         .fixedSize()
         .padding(.horizontal, 10)
@@ -550,7 +550,8 @@ enum AppTab: String, CaseIterable, Identifiable {
 /// Apple's native tab bar: on iOS 26+ it is the Liquid Glass bar with the press-and-drag lens
 /// and it shrinks when you scroll down.
 struct RootView: View {
-    @State private var tab: AppTab = .today
+    // v52: `-hdStartTab stats` (simulator launch argument) opens a tab directly, for screenshots/audits.
+    @State private var tab: AppTab = AppTab(rawValue: UserDefaults.standard.string(forKey: "hdStartTab") ?? "") ?? .today
     @State private var adding: AddMode?
     @State private var calDay = Calendar.current.component(.day, from: .now)
     @Environment(\.scenePhase) private var scenePhase
@@ -703,7 +704,7 @@ struct SwipeRow<Content: View>: View {
         } label: {
             VStack(spacing: 4) {
                 HDIcon(a.icon, size: 20)
-                Text(a.title).font(.system(size: 11, weight: .semibold))
+                Text(a.title).font(.hd(size: 11, weight: .semibold))
             }
             .foregroundStyle(.white)
             .frame(width: width)
@@ -737,7 +738,7 @@ struct AddFab: View {
             Button { open(.photo) } label: { Label("Photo task", systemImage: "camera") }
         } label: {
             Image(systemName: "plus")
-                .font(.system(size: 24, weight: .heavy))
+                .font(.hd(size: 24, weight: .heavy))
                 .foregroundStyle(.white)
                 .frame(width: 58, height: 58)
                 .modifier(BlueGlassCircle())
@@ -771,7 +772,7 @@ struct TabRoot<Content: View>: View {
                     // The HYPERDAY wordmark stays top-left, above the large title.
                     ToolbarItem(placement: .topBarLeading) {
                         Text("HYPERDAY")
-                            .font(.system(size: 14, weight: .heavy))
+                            .font(.hd(size: 14, weight: .heavy))
                             .kerning(5)
                             .foregroundStyle(Theme.text)
                             .fixedSize()

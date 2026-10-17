@@ -196,6 +196,8 @@ struct LockScreenCard: View {
                              big: inIsland ? 19 : 24)
             } else if state.source == .free, state.nextStart != nil {
                 PhasesStrip(state: state, inIsland: inIsland)
+            } else if isEmptyDay {
+                emptyDay   // v52: nothing planned / nothing left: a check mark, not an empty timeline
             } else {
                 journey
             }
@@ -204,6 +206,31 @@ struct LockScreenCard: View {
         .padding(.horizontal, inIsland ? 4 : 14)   // v26: the same gap on every side (concentric)
         .padding(.vertical, inIsland ? 2 : 12)   // v33: room for the taller card (iOS caps it at 160 pt)
         .background { if !inIsland { EdgeTicks(state: state, headsUp: headsUp) } }   // v23: ticks around the card
+    }
+
+    /// Nothing running and nothing coming up (free, no next block, no timer).
+    private var isEmptyDay: Bool {
+        state.source == .free && state.nextStart == nil && state.currentEnd == nil && state.overSince == nil
+    }
+
+    private var emptyDay: some View {
+        HStack(spacing: inIsland ? 10 : 12) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: inIsland ? 30 : 38, weight: .semibold))
+                .foregroundStyle(DayLiveStyle.doneGreen)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(state.title)
+                    .font(.system(size: inIsland ? 16 : 19, weight: .bold))
+                    .lineLimit(1)
+                Text(state.label)
+                    .font(.system(size: inIsland ? 12.5 : 14, weight: .medium))
+                    .opacity(0.7)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, inIsland ? 4 : 6)
     }
 
     /// v33 A · a block is running: title · ends, big countdown + Pause/Done, a tick strip of this

@@ -18,8 +18,8 @@ struct PaywallView: View {
                             RoundedRectangle(cornerRadius: 3).fill(Color(hex: b.1)).frame(width: 8, height: b.0)
                         }
                     }
-                    Text("Hyperday Pro").font(.system(size: 30, weight: .heavy)).padding(.top, 12)
-                    Text("Your whole day, everywhere you look.").font(.system(size: 15)).foregroundStyle(.secondary)
+                    Text("Hyperday Pro").font(.hd(size: 30, weight: .heavy)).padding(.top, 12)
+                    Text("Your whole day, everywhere you look.").font(.hd(size: 15)).foregroundStyle(.secondary)
                         .padding(.top, 2)
                     VStack(alignment: .leading, spacing: 4) {
                         feature("timer", "#30D158", "All widgets", "Dock-style, Lock Screen and StandBy widgets with Pause and Done.")
@@ -42,7 +42,7 @@ struct PaywallView: View {
                         if let p = selected { Task { await pro.buy(p) } }
                     } label: {
                         Group {
-                            if pro.busy { ProgressView().tint(.white) } else { Text(trialText).font(.system(size: 17, weight: .bold)) }
+                            if pro.busy { ProgressView().tint(.white) } else { Text(trialText).font(.hd(size: 17, weight: .bold)) }
                         }
                         .frame(maxWidth: .infinity).frame(height: 50)
                     }
@@ -51,7 +51,7 @@ struct PaywallView: View {
                     .padding(.top, 16)
 
                     Text("Then \(selected?.displayPrice ?? (pickYearly ? "$19.99" : "$2.99"))/\(pickYearly ? "year" : "month"). Cancel anytime in Settings › Apple ID.")
-                        .font(.system(size: 11.5)).foregroundStyle(.secondary)
+                        .font(.hd(size: 11.5)).foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity).multilineTextAlignment(.center).padding(.top, 8)
                     HStack(spacing: 6) {
                         Button("Restore purchases") { Task { await pro.restore() } }
@@ -60,9 +60,9 @@ struct PaywallView: View {
                         Text("·").foregroundStyle(.secondary)
                         Link("Privacy", destination: URL(string: "https://prabhusubramanian.com/hyperday/privacy")!)
                     }
-                    .font(.system(size: 11.5)).frame(maxWidth: .infinity).padding(.top, 4)
+                    .font(.hd(size: 11.5)).frame(maxWidth: .infinity).padding(.top, 4)
                     if let m = pro.message {
-                        Text(m).font(.system(size: 12)).foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.top, 8)
+                        Text(m).font(.hd(size: 12)).foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.top, 8)
                     }
                 }
                 .padding(24)
@@ -86,8 +86,8 @@ struct PaywallView: View {
         HStack(alignment: .top, spacing: 12) {
             HDIcon(icon, size: 24).foregroundStyle(Color(hex: hex))
             VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(.system(size: 15, weight: .semibold))
-                Text(sub).font(.system(size: 12.5)).foregroundStyle(.secondary)
+                Text(title).font(.hd(size: 15, weight: .semibold))
+                Text(sub).font(.hd(size: 12.5)).foregroundStyle(.secondary)
             }
         }
         .padding(.vertical, 6)
@@ -97,9 +97,9 @@ struct PaywallView: View {
                       tap: @escaping () -> Void) -> some View {
         Button(action: tap) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.system(size: 13, weight: .bold))
-                Text(product?.displayPrice ?? fallback).font(.system(size: 20, weight: .bold))
-                Text(sub).font(.system(size: 11.5)).foregroundStyle(.secondary)
+                Text(title).font(.hd(size: 13, weight: .bold))
+                Text(product?.displayPrice ?? fallback).font(.hd(size: 20, weight: .bold))
+                Text(sub).font(.hd(size: 11.5)).foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(12)
@@ -107,7 +107,7 @@ struct PaywallView: View {
             .overlay(RoundedRectangle(cornerRadius: 18).stroke(on ? Theme.blue : Theme.border, lineWidth: on ? 2 : 1))
             .overlay(alignment: .topTrailing) {
                 if let badge {
-                    Text(badge).font(.system(size: 10, weight: .heavy)).foregroundStyle(.white)
+                    Text(badge).font(.hd(size: 10, weight: .heavy)).foregroundStyle(.white)
                         .padding(.horizontal, 7).padding(.vertical, 3)
                         .background(Capsule().fill(Theme.blue)).offset(x: -10, y: -9)
                 }

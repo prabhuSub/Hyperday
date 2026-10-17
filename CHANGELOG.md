@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### v52: deeper, not bigger
+- **Usage audit:** `tools/usage_audit.py` reads the data pulled from the iPhone into `audit/` (git-ignored). North-star: days per week with at least one planned block done.
+- **Fix: skipped days vanished from history.** If the app didn't run on a day (e.g. Fri Oct 16), that day was never recorded. Now every missed day (up to 14) is filled when the app next runs.
+- **Fix: overtime was never recorded.** Done after the planned end was saved as on time, so "ran over" was always 0. History now keeps the real Done time.
+- **Reliability logging:** Logger + signposts around every Live Activity refresh and background wake-up, plus a local `Documents/diagnostics.jsonl` (no titles; never uploaded). `tools/diag_check.py` checks a 7-day run for missed updates.
+- **Tests:** 14 new (ahead/behind, overtime, midnight, skipped days, save/restore); 27 total pass.
+- **Dynamic Type:** all 152 fixed font sizes now follow Settings › Text Size (up to XXX Large).
+- **VoiceOver:** the three new charts read their numbers; theme button is a 44 pt target; "1 dot = 15 min" no longer clipped.
+- **Empty day:** with nothing planned (or nothing left), the Lock Screen card and Island show a green check mark instead of an empty timeline.
+- **deploy.sh:** a failed launch now fails the deploy and prints the Trust steps instead of "✓".
+
 ### v50–v51
 - **Onboarding (v50):** 3 pages on first run only: Welcome (sample Live Activity), Permissions (Calendar read-only, Notifications, Live Activities), Shape your day (picked categories are added; nothing is removed). Existing installs skip it. Test: Settings › Developer › Show onboarding, or `hyperday://onboarding`.
 - **Stats charts (v51):** Focus this week (square-dot columns, today in blue), Ahead / behind plan (dots above = done as planned, orange below = missed or over, 30 days; 14 on narrow screens), Focus hours month to date (this month solid vs last month dashed). Existing Stats cards stay.

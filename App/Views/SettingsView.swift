@@ -74,7 +74,7 @@ struct SettingsIcon: View {
     let color: Color
     var body: some View {
         Image(systemName: symbol)   // v47: solid symbol in colour, no square behind
-            .font(.system(size: 19, weight: .semibold))
+            .font(.hd(size: 19, weight: .semibold))
             .foregroundStyle(color)
             .frame(width: 30, height: 30)
     }
@@ -292,7 +292,7 @@ struct CategoryEditorSheet: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Caps("Name")
                     TextField("Category name", text: $category.name)
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(.hd(size: 20, weight: .semibold))
                 }
                 .cardBox()
 
@@ -379,10 +379,10 @@ struct RuleEditorSheet: View {
                     Caps("When")
                     PillNav(options: CategoryRule.Kind.allCases, selection: $kind) { $0.label }
                     TextField(kind == .title ? "gym, run, yoga" : "Tesla", text: $keywords)
-                        .font(.system(size: 17))
+                        .font(.hd(size: 17))
                         .textInputAutocapitalization(.never)
                     Text("Separate words with commas. Not case-sensitive.")
-                        .font(.system(size: 12))
+                        .font(.hd(size: 12))
                         .foregroundStyle(Theme.faint)
                 }
                 .cardBox()
@@ -451,7 +451,7 @@ struct CalendarColorSheet: View {
                         }
                     }
                     Text("First swatch is this calendar's color in the iOS Calendar app.")
-                        .font(.system(size: 12))
+                        .font(.hd(size: 12))
                         .foregroundStyle(Theme.faint)
                 }
                 .cardBox()
@@ -487,7 +487,7 @@ struct BackupCard: View {
         VStack(alignment: .leading, spacing: 0) {
             SectionHeader("Backup", icon: "share", color: Color(hex: "#64D2FF")).padding(.bottom, 8)
             Toggle("Weekly backup", isOn: $backups.weekly)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.hd(size: 14, weight: .semibold))
                 .tint(DayLiveStyle.doneGreen)
                 .padding(.bottom, 8)
             line("Last backup", backups.lastBackup.map { $0.formatted(.dateTime.weekday(.abbreviated).hour().minute()) } ?? "Never",
@@ -505,10 +505,10 @@ struct BackupCard: View {
             }
             .padding(.top, 12)
             if let message {
-                Text(message).font(.system(size: 12, weight: .semibold)).foregroundStyle(DayLiveStyle.doneGreen).padding(.top, 6)
+                Text(message).font(.hd(size: 12, weight: .semibold)).foregroundStyle(DayLiveStyle.doneGreen).padding(.top, 6)
             }
             Text("Saved in Files › On My iPhone › Hyperday › Backups. Plans, history, categories, places and settings — not your calendar (that stays in Calendar). AirDrop or save to iCloud Drive from Files for an off-phone copy.")
-                .font(.system(size: 11.5))
+                .font(.hd(size: 11.5))
                 .foregroundStyle(Theme.muted)
                 .padding(.top, 10)
         }
@@ -521,9 +521,9 @@ struct BackupCard: View {
 
     private func line(_ a: String, _ b: String, color: Color = Theme.muted) -> some View {
         HStack {
-            Text(a).font(.system(size: 14)).foregroundStyle(Theme.text)
+            Text(a).font(.hd(size: 14)).foregroundStyle(Theme.text)
             Spacer()
-            Text(b).font(.system(size: 14, weight: .semibold)).foregroundStyle(color)
+            Text(b).font(.hd(size: 14, weight: .semibold)).foregroundStyle(color)
         }
         .padding(.vertical, 9)
         .overlay(alignment: .top) { Rectangle().fill(Theme.border).frame(height: 1) }
@@ -538,9 +538,9 @@ private struct RestoreSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Restore a backup").font(.system(size: 20, weight: .heavy)).foregroundStyle(Theme.text)
+            Text("Restore a backup").font(.hd(size: 20, weight: .heavy)).foregroundStyle(Theme.text)
             Text("Your current data is backed up first, so you can undo.")
-                .font(.system(size: 12)).foregroundStyle(Theme.muted).padding(.top, 4).padding(.bottom, 10)
+                .font(.hd(size: 12)).foregroundStyle(Theme.muted).padding(.top, 4).padding(.bottom, 10)
             ScrollView {
                 VStack(spacing: 0) {
                     ForEach(backups.items) { item in
@@ -554,7 +554,7 @@ private struct RestoreSheet: View {
                                 Text(ByteCountFormatter.string(fromByteCount: Int64(item.bytes), countStyle: .file))
                                     .foregroundStyle(Theme.muted)
                             }
-                            .font(.system(size: 14))
+                            .font(.hd(size: 14))
                             .padding(.vertical, 11)
                             .contentShape(Rectangle())
                         }

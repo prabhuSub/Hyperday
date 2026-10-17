@@ -33,3 +33,6 @@ tesla-site/
 # 3D model source (CC-BY download); the app uses the exported USDZ
 *.glb
 .agenttrail/
+
+# v52: personal usage data pulled from the iPhone, never commit
+audit/

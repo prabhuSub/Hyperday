@@ -86,7 +86,7 @@ struct RealityCard: View {
                         let yy = inset + CGFloat(h - firstHour) * hourHeight
                         Rectangle().fill(Theme.border).frame(height: 1).offset(y: yy)
                         Text(h % 12 == 0 ? "12\(h < 12 ? "a" : "p")" : "\(h % 12)\(h < 12 ? "a" : "p")")
-                            .font(.system(size: 10, weight: .medium)).foregroundStyle(Theme.faint)
+                            .font(.hd(size: 10, weight: .medium)).foregroundStyle(Theme.faint)
                             .offset(y: yy - 6)
                     }
                     ForEach(planned) { it in
@@ -109,7 +109,7 @@ struct RealityCard: View {
             .frame(height: height)
             if happened.isEmpty {
                 Text("Blocks you mark Done show up on the right at the time they ran. Set Home and Office in Settings › Reality line to add places and drives.")
-                    .font(.system(size: 12))
+                    .font(.hd(size: 12))
                     .foregroundStyle(Theme.muted)
             }
         }
@@ -127,7 +127,7 @@ struct RealityCard: View {
     private func lane(_ title: String, color: Color, from: CGFloat, to: CGFloat) -> some View {
         let h = max(16, to - from - 2)
         return Text(title)
-            .font(.system(size: 12, weight: .semibold))
+            .font(.hd(size: 12, weight: .semibold))
             .foregroundStyle(Theme.text)
             .lineLimit(h > 34 ? 2 : 1)
             .padding(.horizontal, 5)
@@ -159,14 +159,14 @@ struct RealitySettingsCard: View {
             Rectangle().fill(Theme.border).frame(height: 1)
             Caps("Your car")
             Text("iPhone doesn't let apps watch Bluetooth in the background. Add two Shortcuts automations once:")
-                .font(.system(size: 12.5)).foregroundStyle(Theme.muted)
+                .font(.hd(size: 12.5)).foregroundStyle(Theme.muted)
             VStack(alignment: .leading, spacing: 4) {
                 Text("1. Shortcuts › Automation › New › Bluetooth (or CarPlay)")
                 Text("2. Pick your car › Is Connected › Run Immediately")
                 Text("3. Action: Hyperday › I'm driving")
                 Text("4. Same for Is Disconnected › Hyperday › Arrived")
             }
-            .font(.system(size: 12.5))
+            .font(.hd(size: 12.5))
             .foregroundStyle(Theme.text)
             Button("Open Shortcuts") {
                 if let url = URL(string: "shortcuts://") { UIApplication.shared.open(url) }
@@ -174,9 +174,9 @@ struct RealitySettingsCard: View {
             .buttonStyle(PrimaryButtonStyle())
 
             Rectangle().fill(Theme.border).frame(height: 1)
-            Toggle("Workouts tick Fitness blocks", isOn: $tickWorkouts).font(.system(size: 14))
+            Toggle("Workouts tick Fitness blocks", isOn: $tickWorkouts).font(.hd(size: 14))
             Text("Reads workouts from Health. Everything stays on your iPhone.")
-                .font(.system(size: 11)).foregroundStyle(Theme.muted)
+                .font(.hd(size: 11)).foregroundStyle(Theme.muted)
         }
         .cardBox()
     }
@@ -184,8 +184,8 @@ struct RealitySettingsCard: View {
     private func placeRow(_ id: String, _ name: String, _ sub: String) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 1) {
-                Text(name).font(.system(size: 14)).foregroundStyle(Theme.text)
-                Text(sub).font(.system(size: 11)).foregroundStyle(Theme.muted)
+                Text(name).font(.hd(size: 14)).foregroundStyle(Theme.text)
+                Text(sub).font(.hd(size: 11)).foregroundStyle(Theme.muted)
             }
             Spacer()
             Button(busy == id ? "Locating…" : (reality.place(id) != nil ? "Saved ✓ · Reset" : "Set to here")) {
@@ -197,7 +197,7 @@ struct RealitySettingsCard: View {
                     }
                 }
             }
-            .font(.system(size: 13, weight: .semibold))
+            .font(.hd(size: 13, weight: .semibold))
             .disabled(busy != nil)
         }
     }

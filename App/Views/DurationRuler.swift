@@ -31,7 +31,7 @@ struct DurationRuler: View {
                 let r = CGRect(x: x - w / 2, y: tickBottom - tall, width: w, height: tall)
                 ctx.fill(Path(roundedRect: r, cornerRadius: w / 2), with: .color(tint.opacity(major ? fade : fade * 0.7)))
                 if m % 10 == 0 {
-                    let label = ctx.resolve(Text(Self.short(m)).font(.system(size: 15, weight: .bold))
+                    let label = ctx.resolve(Text(Self.short(m)).font(.hd(size: 15, weight: .bold))
                         .monospacedDigit().foregroundStyle(tint.opacity(fade)))
                     ctx.draw(label, at: CGPoint(x: x, y: 9), anchor: .center)
                 }
@@ -95,15 +95,15 @@ struct DurationReadout: View {
         let h = minutes / 60, m = minutes % 60
         HStack(alignment: .firstTextBaseline, spacing: 2) {
             if h > 0 {
-                Text("\(h)").font(.system(size: 40, weight: .bold)).monospacedDigit()
-                Text("h").font(.system(size: 20, weight: .bold))
+                Text("\(h)").font(.hd(size: 40, weight: .bold)).monospacedDigit()
+                Text("h").font(.hd(size: 20, weight: .bold))
                 if m > 0 {
-                    Text(" \(m)").font(.system(size: 40, weight: .bold)).monospacedDigit()
-                    Text("m").font(.system(size: 20, weight: .bold))
+                    Text(" \(m)").font(.hd(size: 40, weight: .bold)).monospacedDigit()
+                    Text("m").font(.hd(size: 20, weight: .bold))
                 }
             } else {
-                Text("\(m)").font(.system(size: 40, weight: .bold)).monospacedDigit()
-                Text(" min").font(.system(size: 20, weight: .bold))
+                Text("\(m)").font(.hd(size: 40, weight: .bold)).monospacedDigit()
+                Text(" min").font(.hd(size: 20, weight: .bold))
             }
         }
         .foregroundStyle(tint)

@@ -17,7 +17,7 @@ struct StatsView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             Caps(s.subtitle)
                             Text(s.title)
-                                .font(.system(size: 26, weight: .heavy))   // v27: modest
+                                .font(.hd(size: 26, weight: .heavy))   // v27: modest
                                 .foregroundStyle(Theme.text)
                         }
                         PillNav(options: StatsRange.allCases, selection: $range) { $0.rawValue }
@@ -41,7 +41,7 @@ struct StatsView: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 Caps("No history yet")
                                 Text("Stats fill in as you use Hyperday. To preview the look now: Settings › Load sample data.")
-                                    .font(.system(size: 14))
+                                    .font(.hd(size: 14))
                                     .foregroundStyle(Theme.muted)
                             }
                             .cardBox()
@@ -92,7 +92,7 @@ struct StatsView: View {
                 ForEach(Array(s.byCategory.enumerated()), id: \.element.id) { i, c in
                     HStack(spacing: 10) {
                         Circle().fill(c.color).frame(width: 10, height: 10)
-                        Text(c.name).font(.system(size: 14)).foregroundStyle(Theme.text).lineLimit(1)
+                        Text(c.name).font(.hd(size: 14)).foregroundStyle(Theme.text).lineLimit(1)
                         Spacer()
                         bigSmallText(hours(c.hours), size: 15).foregroundStyle(Theme.text)
                     }
@@ -122,7 +122,7 @@ struct StatsView: View {
                 Spacer()
                 (Text(hours(s.planHours)).bold().foregroundColor(Theme.text) + Text(" your plan"))
             }
-            .font(.system(size: 13))
+            .font(.hd(size: 13))
             .foregroundStyle(Theme.muted)
         }
         .cardBox()
@@ -142,8 +142,8 @@ struct StatsView: View {
 
     private func stat(_ value: String, _ label: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(value).font(.system(size: 22, weight: .semibold)).foregroundStyle(Theme.text)
-            Text(label).font(.system(size: 12)).foregroundStyle(Theme.muted)
+            Text(value).font(.hd(size: 22, weight: .semibold)).foregroundStyle(Theme.text)
+            Text(label).font(.hd(size: 12)).foregroundStyle(Theme.muted)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

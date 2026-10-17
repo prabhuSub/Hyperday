@@ -7,14 +7,20 @@ private let missColor = Color(hex: "#FF9F0A") // dots below the line
 
 extension HistoryStore {
     /// Hours spent in your own planned blocks on a day.
-    func planHours(on day: Date) -> Double {
-        entries(on: day).filter { $0.source == .plan }.reduce(0) { $0 + $1.hours }
+    func planHours(on day: Date) -> Double { Self.planHours(entries(on: day)) }
+
+    nonisolated static func planHours(_ entries: [HistoryEntry]) -> Double {
+        entries.filter { $0.source == .plan }.reduce(0) { $0 + $1.hours }
     }
 
     /// Minutes done as planned (up) and minutes missed or run over (down) on a day.
     func aheadBehind(on day: Date, now: Date = .now) -> (up: Double, down: Double) {
+        Self.aheadBehind(entries(on: day), now: now)
+    }
+
+    nonisolated static func aheadBehind(_ entries: [HistoryEntry], now: Date) -> (up: Double, down: Double) {
         var up = 0.0, down = 0.0
-        for e in entries(on: day) where e.source == .plan {
+        for e in entries where e.source == .plan {
             let inPlan = min(e.actualEnd, e.plannedEnd).timeIntervalSince(e.start)
             up += max(0, inPlan) / 60
             down += max(0, e.actualEnd.timeIntervalSince(e.plannedEnd)) / 60          // ran over
@@ -54,9 +60,9 @@ private struct ChartHeader: View {
     var right: String
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(title).font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text)
+            Text(title).font(.hd(size: 15, weight: .bold)).foregroundStyle(Theme.text)
             Spacer()
-            Text(right).font(.system(size: 12.5, weight: .semibold)).foregroundStyle(Theme.muted)
+            Text(right).font(.hd(size: 12.5, weight: .semibold)).foregroundStyle(Theme.muted)
         }
     }
 }
@@ -67,13 +73,13 @@ private func hoursText(_ h: Double) -> String {
 
 private func bigNumber(_ value: String, _ note: String?, good: Bool, trailing: String? = nil) -> some View {
     HStack(alignment: .firstTextBaseline, spacing: 6) {
-        Text(value).font(.system(size: 30, weight: .heavy)).foregroundStyle(Theme.text)
+        Text(value).font(.hd(size: 30, weight: .heavy)).foregroundStyle(Theme.text)
         if let note {
-            Text(note).font(.system(size: 13, weight: .bold))
+            Text(note).font(.hd(size: 13, weight: .bold))
                 .foregroundStyle(good ? DayLiveStyle.doneGreen : missColor)
         }
         Spacer(minLength: 0)
-        if let trailing { Text(trailing).font(.system(size: 12)).foregroundStyle(Theme.muted) }
+        if let trailing { Text(trailing).font(.hd(size: 12)).foregroundStyle(Theme.muted) }
     }
 }
 
@@ -111,7 +117,7 @@ struct WeekDotsCard: View {
                                   color: isToday ? Theme.blue : (days[i] < today ? doneColor : Theme.faint))
                             .frame(height: CGFloat(maxRows) * 7)
                         Text(days[i].formatted(.dateTime.weekday(.narrow)))
-                            .font(.system(size: 11.5, weight: .semibold))
+                            .font(.hd(size: 11.5, weight: .semibold))
                             .foregroundStyle(isToday ? Theme.blue : Theme.muted)
                     }
                     .frame(maxWidth: .infinity)
@@ -120,6 +126,12 @@ struct WeekDotsCard: View {
             .padding(.top, 6)
         }
         .cardBox()
+        // v52: Canvas dots are invisible to VoiceOver; read the numbers instead.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Focus this week")
+        .accessibilityValue(([hoursText(total) + " total"] + (0..<7).filter { days[$0] <= today }.map {
+            "\(days[$0].formatted(.dateTime.weekday(.wide))) \(hoursText(hours[$0]))"
+        }).joined(separator: ", "))
     }
 }
 
@@ -144,7 +156,7 @@ struct AheadBehindCard: View {
         let ticks = stride(from: 0, to: n, by: max(1, n / 4)).map { days[$0] } + [days[n - 1]]
 
         return VStack(alignment: .leading, spacing: 0) {
-            ChartHeader(title: "Ahead / behind plan", right: "\(n) days")
+            ChartHeader(title: "Ahead / behind plan", right: "\(n) days · 1 dot = 15 min")
             HStack(alignment: .top, spacing: 0) {
                 ForEach(0..<n, id: \.self) { i in
                     VStack(spacing: 0) {
@@ -165,16 +177,24 @@ struct AheadBehindCard: View {
                     if i < ticks.count - 1 { Spacer(minLength: 4) }
                 }
             }
-            .font(.system(size: 11)).foregroundStyle(Theme.muted).padding(.top, 4)
+            .font(.hd(size: 11)).foregroundStyle(Theme.muted).padding(.top, 4)
             HStack(spacing: 14) {
                 legend(doneColor, "Done as planned")
                 legend(missColor, "Missed or over")
                 Spacer(minLength: 0)
-                Text("1 dot = 15 min")
             }
-            .font(.system(size: 12)).foregroundStyle(Theme.muted).padding(.top, 8)
+            .font(.hd(size: 12)).foregroundStyle(Theme.muted).padding(.top, 8)
         }
         .cardBox()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Ahead or behind plan, last \(n) days")
+        .accessibilityValue({
+            let up = vals.reduce(0) { $0 + $1.up }, down = vals.reduce(0) { $0 + $1.down }
+            let worst = zip(days, vals).max { $0.1.down < $1.1.down }
+            var t = "\(hoursText(up / 60)) done as planned, \(hoursText(down / 60)) missed or over"
+            if let w = worst, w.1.down >= 15 { t += ". Most missed: \(w.0.formatted(.dateTime.weekday(.wide).month().day()))" }
+            return t
+        }())
     }
 
     private func legend(_ c: Color, _ t: String) -> some View {
@@ -226,9 +246,12 @@ struct CumulativeLineCard: View {
                     Text("\(lastName) · \(hoursText(lastByNow)) by now")
                 }
             }
-            .font(.system(size: 12)).foregroundStyle(Theme.muted).padding(.top, 4)
+            .font(.hd(size: 12)).foregroundStyle(Theme.muted).padding(.top, 4)
         }
         .cardBox()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Focus hours, month to date")
+        .accessibilityValue("\(monthName) \(hoursText(nowTotal)), \(lastName) had \(hoursText(lastByNow)) by this day")
     }
 }
 

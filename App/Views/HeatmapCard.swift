@@ -23,7 +23,7 @@ struct HeatmapCard: View {
                 Caps("Blocks done · last 12 months")
                 Spacer()
                 Text("\(data.total()) total")
-                    .font(.system(size: 11))
+                    .font(.hd(size: 11))
                     .foregroundStyle(Theme.muted)
             }
             ScrollViewReader { proxy in
@@ -37,7 +37,7 @@ struct HeatmapCard: View {
             HStack {
                 let streak = data.streak()
                 (Text("\(streak)-day").bold().foregroundColor(Theme.text) + Text(" streak · best \(data.best())"))
-                    .font(.system(size: 12))
+                    .font(.hd(size: 12))
                     .foregroundStyle(Theme.muted)
                 Spacer()
                 HeatLegend()
@@ -73,10 +73,10 @@ struct HeatDaySheet: View {
                     .frame(width: 22, height: 22)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(day.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()))
-                        .font(.system(size: 20, weight: .bold))
+                        .font(.hd(size: 20, weight: .bold))
                     Text(entries.isEmpty ? "Nothing recorded this day"
                          : "\(done) of \(entries.count) blocks done · \((focused * 3600).hoursMinutes) focused")
-                        .font(.system(size: 12))
+                        .font(.hd(size: 12))
                         .foregroundStyle(Theme.muted)
                 }
             }
@@ -87,12 +87,12 @@ struct HeatDaySheet: View {
                             HDIcon(e.done ? "step-done" : "step-open", size: 20)
                                 .foregroundStyle(e.done ? DayLiveStyle.doneGreen : Theme.faint)
                             Text(e.title)
-                                .font(.system(size: 14))
+                                .font(.hd(size: 14))
                                 .foregroundStyle(e.done ? Theme.text : Theme.muted)
                                 .lineLimit(1)
                             Spacer()
                             Text(e.start.shortTime)
-                                .font(.system(size: 12))
+                                .font(.hd(size: 12))
                                 .foregroundStyle(Theme.muted)
                         }
                         .padding(.vertical, 10)

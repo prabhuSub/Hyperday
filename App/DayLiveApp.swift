@@ -32,7 +32,7 @@ struct DayLiveApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
+            TypeSizeRebuilder { RootView() }   // v52: fonts follow Settings › Text Size
                 .preferredColorScheme((Appearance(rawValue: appearance) ?? .system).scheme)
                 .tint(Theme.blue)
                 .environmentObject(store)
@@ -69,6 +69,7 @@ struct DayLiveApp: App {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
+                HDLog.event("foreground")
                 // A save file that was locked at launch (after a reboot) can be read now.
                 BlockStore.shared.retryLoadIfNeeded()
                 HistoryStore.shared.retryLoadIfNeeded()
@@ -84,6 +85,7 @@ struct DayLiveApp: App {
             }
         }
         .backgroundTask(.appRefresh(BackgroundRefresh.id)) {
+            HDLog.event("bg-fired")   // v52: did iOS actually wake us?
             await LiveActivityManager.shared.refresh()
             if Features.car || Features.carWidgets { await CarStore.shared.refresh() }   // v38: keeps car widgets current
         }

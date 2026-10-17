@@ -97,9 +97,9 @@ struct ProLocked<Content: View>: View {
                 .allowsHitTesting(false)
                 .overlay {
                     VStack(spacing: 8) {
-                        Text(title).font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text)
+                        Text(title).font(.hd(size: 15, weight: .bold)).foregroundStyle(Theme.text)
                         Button("Try free for 7 days") { pro.showPaywall = true }
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.hd(size: 14, weight: .bold))
                             .buttonStyle(.borderedProminent).buttonBorderShape(.capsule)
                     }
                 }
@@ -122,7 +122,7 @@ struct ProChip: View {
     @ObservedObject private var pro = ProStore.shared
     var body: some View {
         if !pro.isPro {
-            Text("PRO").font(.system(size: 11, weight: .heavy))
+            Text("PRO").font(.hd(size: 11, weight: .heavy))
                 .padding(.horizontal, 8).padding(.vertical, 3)
                 .foregroundStyle(Theme.blue)
                 .background(Capsule().fill(Theme.blue.opacity(0.12)))

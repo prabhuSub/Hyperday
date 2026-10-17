@@ -127,5 +127,19 @@ for attempt in 1 2 3; do
   echo "› Connection dropped, retrying ($attempt/3)…"
   sleep 3
 done
-xcrun devicectl device process launch --device "$DEVICE" com.prabhu.daylive >/dev/null || true
-echo "✓ Hyperday is on your iPhone."
+# v52: a failed launch is a failed deploy (it used to print ✓ anyway).
+LAUNCH_ERR="${TMPDIR:-/tmp}/hd-launch.err"
+if xcrun devicectl device process launch --device "$DEVICE" com.prabhu.daylive >/dev/null 2>"$LAUNCH_ERR"; then
+  echo "✓ Hyperday is on your iPhone and running."
+else
+  echo "✗ Installed, but iOS would not open it."
+  if grep -qiE "invalid code signature|not been explicitly trusted|inadequate entitlements" "$LAUNCH_ERR"; then
+    echo "  Fix on the iPhone: Settings › General › VPN & Device Management › Developer App › your Apple ID › Trust."
+    echo "  Then open Hyperday from the Home Screen (no need to deploy again)."
+  elif grep -qi "locked" "$LAUNCH_ERR"; then
+    echo "  Unlock your iPhone and open Hyperday."
+  else
+    sed 's/^/    /' "$LAUNCH_ERR" | head -6
+  fi
+  exit 1
+fi

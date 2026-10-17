@@ -177,7 +177,14 @@ final class LiveActivityManager: ObservableObject {
               let endOfLast = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: last))?.addingTimeInterval(-1)
         else { return }
         CalendarService.shared.invalidate()
-        HistoryStore.shared.recordToday(raw: allTodayBlocks(now: endOfLast), now: endOfLast)
+        // v52: also fill days the app never ran (no foreground, no background wake-up). Before, those days
+        // were simply missing from Stats, e.g. a whole Friday of meetings.
+        for day in HistoryStore.daysToFinalize(last: last, now: now) {
+            let end = cal.date(byAdding: .day, value: 1, to: day)!.addingTimeInterval(-1)
+            HistoryStore.shared.recordToday(raw: allTodayBlocks(now: end), now: end)
+        }
+        HDLog.event("finalize", ["days": HistoryStore.daysToFinalize(last: last, now: now).count])
+        _ = endOfLast
     }
 
     /// v20: today score (top row), Pause, and the last-5-minutes heads-up.
@@ -266,6 +273,10 @@ final class LiveActivityManager: ObservableObject {
 
     private func performRefresh() async {
         let now = Date.now
+        let spid = HDLog.signposter.makeSignpostID()
+        let sp = HDLog.signposter.beginInterval("refresh", id: spid)
+        defer { HDLog.signposter.endInterval("refresh", sp) }
+        let appState = UIApplication.shared.applicationState
         let snap = snapshot(now: now)
         finalizePreviousDayIfNeeded(now: now)
         HistoryStore.shared.recordToday(raw: allTodayBlocks(now: now), now: now)
@@ -299,10 +310,12 @@ final class LiveActivityManager: ObservableObject {
         let dayIsOver = !closed && !closePending && !snap.all.isEmpty && !snap.hasAnythingLeft
         let force = forceStart
         forceStart = false
+        var outcome = "idle"
 
         if dayIsOver && !force {
             // Day's over: show "Day complete" briefly, then let iOS dismiss it.
             for a in running { await a.end(content, dismissalPolicy: .default) }
+            outcome = running.isEmpty ? "idle" : "ended"
         } else if let activity = running.first {
             // Only ever one Hyperday card: clear duplicates and ended cards still sitting on the Lock Screen.
             await Self.endAll(except: activity.id)
@@ -311,18 +324,28 @@ final class LiveActivityManager: ObservableObject {
                 // Restart only in the foreground: a background request would fail and leave nothing on screen.
                 await Self.endAll()
                 request(content)
+                outcome = "restarted"
             } else {
                 await activity.update(content)
                 lastError = nil
+                outcome = "updated"
             }
         } else if force || (autoStart && inForeground && (snap.hasAnythingLeft || closed)) {
             // (A background request always fails, so only auto-start while the app is open.)
             // Auto-start only when there's something to show; "Go Live" always starts.
             await Self.endAll()
             request(content)
+            outcome = "requested"
         }
 
         isRunning = !Self.liveActivities().isEmpty
+        // v52: one line per pass, so a 7-day run can show whether every boundary was reached.
+        let bgState = appState == .active ? "fg" : (appState == .background ? "bg" : "inactive")
+        HDLog.live.info("refresh \(outcome, privacy: .public) state=\(bgState, privacy: .public) running=\(self.isRunning)")
+        var f: [String: Any] = ["out": outcome, "app": bgState, "running": isRunning, "closed": closed]
+        if let b = boundary { f["next"] = b.timeIntervalSince1970 }
+        if let e = lastError { f["err"] = e }
+        HDLog.event("refresh", f)
         MeetingAlerts.schedule(snap.all, now: now)
         writeWidgetDay(snap, now: now)
         writeCalendarCounts(now: now)
@@ -593,6 +616,7 @@ final class LiveActivityManager: ObservableObject {
             lastError = nil
         } catch {
             lastError = error.localizedDescription
+            HDLog.live.error("Activity.request failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 }
@@ -605,7 +629,13 @@ enum BackgroundRefresh {
     static func schedule(at date: Date?) {
         let request = BGAppRefreshTaskRequest(identifier: id)
         request.earliestBeginDate = date ?? Date.now.addingTimeInterval(30 * 60)
-        try? BGTaskScheduler.shared.submit(request)
+        do {
+            try BGTaskScheduler.shared.submit(request)
+            HDLog.event("bg-scheduled", ["at": request.earliestBeginDate?.timeIntervalSince1970 ?? 0])
+        } catch {
+            HDLog.bg.error("BG submit failed: \(error.localizedDescription, privacy: .public)")
+            HDLog.event("bg-submit-failed", ["err": error.localizedDescription])
+        }
     }
 }
 

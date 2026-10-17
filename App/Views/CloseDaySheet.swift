@@ -22,7 +22,7 @@ struct CloseDaySheet: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Caps("Close the day · \(today.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))")
                         (Text("\(done.count)").foregroundColor(DayLiveStyle.doneGreen) + Text(" of \(total) done"))
-                            .font(.system(size: 30, weight: .heavy))
+                            .font(.hd(size: 30, weight: .heavy))
                             .foregroundStyle(Theme.text)
                     }
 
@@ -30,11 +30,11 @@ struct CloseDaySheet: View {
                         VStack(alignment: .leading, spacing: 6) {
                             Caps("Your day")
                             Text(story)
-                                .font(.system(size: 15))
+                                .font(.hd(size: 15))
                                 .italic()
                                 .foregroundStyle(Theme.text)
                             Text("Written on your iPhone by Apple Intelligence from today's blocks and places.")
-                                .font(.system(size: 11))
+                                .font(.hd(size: 11))
                                 .foregroundStyle(Theme.muted)
                         }
                         .cardBox()
@@ -57,7 +57,7 @@ struct CloseDaySheet: View {
                         }
                         .cardBox(padding: 0)
                         Text("Tap the circle or swipe right if you did it. Swipe left: Tomorrow (same time) or Drop. Anything left here moves to tomorrow when you close the day.")
-                            .font(.system(size: 12))
+                            .font(.hd(size: 12))
                             .foregroundStyle(Theme.muted)
                     }
 
@@ -68,7 +68,7 @@ struct CloseDaySheet: View {
                                 if index > 0 { Rectangle().fill(Theme.border).frame(height: 1) }
                                 HStack(spacing: 10) {
                                     HDIcon("done", size: 16).foregroundStyle(DayLiveStyle.doneGreen)
-                                    Text(e.title).font(.system(size: 14)).foregroundStyle(Theme.muted).lineLimit(1)
+                                    Text(e.title).font(.hd(size: 14)).foregroundStyle(Theme.muted).lineLimit(1)
                                     Spacer()
                                 }
                                 .padding(.horizontal, 14)
@@ -123,8 +123,8 @@ struct CloseDaySheet: View {
             .accessibilityLabel("Mark \(b.title) done")
             RoundedRectangle(cornerRadius: 2).fill(CategoryStore.shared.displayColor(for: b)).frame(width: 3, height: 30)
             VStack(alignment: .leading, spacing: 2) {
-                Text(b.title).font(.system(size: 15)).foregroundStyle(Theme.text).lineLimit(1)
-                Text("\(b.start.shortTime) · \(b.duration.hoursMinutes)").font(.system(size: 12)).foregroundStyle(Theme.muted)
+                Text(b.title).font(.hd(size: 15)).foregroundStyle(Theme.text).lineLimit(1)
+                Text("\(b.start.shortTime) · \(b.duration.hoursMinutes)").font(.hd(size: 12)).foregroundStyle(Theme.muted)
             }
             Spacer()
         }
@@ -164,7 +164,7 @@ struct CloseDaySheet: View {
 private struct CloseButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 15, weight: .bold))
+            .font(.hd(size: 15, weight: .bold))
             .foregroundStyle(Theme.bg)
             .frame(maxWidth: .infinity)
             .frame(height: 44)
@@ -190,17 +190,17 @@ struct DayCloseSettingsCard: View {
         VStack(alignment: .leading, spacing: 12) {
             SectionHeader("Day Close", icon: "done", color: Color(hex: "#FF375F"))
             DatePicker("Close my day at", selection: $close, displayedComponents: [.hourAndMinute])
-                .font(.system(size: 14))
-            Toggle("Show on Lock Screen", isOn: $show).font(.system(size: 14))
+                .font(.hd(size: 14))
+            Toggle("Show on Lock Screen", isOn: $show).font(.hd(size: 14))
 
             Rectangle().fill(Theme.border).frame(height: 1)
             Caps("Tomorrow pre-flight")
             Stepper(value: $sleep, in: 300...600, step: 15) {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Sleep target  \(TimeInterval(sleep * 60).hoursMinutes)").font(.system(size: 14))
+                    Text("Sleep target  \(TimeInterval(sleep * 60).hoursMinutes)").font(.hd(size: 14))
                     Text(healthAvg.map { "Your 2-week average in Health: \(TimeInterval($0 * 60).hoursMinutes)" }
                          ?? "Tap Use Health to read your average sleep")
-                        .font(.system(size: 11)).foregroundStyle(Theme.muted)
+                        .font(.hd(size: 11)).foregroundStyle(Theme.muted)
                 }
             }
             Button(reading ? "Reading Health…" : "Use Health average") {
@@ -212,20 +212,20 @@ struct DayCloseSettingsCard: View {
                     reading = false
                 }
             }
-            .font(.system(size: 13, weight: .semibold))
+            .font(.hd(size: 13, weight: .semibold))
             .disabled(reading)
             Stepper(value: $routine, in: 0...120, step: 5) {
-                Text("Morning routine  \(routine) min").font(.system(size: 14))
+                Text("Morning routine  \(routine) min").font(.hd(size: 14))
             }
             Stepper(value: $commute, in: 0...120, step: 5) {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Commute  \(commute) min").font(.system(size: 14))
+                    Text("Commute  \(commute) min").font(.hd(size: 14))
                     Text("Learned automatically once Location arrives (roadmap #3)")
-                        .font(.system(size: 11)).foregroundStyle(Theme.muted)
+                        .font(.hd(size: 11)).foregroundStyle(Theme.muted)
                 }
             }
             VStack(alignment: .leading, spacing: 6) {
-                Text("Office days").font(.system(size: 14))
+                Text("Office days").font(.hd(size: 14))
                 HStack(spacing: 6) {
                     ForEach(1...7, id: \.self) { day in
                         let on = office.contains(day)
@@ -233,7 +233,7 @@ struct DayCloseSettingsCard: View {
                             if on { office.remove(day) } else { office.insert(day) }
                         } label: {
                             Text(weekdays[day - 1])
-                                .font(.system(size: 13, weight: .semibold))
+                                .font(.hd(size: 13, weight: .semibold))
                                 .frame(width: 34, height: 34)
                                 .foregroundStyle(on ? Theme.bg : Theme.text)
                                 .background(Circle().fill(on ? Theme.text : Theme.card))
@@ -242,7 +242,7 @@ struct DayCloseSettingsCard: View {
                         .buttonStyle(.plain)
                     }
                 }
-                Text("Leave-by shows only on office days.").font(.system(size: 11)).foregroundStyle(Theme.muted)
+                Text("Leave-by shows only on office days.").font(.hd(size: 11)).foregroundStyle(Theme.muted)
             }
         }
         .cardBox()

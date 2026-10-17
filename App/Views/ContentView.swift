@@ -46,11 +46,11 @@ struct TodayView: View {
                         if !calendarGranted { calendarBanner }
                         InfoRow(items: todayNumbers(snap))
                         Text("Schedule")
-                            .font(.system(size: 22, weight: .bold))
+                            .font(.hd(size: 22, weight: .bold))
                             .foregroundStyle(Theme.text)
                         timeline(snap: snap)
                         Text("Plan vs real")
-                            .font(.system(size: 22, weight: .bold))
+                            .font(.hd(size: 22, weight: .bold))
                             .foregroundStyle(Theme.text)
                             .padding(.top, 8)
                         RealityCard(blocks: snap.all, now: now)
@@ -128,19 +128,19 @@ struct TodayView: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Text("\(date) · \(state)")
-                        .font(.system(size: 11, weight: .heavy))
+                        .font(.hd(size: 11, weight: .heavy))
                         .kerning(1.4)
                         .foregroundStyle(.white.opacity(0.7))
                     Spacer(minLength: 8)
                     heroTimer(snap: snap)
                 }
                 Text(title)
-                    .font(.system(size: 30, weight: .heavy))
+                    .font(.hd(size: 30, weight: .heavy))
                     .foregroundStyle(.white)
                     .lineLimit(2)
                     .minimumScaleFactor(0.7)
                 Text(subtitle)
-                    .font(.system(size: 14))
+                    .font(.hd(size: 14))
                     .foregroundStyle(.white.opacity(0.75))
                 if snap.lanes.count > 0 {
                     AppJourney(lanes: snap.lanes, now: now, color: { categories.displayColor(for: $0) })
@@ -158,7 +158,7 @@ struct TodayView: View {
 
             if !activity.isRunning || activity.lastError != nil {
                 Text(activity.statusText)
-                    .font(.system(size: 12))
+                    .font(.hd(size: 12))
                     .foregroundStyle(activity.lastError == nil ? Color.white.opacity(0.7) : Theme.red)
             }
         }
@@ -185,7 +185,7 @@ struct TodayView: View {
             iconButton("siri", label: "Plan with words") { showingWords = true }
             Button { showingScan = true } label: {
                 Image(systemName: "camera")
-                    .font(.system(size: 17, weight: .medium))
+                    .font(.hd(size: 17, weight: .medium))
                     .foregroundStyle(Theme.text)
                     .frame(width: 40, height: 40)
                     .background(Circle().fill(Theme.card))
@@ -248,7 +248,7 @@ struct TodayView: View {
         VStack(spacing: 0) {
             if snap.all.isEmpty {
                 Text("Nothing planned. Tap Add block, or load sample data in Settings.")
-                    .font(.system(size: 14))
+                    .font(.hd(size: 14))
                     .foregroundStyle(Theme.muted)
                     .padding(16)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -338,7 +338,7 @@ struct TodayView: View {
         VStack(alignment: .leading, spacing: 8) {
             Caps("Calendar access is off")
             Text("Turn it on so your Tesla and personal events show up.")
-                .font(.system(size: 14))
+                .font(.hd(size: 14))
                 .foregroundStyle(Theme.muted)
             Button("Allow access") {
                 Task {
@@ -360,7 +360,7 @@ struct TodayView: View {
 private struct HeroOutlineButton: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 14, weight: .semibold))
+            .font(.hd(size: 14, weight: .semibold))
             .foregroundStyle(.white)
             .frame(width: 116, height: 40)
             .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white.opacity(0.45), lineWidth: 1))
@@ -406,7 +406,7 @@ struct AppJourney: View {
                     if d != Self.ticks(from, to).last { Spacer(minLength: 0) }
                 }
             }
-            .font(.system(size: 10, weight: .semibold))
+            .font(.hd(size: 10, weight: .semibold))
             .foregroundStyle(.white.opacity(0.55))
         }
         .accessibilityElement(children: .ignore)

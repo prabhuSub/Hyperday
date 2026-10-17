@@ -10,10 +10,10 @@ struct ExtendSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("EXTEND · \(block.title.uppercased())")
-                .font(.system(size: 12, weight: .heavy)).tracking(1)
+                .font(.hd(size: 12, weight: .heavy)).tracking(1)
                 .foregroundStyle(Theme.muted).lineLimit(1)
             Text("Ends \(block.end.shortTime) → \(block.end.addingTimeInterval(TimeInterval(add * 60)).shortTime)")
-                .font(.system(size: 15, weight: .semibold))
+                .font(.hd(size: 15, weight: .semibold))
                 .contentTransition(.numericText())
             DurationRuler(minutes: $add, range: 5...180)
             HStack {
@@ -22,7 +22,7 @@ struct ExtendSheet: View {
                     dismiss()
                 } label: {
                     Text("Add \(DurationRuler.long(add))")
-                        .font(.system(size: 16, weight: .heavy))
+                        .font(.hd(size: 16, weight: .heavy))
                         .padding(.horizontal, 18).frame(height: 40)
                         .background(Capsule().fill(Theme.blue.opacity(0.18)))
                         .foregroundStyle(Theme.blue)
