@@ -41,6 +41,25 @@ struct Hairlines: Shape {
     }
 }
 
+/// v56 dot grid (like the design canvas): small round dots on a square grid.
+struct DotGrid: Shape {
+    var step: CGFloat = 9
+    var radius: CGFloat = 1.1
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        var y = rect.minY + step / 2
+        while y < rect.maxY {
+            var x = rect.minX + step / 2
+            while x < rect.maxX {
+                p.addEllipse(in: CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2))
+                x += step
+            }
+            y += step
+        }
+        return p
+    }
+}
+
 /// A plus drawn as two bars, so it sits exactly in the centre at any size (a text "+" doesn't).
 struct PlusMark: Shape {
     var weight: CGFloat = 3.2
@@ -69,6 +88,9 @@ enum HDTone {
     /// Dark instrument panel used on the Now card, Live Activities and widgets in both modes.
     static let instrument = Color(UIColor(hd: 0x141518))
     static let instrumentHair = Color(UIColor(hd: 0x1C1E22))
+    static let instrumentDot = Color(UIColor(hd: 0x2B2E34))
+    /// Faint page dots for app backgrounds.
+    static let pageDot = dyn(0xD9DBDF, 0x1F2226)
     static let instrumentButton = Color(UIColor(hd: 0x25272B))
     static let instrumentMuted = Color(UIColor(hd: 0xA2A3A5))
 }
@@ -104,7 +126,7 @@ struct InstrumentBackground: View {
     var body: some View {
         ZStack {
             HDTone.instrument
-            Hairlines().fill(HDTone.instrumentHair)
+            DotGrid().fill(HDTone.instrumentDot)   // v56: dots instead of hairlines
         }
     }
 }

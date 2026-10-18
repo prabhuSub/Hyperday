@@ -7,7 +7,7 @@ import WidgetKit
 
 private let trayFill = Color(red: 0.06, green: 0.063, blue: 0.07)
 /// v55: the tray gets brushed hairlines.
-private var tray: some View { ZStack { trayFill; Hairlines().fill(HDTone.instrumentHair) } }
+private var tray: some View { ZStack { trayFill; DotGrid().fill(HDTone.instrumentDot) } }
 private let tileFill = Color(red: 0.12, green: 0.125, blue: 0.14)
 private let ink = Color(white: 0.95)
 private let muted = Color(white: 0.55)

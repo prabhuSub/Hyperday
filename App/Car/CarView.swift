@@ -610,11 +610,10 @@ struct CarSceneView: UIViewRepresentable {
     static func gridTile(_ t: WorldTheme) -> UIImage {
         UIGraphicsImageRenderer(size: CGSize(width: 256, height: 256)).image { ctx in
             t.gridFill.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 256, height: 256))
-            // v55: brushed stainless: fine parallel lines only (no triangle grid).
-            let line = UIBezierPath(); line.lineWidth = 1
-            var y: CGFloat = 0
-            while y < 256 { line.move(to: CGPoint(x: 0, y: y)); line.addLine(to: CGPoint(x: 256, y: y)); y += 8 }
-            t.gridLine.withAlphaComponent(0.35).setStroke(); line.stroke()
+            // v56: dot grid floor (like the design canvas), no lines.
+            t.gridLine.withAlphaComponent(0.45).setFill()
+            var y: CGFloat = 8
+            while y < 256 { var x: CGFloat = 8; while x < 256 { ctx.cgContext.fillEllipse(in: CGRect(x: x - 2, y: y - 2, width: 4, height: 4)); x += 16 }; y += 16 }
         }
     }
 

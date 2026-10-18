@@ -171,6 +171,13 @@ struct SecondaryButtonStyle: ButtonStyle {
     }
 }
 
+/// v56: page background with faint canvas dots.
+struct DotPage: View {
+    var body: some View {
+        ZStack { Theme.section; DotGrid(step: 14, radius: 1).fill(HDTone.pageDot) }.ignoresSafeArea()
+    }
+}
+
 // MARK: - Card
 
 struct CardBox: ViewModifier {
@@ -766,7 +773,7 @@ struct TabRoot<Content: View>: View {
     var body: some View {
         NavigationStack {
             content()
-                .background(Theme.section)
+                .background(DotPage())   // v56: canvas dots
                 .navigationTitle(title)
                 .navigationBarTitleDisplayMode(.large)
                 .toolbar {

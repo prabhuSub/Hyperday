@@ -37,6 +37,9 @@ struct DayLiveActivityWidget: Widget {
         } dynamicIsland: { context in
             let live = context.state.selfSwitched(isStale: context.isStale)
             let st = live.state
+            // v56: nothing planned / nothing left = just a green check (minimal), no calendar icon or empty ring.
+            let emptyDay = st.closed != true && st.driving != true && st.source == .free
+                && st.nextStart == nil && st.currentEnd == nil && st.overSince == nil
             return DynamicIsland {
                 // Same layout as the Lock Screen card: [mark] ······ 1:26:10 left on top (beside the camera),
                 // then title + category icon, then bar + button.
@@ -51,7 +54,9 @@ struct DayLiveActivityWidget: Widget {
                     }
                 }
             } compactLeading: {
-                if st.closed == true {
+                if emptyDay {
+                    EmptyDayCheck()
+                } else if st.closed == true {
                     ClosedCheck()                                   // v34 option 1: no more clock
                 } else if st.driving == true {
                     SourceIcon(source: st.source, size: 22,
@@ -61,7 +66,9 @@ struct DayLiveActivityWidget: Widget {
                     IslandRingIcon(state: st, size: 22)
                 }
             } compactTrailing: {
-                if st.closed == true {
+                if emptyDay {
+                    EmptyView()
+                } else if st.closed == true {
                     Text("\(st.doneCount ?? 0)/\(st.totalCount ?? 0)")
                         .font(.mono(14, .semibold))
                         .foregroundStyle(DayLiveStyle.doneGreen)
@@ -72,7 +79,7 @@ struct DayLiveActivityWidget: Widget {
                     IslandTimer(state: st)
                 }
             } minimal: {
-                if st.closed == true { ClosedCheck() } else { IslandRingIcon(state: st, size: 20) }
+                if emptyDay { EmptyDayCheck() } else if st.closed == true { ClosedCheck() } else { IslandRingIcon(state: st, size: 20) }
             }
             .keylineTint(st.accentColor)
             .widgetURL(st.closed == true && (st.reviewCount ?? 0) > 0 ? URL(string: "hyperday://close") : nil)
@@ -81,6 +88,16 @@ struct DayLiveActivityWidget: Widget {
     }
 }
 
+
+/// v56: empty day in the Island: a solid green check, nothing behind it.
+struct EmptyDayCheck: View {
+    var body: some View {
+        Image(systemName: "checkmark")
+            .font(.system(size: 15, weight: .heavy))
+            .foregroundStyle(DayLiveStyle.doneGreen)
+            .accessibilityLabel("Nothing planned")
+    }
+}
 
 /// v34 (Island option 1): day closed = a green check in a tinted capsule, beside "4/8".
 struct ClosedCheck: View {

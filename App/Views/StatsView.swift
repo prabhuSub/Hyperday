@@ -29,7 +29,7 @@ struct StatsView: View {
                     }
                     .padding(20)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Theme.bg)
+                    .background(Color.clear)
 
                     VStack(spacing: 12) {
                         WeekDotsCard()        // v51
@@ -59,7 +59,7 @@ struct StatsView: View {
                     .padding(.bottom, 40)
                 }
             }
-            .background(Theme.section)
+            .background(DotPage())
         }
         .task { await LiveActivityManager.shared.refresh() }
         .fullScreenCover(isPresented: $showRecap) { WeeklyRecapView() }   // records today before showing numbers

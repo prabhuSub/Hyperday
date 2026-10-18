@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### v56: canvas dots + empty-day Island
+- **Dot grid** (`DotGrid` in `Shared/HDTheme.swift`) replaces the hairlines: Now card, Lock Screen card, every widget plate, Car stage floor, and faint dots on the Today, Stats and Calendar page backgrounds.
+- **Island on an empty day:** just a solid green check (compact and minimal). No more calendar icon + empty ring.
+
 ### v55: instrument look, whole app (approved v54/v55 mockups)
 - **Shared theme** (`Shared/HDTheme.swift`): chamfered panels, brushed hairline plates, SF Mono readouts and caps, AA-checked tokens. Used by the app, every widget and every Live Activity.
 - **App:** cards, buttons, stat tiles and the + button are chamfered (the + is drawn, so it's exactly centred); section caps are mono; the Now card is a dark hairline instrument panel in both modes; deeper darks.

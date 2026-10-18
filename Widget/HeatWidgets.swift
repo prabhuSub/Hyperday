@@ -105,7 +105,7 @@ struct HeatWidgetView: View {
             }
         }
         .containerBackground(for: .widget) {
-            if family == .accessoryRectangular { AccessoryWidgetBackground() } else { ZStack { Color(UIColor.systemBackground); Hairlines().fill(HDTone.hair.opacity(0.5)) } }   // v55
+            if family == .accessoryRectangular { AccessoryWidgetBackground() } else { ZStack { Color(UIColor.systemBackground); DotGrid(step: 10).fill(HDTone.hair) } }   // v55
         }
     }
 

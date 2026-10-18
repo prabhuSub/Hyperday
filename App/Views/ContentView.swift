@@ -61,7 +61,7 @@ struct TodayView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            .background(Theme.section)
+            .background(DotPage())
         }
         .sheet(isPresented: $showingWords) { PlanWithWordsSheet().presentationDetents([.large]) }
         .sheet(isPresented: $showingScan) { PhotoTaskSheet().presentationDetents([.large]) }   // v36

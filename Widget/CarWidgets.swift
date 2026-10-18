@@ -308,7 +308,7 @@ struct CarWidgetsBundle: WidgetBundle {
 
 private extension View {
     func carBackground() -> some View {
-        containerBackground(for: .widget) { ZStack { carBG; Hairlines().fill(HDTone.instrumentHair) } }   // v55.widgetURL(URL(string: "hyperday://car"))
+        containerBackground(for: .widget) { ZStack { carBG; DotGrid().fill(HDTone.instrumentDot) } }   // v55.widgetURL(URL(string: "hyperday://car"))
     }
 }
 

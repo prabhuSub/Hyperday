@@ -44,7 +44,7 @@ struct CalendarTabView: View {
                     .padding(.bottom, 40)
                 }
                 .scrollPosition(id: $agendaTop, anchor: .top)
-                .background(Theme.section)
+                .background(DotPage())
                 .onChange(of: agendaTop) { _, top in
                     // Keep the title and week strip in step with the day you scrolled to.
                     // Only when the week changes, so scrolling doesn't redraw everything constantly.
@@ -84,7 +84,7 @@ struct CalendarTabView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
-                    .background(Theme.section)
+                    .background(DotPage())
                     .onChange(of: scrollTick) { _, _ in
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                             withAnimation(.easeInOut(duration: 0.3)) { proxy.scrollTo(selected, anchor: .top) }

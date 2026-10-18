@@ -205,7 +205,7 @@ struct LockScreenCard: View {
         .foregroundStyle(.white)
         .padding(.horizontal, inIsland ? 4 : 14)   // v26: the same gap on every side (concentric)
         .padding(.vertical, inIsland ? 2 : 12)   // v33: room for the taller card (iOS caps it at 160 pt)
-        .background { if !inIsland { ZStack { Hairlines().fill(HDTone.instrumentHair.opacity(0.8)); EdgeTicks(state: state, headsUp: headsUp) } } }   // v55: hairline plate   // v23: ticks around the card
+        .background { if !inIsland { ZStack { DotGrid().fill(HDTone.instrumentDot); EdgeTicks(state: state, headsUp: headsUp) } } }   // v55: hairline plate   // v23: ticks around the card
     }
 
     /// Nothing running and nothing coming up (free, no next block, no timer).

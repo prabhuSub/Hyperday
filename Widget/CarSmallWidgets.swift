@@ -320,7 +320,7 @@ struct HyperdayCarListWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: CarShared.listKind, provider: CarProvider()) {
             CarListView(entry: $0)
-                .containerBackground(for: .widget) { ZStack { Color(red: 0.11, green: 0.114, blue: 0.13); Hairlines().fill(HDTone.instrumentHair) } }   // v55
+                .containerBackground(for: .widget) { ZStack { Color(red: 0.11, green: 0.114, blue: 0.13); DotGrid().fill(HDTone.instrumentDot) } }   // v55
         }
         .configurationDisplayName("Car").description("Your car from the front, battery, range and lock.")
         .supportedFamilies([.systemSmall, .systemMedium])
@@ -331,7 +331,7 @@ struct HyperdayCarBigWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: CarShared.bigKind, provider: CarProvider()) {
             CarBigView(entry: $0)
-                .containerBackground(for: .widget) { ZStack { Color(red: 0.11, green: 0.114, blue: 0.13); Hairlines().fill(HDTone.instrumentHair) } }   // v55
+                .containerBackground(for: .widget) { ZStack { Color(red: 0.11, green: 0.114, blue: 0.13); DotGrid().fill(HDTone.instrumentDot) } }   // v55
         }
         .configurationDisplayName("Big car").description("Your car fills the widget, with battery and lock.")
         .supportedFamilies([.systemSmall])
