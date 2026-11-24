@@ -30,6 +30,7 @@ struct MacLive: Codable, Hashable {
     var running: Int
     var waiting: Int
     var gpu: Int?             // %
+    var mem: Int?             // % used (v63)
     var top: String?          // label of the newest running (else waiting) job
     var topSince: Date?       // when it started: the card counts up from here by itself
     var topWaiting: Bool?

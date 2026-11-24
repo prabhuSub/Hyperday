@@ -5,10 +5,10 @@ import SwiftUI
 /// for every preview state. Used to check nothing is cut off.
 struct LAPreviewScreen: View {
     private static let macs = [
-        MacLive(name: "MacBook Pro", desktop: false, online: true, running: 3, waiting: 1, gpu: 34,
+        MacLive(name: "MacBook Pro", desktop: false, online: true, running: 3, waiting: 1, gpu: 0, mem: 42,
                 top: "S01_run2.sh --scene 4", topSince: .now.addingTimeInterval(-2843), topWaiting: false),
-        MacLive(name: "Mac mini", desktop: true, online: true, running: 1, waiting: 0, gpu: 88,
-                top: "~/ai/ltx-2-video/render.sh", topSince: .now.addingTimeInterval(-1290), topWaiting: false),
+        MacLive(name: "Mac mini", desktop: true, online: true, running: 1, waiting: 0, gpu: 98, mem: 37,
+                top: "~/ai/ltx-2-mlx/.venv/bin/python render_s01.py", topSince: .now.addingTimeInterval(-1290), topWaiting: false),
     ]
     var body: some View {
         ScrollView {

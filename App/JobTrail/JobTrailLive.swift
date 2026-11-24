@@ -90,11 +90,12 @@ final class JobTrailLive: ObservableObject {
             let newest = { (list: [[String: Any]]) in list.max { ($0["startedAt"] as? Double ?? 0) < ($1["startedAt"] as? Double ?? 0) } }
             let top = newest(run) ?? newest(wait)
             let gpu = (m["gpu"] as? Double).map { Int($0.rounded()) }
+            let mem = (m["memFree"] as? Double).map { max(0, 100 - Int($0.rounded())) }
             out.append(MacLive(
                 name: m["name"] as? String ?? id,
                 desktop: (m["device"] as? String) == "desktop",
                 online: m["online"] as? Bool ?? false,
-                running: run.count, waiting: wait.count, gpu: gpu,
+                running: run.count, waiting: wait.count, gpu: gpu, mem: mem,
                 top: top.flatMap { $0["label"] as? String },
                 topSince: (top?["startedAt"] as? Double).map { Date(timeIntervalSince1970: $0 / 1000) },
                 topWaiting: top.map { ($0["state"] as? String) == "waiting" }))
@@ -107,7 +108,7 @@ final class JobTrailLive: ObservableObject {
 
     /// Refresh the Live Activity only when something you'd see changed (not on every GPU tick).
     private func changed() {
-        let sig = macs.map { "\($0.name)|\($0.online)|\($0.running)|\($0.waiting)|\($0.top ?? "")|\(($0.gpu ?? 0) / 20)" }.joined(separator: ",")
+        let sig = macs.map { "\($0.name)|\($0.online)|\($0.running)|\($0.waiting)|\($0.top ?? "")|\(($0.gpu ?? 0) / 10)|\(($0.mem ?? 0) / 10)" }.joined(separator: ",")
         guard sig != lastSignature else { return }
         lastSignature = sig
         Task { await LiveActivityManager.shared.refresh() }

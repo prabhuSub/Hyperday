@@ -277,7 +277,7 @@ struct LockScreenCard: View {
 
     private var jtCard: some View {
         let st = jtStatus
-        return VStack(alignment: .leading, spacing: 6) {
+        return VStack(alignment: .leading, spacing: hasMacs ? 5 : 6) {
             // header: status · when ······ score
             HStack(spacing: 6) {
                 JTStatusDot(status: st, size: 6, animated: false)
@@ -304,8 +304,8 @@ struct LockScreenCard: View {
             HStack(alignment: .center, spacing: 8) {
                 jtClock(st)
                 Spacer(minLength: 4)
-                PauseButton(state: state)
-                BlockActionButton(state: state)
+                PauseButton(state: state, compact: hasMacs)
+                BlockActionButton(state: state, compact: hasMacs)
             }
             jtBar(st)
             if let n = jtNext {
@@ -320,7 +320,7 @@ struct LockScreenCard: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, hasMacs ? 11 : 14)
+        .padding(.vertical, hasMacs ? 7 : 14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             ContainerRelativeShape()
@@ -332,7 +332,7 @@ struct LockScreenCard: View {
     /// Big Geist Mono clock: counts down to the end (or the next start in free time), up when over, frozen when paused.
     @ViewBuilder
     private func jtClock(_ st: HDStatus) -> some View {
-        let font = Font.mono(32, .semibold)
+        let font = Font.mono(jtClockSize, .semibold)
         HStack(alignment: .firstTextBaseline, spacing: 6) {
             Group {
                 if state.paused == true {
@@ -365,8 +365,11 @@ struct LockScreenCard: View {
         let long = state.overSince != nil || (target.map { $0.timeIntervalSinceNow >= 3600 } ?? false)
             || (state.pausedLeft ?? 0) >= 3600
         let chars: CGFloat = (long ? 7 : 5) + (state.overSince != nil ? 1 : 0)
-        return chars * 32 * 0.6 + 2
+        return chars * jtClockSize * 0.6 + 2
     }
+
+    /// v63: a little smaller when the Macs (with their usage line) are on the card.
+    private var jtClockSize: CGFloat { hasMacs ? 27 : 32 }
 
     /// 4 pt bar that moves by itself (timer-driven) in the status colour.
     @ViewBuilder
@@ -1060,6 +1063,7 @@ struct DayBar: View {
 /// Same button both ways, so iOS morphs the symbol (pause → play) instead of swapping views.
 struct PauseButton: View {
     let state: DayActivityAttributes.ContentState
+    var compact = false   // v63: 30 pt when the Macs share the card
 
     var body: some View {
         if state.canPause == true, let id = state.actionBlockID {
@@ -1069,7 +1073,7 @@ struct PauseButton: View {
                     .font(.geist(size: 14, weight: .bold))
                     .foregroundStyle(paused ? .black : HDTone.soft)
                     .contentTransition(.symbolEffect(.replace.downUp))
-                    .frame(width: 34, height: 34)
+                    .frame(width: compact ? 30 : 34, height: compact ? 30 : 34)
                     // v62 JobTrail: square hover button; paused = amber so Resume stands out.
                     .background(paused ? HDTone.amber : HDTone.hover, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(paused ? Color.clear : HDTone.lineDark))
@@ -1082,6 +1086,7 @@ struct PauseButton: View {
 
 struct BlockActionButton: View {
     let state: DayActivityAttributes.ContentState
+    var compact = false
 
     var body: some View {
         if let id = state.actionBlockID, let action = state.action {
@@ -1096,7 +1101,7 @@ struct BlockActionButton: View {
                 }
                     .font(.geist(size: 13.5, weight: .semibold))
                     .padding(.horizontal, 12)
-                    .frame(height: 34)
+                    .frame(height: compact ? 30 : 34)
                     .background(fill, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(line, lineWidth: 1))
             }
@@ -1572,58 +1577,92 @@ struct MacChip: View {
 struct MacRow: View {
     let macs: [MacLive]
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(alignment: .top, spacing: 10) {
             ForEach(Array(macs.prefix(2).enumerated()), id: \.offset) { i, m in
-                if i > 0 { Rectangle().fill(HDTone.hover).frame(width: 1, height: 14) }
+                if i > 0 { Rectangle().fill(HDTone.hover).frame(width: 1, height: 24) }
                 MacRowItem(mac: m)
             }
         }
-        .frame(height: 16)
     }
 }
 
+/// v63: two tight lines per Mac. Line 1: glyph · status · count · job · live clock.
+/// Line 2: GPU and memory as hairline meters with their numbers (JobTrail's machine meters).
 struct MacRowItem: View {
     let mac: MacLive
     private var status: HDStatus {
         switch mac.statusRaw { case "running": .running; case "waiting": .waiting; case "failed": .failed; default: .idle }
     }
     var body: some View {
-        HStack(spacing: 5) {
-            Image(systemName: mac.desktop ? "macmini" : "laptopcomputer")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(HDTone.dim)
-            Circle().fill(status == .idle ? HDTone.faintDark : status.color).frame(width: 5, height: 5)
-            if !mac.online {
-                Text("OFFLINE").font(.mono(9.5, .semibold)).kerning(0.6).foregroundStyle(HDTone.danger)
-                Spacer(minLength: 0)
-            } else if let top = mac.top {
-                Text(mac.running > 1 ? "\(mac.running)×" : (mac.topWaiting == true ? "WAIT" : ""))
-                    .font(.mono(9.5, .bold)).foregroundStyle(status.color)
-                    .fixedSize()
-                Text(Self.short(top))
-                    .font(.mono(10, .medium)).foregroundStyle(HDTone.soft)
-                    .lineLimit(1).truncationMode(.middle)
-                    .layoutPriority(-1)
-                Spacer(minLength: 2)
-                if let since = mac.topSince, mac.topWaiting != true {
-                    Text(timerInterval: since...since.addingTimeInterval(7 * 24 * 3600), countsDown: false)
-                        .font(.mono(10, .semibold)).foregroundStyle(status.color)
-                        .monospacedDigit().multilineTextAlignment(.trailing)
-                        .frame(width: 46, alignment: .trailing)
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 5) {
+                Image(systemName: mac.desktop ? "macmini" : "laptopcomputer")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(HDTone.dim)
+                Circle().fill(status == .idle ? HDTone.faintDark : status.color).frame(width: 5, height: 5)
+                if !mac.online {
+                    Text("OFFLINE").font(.mono(9.5, .semibold)).kerning(0.6).foregroundStyle(HDTone.danger)
+                    Spacer(minLength: 0)
+                } else if let top = mac.top {
+                    if mac.running > 1 {
+                        Text("\(mac.running)×").font(.mono(9.5, .bold)).foregroundStyle(status.color).fixedSize()
+                    }
+                    Text(Self.short(top))
+                        .font(.mono(10, .medium)).foregroundStyle(HDTone.soft)
+                        .lineLimit(1).truncationMode(.middle)
+                        .layoutPriority(-1)
+                    Spacer(minLength: 2)
+                    if let since = mac.topSince, mac.topWaiting != true {
+                        Text(timerInterval: since...since.addingTimeInterval(7 * 24 * 3600), countsDown: false)
+                            .font(.mono(10, .semibold)).foregroundStyle(status.color)
+                            .monospacedDigit().multilineTextAlignment(.trailing)
+                            .frame(width: 46, alignment: .trailing)
+                    } else {
+                        Text("WAIT").font(.mono(9, .semibold)).foregroundStyle(HDTone.amber)
+                    }
+                } else {
+                    Text("IDLE").font(.mono(9.5, .semibold)).kerning(0.6).foregroundStyle(HDTone.faintDark)
+                    Spacer(minLength: 0)
                 }
-            } else {
-                Text("IDLE").font(.mono(9.5, .semibold)).kerning(0.6).foregroundStyle(HDTone.faintDark)
-                Spacer(minLength: 0)
+            }
+            if mac.online {
+                HStack(spacing: 8) {
+                    meter("GPU", mac.gpu, HDTone.amber)
+                    meter("MEM", mac.mem, HDTone.blue)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// "~/ai/ltx-2-video/run.sh --x" → "run.sh", "python3 train.py" → "train.py"
+    /// "GPU ▬▬▬▬── 98" : a hairline bar and the number; amber turns red above 90%.
+    private func meter(_ key: String, _ value: Int?, _ color: Color) -> some View {
+        let v = min(max(value ?? 0, 0), 100)
+        let c = v >= 90 ? HDTone.danger : color
+        return HStack(spacing: 4) {
+            Text(key).font(.mono(8, .semibold)).foregroundStyle(HDTone.faintDark).fixedSize()
+            GeometryReader { g in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(HDTone.hover)
+                    Capsule().fill(c).frame(width: max(2, g.size.width * CGFloat(v) / 100))
+                }
+            }
+            .frame(height: 3)
+            Text(value.map { "\($0)" } ?? "–").font(.mono(8.5, .semibold)).foregroundStyle(value == nil ? HDTone.faintDark : c)
+                .monospacedDigit().frame(width: 16, alignment: .trailing)
+        }
+    }
+
+    /// Short job names: "~/ai/ltx-2-mlx/.venv/bin/python render_s01.py" → "render_s01.py",
+    /// "python3 train.py" → "train.py", "S01_run2.sh · S01.ok" → "S01_run2.sh".
     static func short(_ s: String) -> String {
-        let first = s.split(separator: " ").first.map(String.init) ?? s
-        let words = s.split(separator: " ").map(String.init)
-        let pick = ["python3", "python", "bash", "sh", "zsh", "node", "bun", "ssh"].contains(first) && words.count > 1 ? words[1] : first
-        return pick.split(separator: "/").last.map(String.init) ?? pick
+        let main = s.components(separatedBy: " · ").first ?? s
+        let words = main.split(separator: " ").map(String.init).filter { !$0.hasPrefix("-") && $0 != "2>/dev/null" }
+        let interpreters: Set<String> = ["python", "python3", "bash", "sh", "zsh", "node", "bun", "ssh", "uv", "env"]
+        func base(_ w: String) -> String { w.split(separator: "/").last.map(String.init) ?? w }
+        var i = 0
+        while i < words.count - 1, interpreters.contains(base(words[i])) || words[i].hasPrefix("python") && words[i].contains("/") { i += 1 }
+        let pick = words.isEmpty ? main : words[i]
+        return pick == "-" ? base(words.first ?? main) : base(pick)
     }
 }

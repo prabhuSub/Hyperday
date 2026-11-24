@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### v63: Mac usage on the Live Activity, JobTrail app icon
+- Each Mac on the card now has a second line: GPU and memory as hairline meters with numbers (red above 90%). Clock and buttons shrink slightly when the Macs are shown so everything fits 160 pt.
+- Smarter job names: the script, not the interpreter (".venv/bin/python render_s01.py" → "render_s01.py").
+- New app icon ("JobTrail Now Line"): done / running / waiting blocks in JobTrail's colours on the black dot grid, crossed by a glowing amber now-line; light, dark and tinted. Widget mark matches. `tools/make_app_icon_jt.py` rebuilds it.
+
 ### v62: Live Activity rebuilt as one JobTrail card
 - Every Lock Screen state (running, last 5 min, free, over time, paused) uses one layout: mono status line + score, title with category icon, big Geist Mono clock with Pause/Done, a 4 pt bar that moves by itself, one NEXT line, then the Macs.
 - Macs as one quiet row (glyph · status · count · short job name · live clock), no boxes; nothing clipped at 160 pt.
