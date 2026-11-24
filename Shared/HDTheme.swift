@@ -164,3 +164,11 @@ struct InstrumentBackground: View {
                        startPoint: .top, endPoint: .bottom)
     }
 }
+
+/// v60: battery colour like the Tesla app: green, orange below 20%, red below 10%.
+enum TeslaBattery {
+    static let green = Color(UIColor(hd: 0x3BB54A))    // Tesla-app battery green (matched by eye)
+    static let orange = Color(UIColor(hd: 0xF5A623))
+    static let red = Color(UIColor(hd: 0xE82127))      // Tesla red
+    static func color(_ percent: Int) -> Color { percent < 10 ? red : percent < 20 ? orange : green }
+}

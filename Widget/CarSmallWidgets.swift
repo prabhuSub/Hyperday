@@ -233,7 +233,7 @@ struct CarListView: View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(c.name).font(.geist(size: 13, weight: .bold)).foregroundStyle(.white.opacity(0.7)).lineLimit(1)
-                Text("\(c.battery)%").font(.geist(size: 36, weight: .bold)).foregroundStyle(homeGreen)
+                Text("\(c.battery)%").font(.geist(size: 36, weight: .bold)).foregroundStyle(TeslaBattery.color(c.battery))
                 HStack(spacing: 6) { lockIcon(c, size: 13); Text("\(c.rangeMiles) mi").font(.geist(size: 14, weight: .semibold)) }
                     .foregroundStyle(.white)
                 Text(ago(c.updatedAt, entry.date)).font(.geist(size: 10, weight: .semibold)).foregroundStyle(.white.opacity(0.45))
@@ -266,7 +266,7 @@ struct CarBigView: View {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 2) {
                         (Text(String(format: "%02d", c.battery)).font(.mono(26, .light)) + Text("%").font(.mono(12, .light)))
-                            .foregroundStyle(low ? Color(UIColor(hd: 0xFF6B5E)) : homeGreen)
+                            .foregroundStyle(TeslaBattery.color(c.battery))
                         Text(String(format: "%03d MI", c.rangeMiles)).font(.mono(10.5, .medium)).kerning(1.5)
                             .foregroundStyle(HDTone.instrumentMuted)
                     }
@@ -280,7 +280,7 @@ struct CarBigView: View {
                     Spacer()
                     HStack(spacing: 2) {
                         ForEach(0..<10, id: \.self) { k in
-                            Rectangle().fill(k < max(1, Int((Double(c.battery) / 10).rounded())) ? (low ? Color(UIColor(hd: 0xFF6B5E)) : homeGreen) : Color.white.opacity(0.14))
+                            Rectangle().fill(k < max(1, Int((Double(c.battery) / 10).rounded())) ? TeslaBattery.color(c.battery) : Color.white.opacity(0.14))
                         }
                     }
                     .frame(height: 6)

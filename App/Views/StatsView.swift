@@ -29,7 +29,15 @@ struct StatsView: View {
                                     JTStatusDot(status: s.streak > 0 ? .running : .idle, size: 6)
                                     Text(s.subtitle).font(.geist(size: 15, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
                                     Spacer()
-                                    JTPulseLine(status: s.streak > 0 ? .running : .idle, boxed: false).frame(width: 44, height: 14)
+                                    JTPulseButton(info: JTPulseInfo(
+                                        title: s.title, status: s.streak > 0 ? .running : .idle, subtitle: s.subtitle.uppercased(),
+                                        items: [JTKV(key: "Focused", value: hours(s.focusedHours), color: HDTone.green),
+                                                JTKV(key: "Steps done", value: "\(s.stepsDone)", color: HDTone.amber),
+                                                JTKV(key: "Streak", value: "\(s.streak) days", color: HDTone.blue),
+                                                JTKV(key: "Blocks done", value: "\(s.blocksDone)"),
+                                                JTKV(key: "Missed", value: "\(s.missed)", color: s.missed > 0 ? HDTone.danger : nil),
+                                                JTKV(key: "Meetings", value: hours(s.meetingHours))]), boxed: false)
+                                        .frame(width: 44, height: 14)
                                     JTPill(text: range.rawValue, kind: .busy)
                                 }
                                 HStack(alignment: .top, spacing: 10) {
@@ -76,6 +84,7 @@ struct StatsView: View {
                     .padding(.bottom, 40)
                 }
             }
+            .jtScrollsToTop("stats")   // v60
             .background(DotPage())
         }
         .task { await LiveActivityManager.shared.refresh() }

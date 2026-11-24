@@ -410,3 +410,136 @@ struct JTEdge: View {
         .accessibilityHidden(true)
     }
 }
+
+// MARK: - Tap a pulse graph → JobTrail detail popover (v60)
+
+struct JTKV: Identifiable {
+    let id = UUID()
+    let key: String
+    let value: String
+    var color: Color? = nil
+}
+
+struct JTPulseInfo {
+    var title: String
+    var status: HDStatus
+    var subtitle: String? = nil
+    var items: [JTKV] = []
+    /// When set, the popover shows a live elapsed / left clock and a self-moving bar.
+    var range: ClosedRange<Date>? = nil
+}
+
+/// A pulse graph you can tap: it pops a small JobTrail detail card (kv grid, big live graph, live clock).
+struct JTPulseButton: View {
+    let info: JTPulseInfo
+    var boxed = true
+    @State private var show = false
+
+    var body: some View {
+        JTPulseLine(status: info.status, boxed: boxed)
+            .contentShape(Rectangle())
+            .highPriorityGesture(TapGesture().onEnded { show = true })   // works inside rows that are buttons
+            .sensoryFeedback(.impact(weight: .light), trigger: show)
+            .popover(isPresented: $show, arrowEdge: .top) {
+                JTPulseDetail(info: info).presentationCompactAdaptation(.popover)
+            }
+            .accessibilityElement()
+            .accessibilityLabel("\(info.title) activity")
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction { show = true }
+    }
+}
+
+struct JTPulseDetail: View {
+    let info: JTPulseInfo
+    private let cols = [GridItem(.flexible(), alignment: .leading), GridItem(.flexible(), alignment: .leading)]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                JTStatusDot(status: info.status, size: 7)
+                Text(info.title).font(.geist(size: 15, weight: .semibold)).foregroundStyle(HDTone.textHi).lineLimit(1)
+                Spacer(minLength: 8)
+                JTPill(text: label(info.status), kind: kind(info.status))
+            }
+            if let sub = info.subtitle {
+                Text(sub).font(.mono(11)).foregroundStyle(HDTone.faintDark).lineLimit(2)
+            }
+            JTPulseLine(status: info.status).frame(height: 54)
+            if let r = info.range {
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("ELAPSED").font(.mono(9.5, .semibold)).kerning(0.8).foregroundStyle(HDTone.faintDark)
+                        Text(timerInterval: r.lowerBound...max(r.lowerBound, r.upperBound.addingTimeInterval(24 * 3600)), countsDown: false)
+                            .font(.mono(17, .semibold)).foregroundStyle(HDTone.soft).monospacedDigit()
+                    }
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(Date.now < r.upperBound ? "LEFT" : "OVER").font(.mono(9.5, .semibold)).kerning(0.8).foregroundStyle(HDTone.faintDark)
+                        Group {
+                            if Date.now < r.upperBound {
+                                Text(timerInterval: Date.now...r.upperBound, countsDown: true)
+                            } else {
+                                Text(timerInterval: r.upperBound...r.upperBound.addingTimeInterval(24 * 3600), countsDown: false)
+                            }
+                        }
+                        .font(.mono(17, .semibold)).monospacedDigit()
+                        .foregroundStyle(Date.now < r.upperBound ? info.status.color : HDTone.danger)
+                    }
+                }
+                ProgressView(timerInterval: r.lowerBound...max(r.upperBound, r.lowerBound.addingTimeInterval(1)), countsDown: false) {
+                    EmptyView()
+                } currentValueLabel: { EmptyView() }
+                    .progressViewStyle(.linear)
+                    .tint(info.status.color)
+            }
+            if !info.items.isEmpty {
+                Rectangle().fill(HDTone.hover).frame(height: 1)
+                LazyVGrid(columns: cols, alignment: .leading, spacing: 10) {
+                    ForEach(info.items) { kv in
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(kv.key.uppercased()).font(.mono(9.5, .semibold)).kerning(0.8).foregroundStyle(HDTone.faintDark)
+                            Text(kv.value).font(.mono(12.5, .medium)).foregroundStyle(kv.color ?? HDTone.soft).lineLimit(1)
+                        }
+                        .jtStagger(0)
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .frame(width: 300)
+        .background(HDTone.surface)
+        .environment(\.colorScheme, .dark)
+    }
+
+    private func label(_ s: HDStatus) -> String {
+        switch s { case .running: "running"; case .waiting: "waiting"; case .done: "done"; case .failed: "over"; case .idle: "idle" }
+    }
+    private func kind(_ s: HDStatus) -> JTPillKind {
+        switch s { case .running: .running; case .waiting: .busy; case .done: .done; case .failed: .failed; case .idle: .closed }
+    }
+}
+
+// MARK: - Tap a tab → its page scrolls back to the top (v60)
+
+extension Notification.Name {
+    static let jtScrollTop = Notification.Name("jt.scrollTop")
+}
+
+private struct ScrollTop: ViewModifier {
+    let tab: String
+    @State private var position = ScrollPosition(edge: .top)
+    func body(content: Content) -> some View {
+        content
+            .scrollPosition($position)
+            .onReceive(NotificationCenter.default.publisher(for: .jtScrollTop)) { note in
+                guard (note.object as? String) == tab else { return }
+                withAnimation(HDEase.standard(0.6)) { position.scrollTo(edge: .top) }
+            }
+    }
+}
+
+extension View {
+    /// Put on a tab's main ScrollView.
+    func jtScrollsToTop(_ tab: String) -> some View { modifier(ScrollTop(tab: tab)) }
+}

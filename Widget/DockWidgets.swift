@@ -179,7 +179,7 @@ struct DockDayView: View {
             }
             .frame(maxWidth: .infinity)
             Tile(padding: 9) {
-                Ring(value: Double(car?.battery ?? 0) / 100, color: car?.charging == true ? green : cyan) {
+                Ring(value: Double(car?.battery ?? 0) / 100, color: TeslaBattery.color(car?.battery ?? 0)) {
                     if let car {
                         VStack(spacing: 0) {
                             HDIcon("bolt", size: 13)

@@ -41,18 +41,13 @@ enum Theme {
     static let dangerBG = dyn(0xF8E2E1, 0x2A1514)   // --danger-bg
 }
 
+/// v60: two modes only, Dark and Light (an old saved "system" reads as Dark).
 enum Appearance: String, CaseIterable, Hashable {
-    case system, light, dark
+    case dark, light
 
     var label: String { rawValue.capitalized }
 
-    var scheme: ColorScheme? {
-        switch self {
-        case .system: return nil
-        case .light: return .light
-        case .dark: return .dark
-        }
-    }
+    var scheme: ColorScheme? { self == .light ? .light : .dark }
 }
 
 // MARK: - Header: HYPERDAY | Section              [theme]
@@ -60,7 +55,7 @@ enum Appearance: String, CaseIterable, Hashable {
 struct HeaderBar: View {
     let section: String
     @AppStorage("appearance") private var appearance = Appearance.dark.rawValue
-    private var current: Appearance { Appearance(rawValue: appearance) ?? .system }
+    private var current: Appearance { Appearance(rawValue: appearance) ?? .dark }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -74,11 +69,9 @@ struct HeaderBar: View {
                 .foregroundStyle(Theme.muted)
             Spacer()
             Button {
-                // System → Light → Dark → System
-                let now = Appearance(rawValue: appearance) ?? .system
-                appearance = (now == .system ? Appearance.light : now == .light ? .dark : .system).rawValue
+                                appearance = (current == .dark ? Appearance.light : .dark).rawValue   // v60: Dark ↔ Light
             } label: {
-                HDIcon(current == .system ? "auto" : current == .light ? "sun" : "moon", size: 17)
+                HDIcon(current == .light ? "sun" : "moon", size: 17)
                     .foregroundStyle(Theme.text)
                     .frame(width: 32, height: 32)
                     .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.border, lineWidth: 1))
@@ -393,6 +386,20 @@ struct BlockRow: View {
         return parts.joined(separator: " · ")
     }
 
+    /// v60: what a row's pulse graph pops up.
+    private func pulseInfo(_ st: HDStatus) -> JTPulseInfo {
+        var items = [
+            JTKV(key: "Time", value: "\(block.start.shortTime) – \(block.end.shortTime)"),
+            JTKV(key: "Length", value: block.end.timeIntervalSince(block.start).hoursMinutes),
+            JTKV(key: "Source", value: block.source == .calendar ? (block.calendarName ?? "Calendar") : "My plan"),
+        ]
+        if !steps.isEmpty {
+            items.append(JTKV(key: "Steps", value: "\(steps.filter(\.done).count)/\(steps.count)", color: HDTone.amber))
+            if let nextStep = steps.first(where: { !$0.done }) { items.append(JTKV(key: "Next step", value: nextStep.title)) }
+        }
+        return JTPulseInfo(title: block.title, status: st, items: items, range: block.start...block.end)
+    }
+
     /// v57 status: green = running, amber = waiting, blue = done, red = failed (over time / declined).
     private func status(isNow: Bool, done: Bool) -> HDStatus {
         if block.declined { return .failed }
@@ -441,7 +448,7 @@ struct BlockRow: View {
                 PhotoThumb(name: first, width: 30, radius: 6)   // v36: the photo, small
             }
             if st == .running || (st == .failed && !block.declined) {
-                JTPulseLine(status: st).frame(width: 40, height: 18)   // v59: live pulse graph
+                JTPulseButton(info: pulseInfo(st)).frame(width: 40, height: 18)   // v59 graph · v60 tap for details
             }
             if let pill {
                 RowPillView(pill: pill, now: now)
@@ -486,21 +493,21 @@ struct StatusRing: View {
 
 // MARK: - v17 appearance button (next to the profile circle)
 
-/// Same grey circle as the profile. Tap cycles System → Light → Dark; the icon shows the current mode.
+/// v60: tap switches Dark ↔ Light; the icon shows the current mode.
 struct AppearanceButton: View {
     @AppStorage("appearance") private var appearance = Appearance.dark.rawValue
-    private var current: Appearance { Appearance(rawValue: appearance) ?? .system }
+    private var current: Appearance { Appearance(rawValue: appearance) ?? .dark }
 
     var body: some View {
         Button {
-            appearance = (current == .system ? Appearance.light : current == .light ? .dark : .system).rawValue
+            appearance = (current == .dark ? Appearance.light : .dark).rawValue   // v60: Dark ↔ Light
         } label: {
-            HDIcon(current == .system ? "auto" : current == .light ? "sun" : "moon", size: 15)
+            HDIcon(current == .light ? "sun" : "moon", size: 15)
                 .foregroundStyle(Theme.soft)
                 .frame(width: 32, height: 32)
                 .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.card))   // v59: JobTrail square button
                 .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Theme.navActive, lineWidth: 1))
-                .rotationEffect(.degrees(current == .dark ? 0 : current == .light ? 180 : 90))
+                .rotationEffect(.degrees(current == .dark ? 0 : 180))
                 .animation(HDEase.standard(0.5), value: appearance)
                 .frame(width: 44, height: 44)   // v52: 44 pt tap target
                 .contentShape(Rectangle())
@@ -942,6 +949,10 @@ struct JTTabBar: View {
                 let on = tab == t
                 Button {
                     withAnimation(HDEase.standard(0.45)) { tab = t }
+                    // v60: every tap also brings that page back to the top.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                        NotificationCenter.default.post(name: .jtScrollTop, object: t.rawValue)
+                    }
                 } label: {
                     VStack(spacing: 4) {
                         icon(t, on: on)

@@ -54,7 +54,7 @@ struct CarGlanceView: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text(c.name).font(.geist(size: 12, weight: .bold)).foregroundStyle(.white.opacity(0.7)).lineLimit(1)
                 HStack(alignment: .firstTextBaseline, spacing: 5) {
-                    Text("\(c.battery)%").font(.geist(size: 22, weight: .heavy)).foregroundStyle(carGreen)
+                    Text("\(c.battery)%").font(.geist(size: 22, weight: .heavy)).foregroundStyle(TeslaBattery.color(c.battery))
                     Text("\(c.rangeMiles) mi").font(.geist(size: 12, weight: .bold)).foregroundStyle(.white.opacity(0.75))
                 }
                 Spacer(minLength: 0)
@@ -103,7 +103,7 @@ struct CarDayView: View {
         if let c = entry.car {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("\(c.battery)% · \(c.rangeMiles) mi").font(.geist(size: 15, weight: .heavy)).foregroundStyle(carGreen)
+                    Text("\(c.battery)% · \(c.rangeMiles) mi").font(.geist(size: 15, weight: .heavy)).foregroundStyle(TeslaBattery.color(c.battery))
                     HStack(spacing: 5) {   // v40: lock icon instead of the word
                         Image(systemName: c.locked == false ? "lock.open.fill" : "lock.fill")
                             .foregroundStyle(c.locked == false ? HDTone.danger : .white.opacity(0.6))
@@ -155,11 +155,11 @@ struct CarChargeView: View {
             if family == .systemSmall {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(c.charging ? "CHARGING" : "BATTERY").font(.geist(size: 10, weight: .heavy)).foregroundStyle(carGreen)
-                    Text("\(c.battery)%").font(.geist(size: 40, weight: .heavy)).foregroundStyle(carGreen)
+                    Text("\(c.battery)%").font(.geist(size: 40, weight: .heavy)).foregroundStyle(TeslaBattery.color(c.battery))
                     Text(c.fullAt.map { "→ \(Int(limit))% · \($0.formatted(date: .omitted, time: .shortened))" } ?? "Limit \(Int(limit))%")
                         .font(.geist(size: 11, weight: .bold)).foregroundStyle(.white.opacity(0.7)).lineLimit(1)
                     Spacer(minLength: 0)
-                    ProgressView(value: Double(c.battery) / 100).tint(carGreen)
+                    ProgressView(value: Double(c.battery) / 100).tint(TeslaBattery.color(c.battery))
                 }
             } else {
                 VStack(alignment: .leading, spacing: 10) {
@@ -173,7 +173,7 @@ struct CarChargeView: View {
                             Text("\(Int(kw)) kW").font(.geist(size: 12, weight: .bold)).foregroundStyle(.white.opacity(0.7))
                         }
                     }
-                    ProgressView(value: Double(c.battery) / 100).tint(carGreen)
+                    ProgressView(value: Double(c.battery) / 100).tint(TeslaBattery.color(c.battery))
                     HStack(alignment: .bottom) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(c.fullAt.map { "Full by \($0.formatted(date: .omitted, time: .shortened))" } ?? "\(c.rangeMiles) mi range")
@@ -204,7 +204,7 @@ struct CarHubView: View {
                 HStack {
                     Text(c.name).font(.geist(size: 14, weight: .heavy)).foregroundStyle(.white)
                     Spacer()
-                    Text("\(c.battery)% · \(c.rangeMiles) mi").font(.geist(size: 14, weight: .heavy)).foregroundStyle(carGreen)
+                    Text("\(c.battery)% · \(c.rangeMiles) mi").font(.geist(size: 14, weight: .heavy)).foregroundStyle(TeslaBattery.color(c.battery))
                 }
                 Text([c.place, "parked", ago(c.updatedAt, now: entry.date)].compactMap { $0 }.joined(separator: " · "))
                     .font(.geist(size: 11, weight: .semibold)).foregroundStyle(.white.opacity(0.55))

@@ -34,7 +34,7 @@ struct SettingsView: View {
                 .jtStagger(0)
 
                 group("Your day", index: 1) {
-                    link("Appearance", "sun.max.fill", .orange, value: (Appearance(rawValue: appearance) ?? .system).label) { AppearanceSettings() }
+                    link("Appearance", "sun.max.fill", .orange, value: (Appearance(rawValue: appearance) ?? .dark).label) { AppearanceSettings() }
                     link("Categories", "tag.fill", .purple, value: "\(categories.categories.count)") { CategoriesSettings() }
                     link("Calendars", "calendar", .red, value: "\(CalendarService.shared.calendarList().count)") { CalendarsSettings() }
                     link("Auto rules", "bolt.fill", .indigo, value: "\(categories.rules.count)", last: true) { RulesSettings() }
@@ -62,6 +62,7 @@ struct SettingsView: View {
             .padding(.top, 8)
             .padding(.bottom, 120)
         }
+        .jtScrollsToTop("settings")   // v60
         .sheet(isPresented: $showProfile) { ProfileSheet() }
     }
 
@@ -92,7 +93,14 @@ struct SettingsView: View {
                 Text(title).font(.hd(size: 15, weight: .medium)).foregroundStyle(Theme.text)
                 Spacer()
                 if let status {
-                    if status == .running { JTPulseLine(status: .running, boxed: false).frame(width: 34, height: 12) }
+                    if status == .running {
+                        JTPulseButton(info: JTPulseInfo(title: "Live Activity", status: .running,
+                                                        subtitle: "ON YOUR LOCK SCREEN AND DYNAMIC ISLAND",
+                                                        items: [JTKV(key: "State", value: "Running", color: HDTone.green),
+                                                                JTKV(key: "Auto start", value: activity.autoStart ? "On" : "Off")]),
+                                      boxed: false)
+                            .frame(width: 34, height: 12)
+                    }
                     JTStatusDot(status: status, size: 6)
                 }
                 if let value { Text(value).font(.hdMono(size: 12)).foregroundStyle(Theme.muted) }

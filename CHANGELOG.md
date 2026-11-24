@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### v60: Add block screen, tappable graphs, scroll to top, battery colours, two modes
+- **Add block** rebuilt as a JobTrail screen: glowing title card, sliding Today/Tomorrow/Other switcher, Starts/Ends readouts, quick lengths, live preview row + day bar, pinned amber Add button with a ✓ on success.
+- **Tap a pulse graph** → a JobTrail detail popover: big live graph, elapsed/left clocks, moving bar, key facts.
+- **Tap a tab** → that page scrolls back to the top (Calendar agenda jumps to today).
+- **Car battery:** Tesla green, orange below 20%, red below 10% (app, widgets, dock).
+- **Appearance:** Dark and Light only (no System); an old "System" setting reads as Dark.
+
 ### v59: pulse graphs, JobTrail switcher, more motion
 - **Pulse graph** (`JTPulseLine`): JobTrail's live sparkline, heartbeat while running, amber drift while waiting. On the Now card, the running row, the Today and Stats meter cards, Settings › Live Activity, and (still) on the widgets.
 - **Traveling pulses:** glowing dots run along every connector line.

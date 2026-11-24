@@ -84,6 +84,7 @@ struct CalendarTabView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
+                    .jtScrollsToTop("calendar")   // v60: week / month views scroll up
                     .background(DotPage())
                     .onChange(of: scrollTick) { _, _ in
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
@@ -102,6 +103,10 @@ struct CalendarTabView: View {
             tapDay(cal.startOfDay(for: .now), fromTodayButton: true)
         }
         .onChange(of: mode) { _, _ in tapDay(selected, fromTodayButton: true) }
+        // v60: tapping Calendar in the switcher brings the agenda back to today.
+        .onReceive(NotificationCenter.default.publisher(for: .jtScrollTop)) { note in
+            if (note.object as? String) == "calendar" && mode == .agenda { tapDay(cal.startOfDay(for: .now), fromTodayButton: true) }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .EKEventStoreChanged)) { _ in cache.eventsVersion += 1; eventsTick += 1 }
         .sheet(item: $editing) { block in
             BlockEditorSheet(

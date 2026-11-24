@@ -58,6 +58,7 @@ struct TodayView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
+            .jtScrollsToTop("today")   // v60: tapping Today scrolls up
             .background(DotPage())
             .refreshable {                       // v59: pull to refresh the day + Live Activity
                 now = .now
@@ -155,7 +156,7 @@ struct TodayView: View {
                         .foregroundStyle(HDTone.soft)
                     Spacer(minLength: 4)
                     // v59: JobTrail pulse graph: heartbeat while running, drift while waiting.
-                    JTPulseLine(status: heroStatus(snap)).frame(width: 64, height: 24)
+                    JTPulseButton(info: heroInfo(snap)).frame(width: 64, height: 24)   // v60: tap for details
                 }
                 if let c = snap.current {
                     // v57: JobTrail progress bar: green while running, red when over time.
@@ -196,6 +197,46 @@ struct TodayView: View {
         // v57: active card = amber border + soft glow; while a block runs it is "hot" and the glow breathes.
         .hdGlow(radius: 16, active: heroStatus(snap) != .done, hot: heroStatus(snap) == .running || heroStatus(snap) == .failed)
         .animation(HDEase.standard(0.5), value: heroStatus(snap) == .running)
+    }
+
+    /// v60: what the hero's pulse graph pops up.
+    private func heroInfo(_ snap: DaySnapshot) -> JTPulseInfo {
+        if let c = snap.current {
+            let st = store.steps(for: c.id)
+            var items = [
+                JTKV(key: "Started", value: c.start.shortTime),
+                JTKV(key: "Ends", value: c.end.shortTime),
+                JTKV(key: "Length", value: c.end.timeIntervalSince(c.start).hoursMinutes),
+                JTKV(key: "Source", value: c.source == .calendar ? (c.calendarName ?? "Calendar") : "My plan"),
+            ]
+            if !st.isEmpty { items.append(JTKV(key: "Steps", value: "\(st.filter(\.done).count)/\(st.count)", color: HDTone.amber)) }
+            if let n = snap.next { items.append(JTKV(key: "Next", value: "\(n.title) · \(n.start.shortTime)")) }
+            return JTPulseInfo(title: c.title, status: heroStatus(snap), subtitle: categories.category(for: c).name.uppercased(),
+                               items: items, range: c.start...c.end)
+        }
+        if let n = snap.next {
+            return JTPulseInfo(title: "Free until \(n.start.shortTime)", status: .waiting,
+                               subtitle: "NEXT · \(n.title)",
+                               items: [JTKV(key: "Next", value: n.title), JTKV(key: "Starts", value: n.start.shortTime),
+                                       JTKV(key: "Length", value: n.end.timeIntervalSince(n.start).hoursMinutes),
+                                       JTKV(key: "Left today", value: "\(snap.all.filter { $0.start >= now }.count) blocks")],
+                               range: now...n.start)
+        }
+        return dayInfo(snap)
+    }
+
+    /// v60: the whole day, for the Today card's pulse graph.
+    private func dayInfo(_ snap: DaySnapshot) -> JTPulseInfo {
+        let done = snap.all.filter { $0.end <= now }.count
+        let nums = todayNumbers(snap)
+        var items = [JTKV(key: "Blocks", value: "\(done)/\(snap.all.count) done", color: HDTone.blue)]
+        items += nums.map { JTKV(key: $0.label, value: $0.value) }
+        if let c = snap.current { items.append(JTKV(key: "Now", value: c.title, color: HDTone.green)) }
+        if let n = snap.next { items.append(JTKV(key: "Next", value: "\(n.start.shortTime) \(n.title)", color: HDTone.amber)) }
+        let first = snap.all.first?.start ?? now, last = snap.all.map(\.end).max() ?? now
+        return JTPulseInfo(title: "Today", status: snap.current != nil ? .running : (snap.next != nil ? .waiting : .done),
+                           subtitle: now.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()).uppercased(),
+                           items: items, range: snap.all.isEmpty ? nil : first...max(last, first.addingTimeInterval(60)))
     }
 
     /// Running = a block is live · failed = over time · waiting = free until the next · done = day complete.
@@ -284,7 +325,7 @@ struct TodayView: View {
                     JTStatusDot(status: snap.current != nil ? .running : (snap.next != nil ? .waiting : .done), size: 6)
                     Text("Today").font(.geist(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
                     Spacer()
-                    JTPulseLine(status: snap.current != nil ? .running : (snap.next != nil ? .waiting : .done), boxed: false)
+                    JTPulseButton(info: dayInfo(snap), boxed: false)
                         .frame(width: 44, height: 14)
                     Text("\(done)/\(snap.all.count) DONE").font(.mono(11, .medium)).kerning(0.6).foregroundStyle(HDTone.faintDark)
                         .contentTransition(.numericText())

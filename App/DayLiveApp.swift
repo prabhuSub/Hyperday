@@ -25,7 +25,7 @@ struct DayLiveApp: App {
         if !RealityStore.shared.places.isEmpty { LocationService.shared.monitor(RealityStore.shared.places) }
         // v6: appearance follows the system by default (the header button used to force light/dark).
         if !UserDefaults.standard.bool(forKey: "appearanceResetV6") {
-            UserDefaults.standard.set(Appearance.system.rawValue, forKey: "appearance")
+            UserDefaults.standard.set(Appearance.dark.rawValue, forKey: "appearance")
             UserDefaults.standard.set(true, forKey: "appearanceResetV6")
         }
         // v57: the JobTrail look is a dark design, so the revamp starts in Dark once (Light still works).
@@ -43,7 +43,7 @@ struct DayLiveApp: App {
     var body: some Scene {
         WindowGroup {
             TypeSizeRebuilder { RootView().font(.hd(size: 16)) }   // v52: fonts follow Text Size · v57: Geist by default
-                .preferredColorScheme((Appearance(rawValue: appearance) ?? .system).scheme)
+                .preferredColorScheme((Appearance(rawValue: appearance) ?? .dark).scheme)
                 .tint(Theme.blue)
                 .environmentObject(store)
                 .environmentObject(activity)

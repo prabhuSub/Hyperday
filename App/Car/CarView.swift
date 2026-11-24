@@ -36,6 +36,7 @@ struct CarView: View {
             }
             .padding(.bottom, 120)
         }
+        .jtScrollsToTop("car")   // v60
         .refreshable { await cars.start(force: true, wake: true).value }   // pull down = wake + read (2¢)
         .onAppear { cars.start() }
     }
@@ -135,7 +136,8 @@ struct CarView: View {
         if let c = cars.car {
             // v55: instrument readouts (zero-padded), segmented bar with the charge-limit mark.
             let low = c.battery < 10, mid = c.battery < 20
-            let battColor: Color = low ? HDTone.alert : (mid ? HDTone.warn : Theme.text)
+            let battColor: Color = TeslaBattery.color(c.battery)   // v60: green / orange <20 / red <10
+            let _ = (low, mid)
             VStack(spacing: 8) {
                 HStack(alignment: .lastTextBaseline) {
                     VStack(alignment: .leading, spacing: 2) {
@@ -150,7 +152,7 @@ struct CarView: View {
                         Caps("Range")
                     }
                 }
-                SegmentedCharge(level: c.battery, limit: c.chargeLimit, fill: low ? HDTone.alert : Theme.text)
+                SegmentedCharge(level: c.battery, limit: c.chargeLimit, fill: battColor)
                     .frame(height: 14)
                     .accessibilityHidden(true)
                 HStack {
