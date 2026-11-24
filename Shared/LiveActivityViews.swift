@@ -195,6 +195,15 @@ struct LockScreenCard: View {
     private var hasMacs: Bool { !macs.isEmpty }
 
     var body: some View {
+        if inIsland || isEmptyDay {
+            legacyBody
+        } else {
+            jtCard   // v62: one JobTrail layout for every Lock Screen state
+        }
+    }
+
+    /// The Dynamic Island (expanded) and the empty-day card keep their compact layouts.
+    private var legacyBody: some View {
         VStack(alignment: .leading, spacing: inIsland ? 5 : 7) {
         Group {
             if headsUp, let next = state.headsNextTitle, let nextStart = state.headsNextStart {
@@ -209,19 +218,173 @@ struct LockScreenCard: View {
                 journey
             }
         }
-        if hasMacs { MacStrip(macs: macs, compact: inIsland) }
+        if hasMacs && !inIsland {
+            Rectangle().fill(HDTone.hover).frame(height: 1)
+            MacRow(macs: macs)
+        } else if hasMacs { MacStrip(macs: macs, compact: true) }
         }
         .foregroundStyle(.white)
-        .padding(.horizontal, inIsland ? 4 : 14)   // v26: the same gap on every side (concentric)
-        .padding(.vertical, inIsland ? 2 : (hasMacs ? 9 : 12))   // v33 · v61: a little tighter with the Macs: room for the taller card (iOS caps it at 160 pt)
-        .background { if !inIsland { ZStack {
-            DotGrid().fill(HDTone.instrumentDot)   // v57: JobTrail map dots (22pt)
-            EdgeTicks(state: state, headsUp: headsUp)
-            // v57: the active card gets an amber border (Live Activities can't animate the glow).
-            if state.currentEnd != nil || state.overSince != nil {
-                ContainerRelativeShape().strokeBorder(HDTone.amber.opacity(0.5), lineWidth: 1)
+        .padding(.horizontal, inIsland ? 4 : 14)
+        .padding(.vertical, inIsland ? 2 : 12)
+    }
+
+    // MARK: v62 JobTrail Lock Screen card
+    //  ● NOW · ENDS 11:02 AM                     3/7 DONE
+    //  [icon] Deep work — ORBIT AI
+    //  39:34 LEFT                           [⏸] [✓ Done]
+    //  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ (moves by itself)
+    //  NEXT  Standup · 11:05 AM
+    //  ───────────────────────────────────────────────────
+    //  ⌨ ● 3  S01_run2.sh   7:54:40 │ ▭ ● ~/ai/ltx-2    13:16
+
+    private var jtStatus: HDStatus {
+        if state.paused == true { return .idle }
+        if state.overSince != nil { return .failed }
+        if headsUp || state.source == .free { return .waiting }
+        return state.currentEnd != nil ? .running : .waiting
+    }
+
+    private var jtHeader: String {
+        if outOfDate && !headsUp && state.paused != true { return "Out of date · tap to refresh" }
+        if state.paused == true { return "Paused" }
+        if state.overSince != nil { return "Over time" }
+        if state.source == .free, let n = state.nextStart { return "Free · until \(n.formatted(date: .omitted, time: .shortened))" }
+        if headsUp { return "Wrapping up · ends \(endText ?? "")" }
+        if let e = endText, state.currentEnd != nil { return "Now · ends \(e)" }
+        return "Now"
+    }
+
+    private var jtTitle: String {
+        state.source == .free ? (state.nextTitle.map { "Free until \($0)" } ?? state.title) : state.title
+    }
+
+    /// One line under the bar: the next step, the heads-up, or what's next.
+    private var jtNext: (key: String, value: String, color: Color)? {
+        if state.alsoIsStep == true, let step = state.also {
+            let n = (state.stepsDone ?? 0) + 1, t = state.stepsTotal ?? 0
+            return ("Step \(n)/\(t)", step, HDTone.amber)
+        }
+        if headsUp, let title = state.headsNextTitle, let start = state.headsNextStart {
+            let place = state.headsNextPlace.map { " · \($0)" } ?? ""
+            return ("Next", "\(title) · \(start.formatted(date: .omitted, time: .shortened))\(place)", HDTone.amber)
+        }
+        if state.source == .free, let later = state.laterTitle, let ls = state.laterStart {
+            return ("Then", "\(later) · \(ls.formatted(date: .omitted, time: .shortened))", HDTone.soft)
+        }
+        if let n = nextParts { return ("Next", "\(n.title) · \(n.time)", HDTone.soft) }
+        return nil
+    }
+
+    private var jtCard: some View {
+        let st = jtStatus
+        return VStack(alignment: .leading, spacing: 6) {
+            // header: status · when ······ score
+            HStack(spacing: 6) {
+                JTStatusDot(status: st, size: 6, animated: false)
+                Text(jtHeader.uppercased())
+                    .font(.mono(10, .semibold)).kerning(0.8)
+                    .foregroundStyle(st == .idle ? HDTone.dim : st.color)
+                    .lineLimit(1)
+                Spacer(minLength: 6)
+                if let d = state.doneCount, let t = state.totalCount, t > 0 {
+                    Text("\(d)/\(t) DONE").font(.mono(10, .medium)).kerning(0.6).foregroundStyle(HDTone.faintDark)
+                        .contentTransition(.numericText())
+                }
             }
-        } } }   // v55: hairline plate   // v23: ticks around the card
+            // title
+            HStack(spacing: 7) {
+                HDIcon(state.source == .free ? (state.nextIcon ?? "event") : (state.iconName ?? "event"), size: 16)
+                    .foregroundStyle(state.source == .free ? (state.nextHex.map { Color(hex: $0) } ?? HDTone.dim) : state.accentColor)
+                Text(jtTitle)
+                    .font(.geist(size: 16, weight: .semibold))
+                    .foregroundStyle(HDTone.textHi)
+                    .lineLimit(1)
+            }
+            // the clock + actions
+            HStack(alignment: .center, spacing: 8) {
+                jtClock(st)
+                Spacer(minLength: 4)
+                PauseButton(state: state)
+                BlockActionButton(state: state)
+            }
+            jtBar(st)
+            if let n = jtNext {
+                HStack(spacing: 8) {
+                    Text(n.key.uppercased()).font(.mono(9.5, .semibold)).kerning(0.8).foregroundStyle(HDTone.faintDark)
+                    Text(n.value).font(.geist(size: 12.5, weight: .medium)).foregroundStyle(n.color).lineLimit(1)
+                }
+            }
+            if hasMacs {
+                Rectangle().fill(HDTone.hover).frame(height: 1)
+                MacRow(macs: macs)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, hasMacs ? 11 : 14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            ContainerRelativeShape()
+                .strokeBorder(st == .running || st == .failed ? st.color.opacity(0.45)
+                              : (st == .waiting ? HDTone.amber.opacity(0.4) : HDTone.lineDark), lineWidth: 1)
+        }
+    }
+
+    /// Big Geist Mono clock: counts down to the end (or the next start in free time), up when over, frozen when paused.
+    @ViewBuilder
+    private func jtClock(_ st: HDStatus) -> some View {
+        let font = Font.mono(32, .semibold)
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Group {
+                if state.paused == true {
+                    Text(TimerLabel.clock(state.pausedLeft ?? 0))
+                } else if let over = state.overSince {
+                    Text("+") + Text(timerInterval: over...over.addingTimeInterval(24 * 3600), countsDown: false)
+                } else if let end = state.currentEnd, end > Date.now {
+                    Text(timerInterval: Date.now...end, countsDown: true)
+                } else if let next = state.nextStart, next > Date.now {
+                    Text(timerInterval: Date.now...next, countsDown: true)
+                } else {
+                    Text("--:--")
+                }
+            }
+            .font(font)
+            .monospacedDigit()
+            .foregroundStyle(st == .failed ? HDTone.danger : (st == .idle ? HDTone.dim : HDTone.textHi))
+            .lineLimit(1)
+            // Timer text stretches to fill its box: size the box with an invisible sample in the same font.
+            .frame(width: jtClockWidth, alignment: .leading)
+            Text(state.paused == true ? "PAUSED" : (state.overSince != nil ? "OVER" : "LEFT"))
+                .font(.mono(10, .semibold)).kerning(0.8)
+                .foregroundStyle(HDTone.faintDark)
+        }
+    }
+
+    /// Width of "88:88" / "8:88:88" (+ sign when over) in Geist Mono 32 (0.6 em per glyph).
+    private var jtClockWidth: CGFloat {
+        let target = state.currentEnd ?? state.nextStart
+        let long = state.overSince != nil || (target.map { $0.timeIntervalSinceNow >= 3600 } ?? false)
+            || (state.pausedLeft ?? 0) >= 3600
+        let chars: CGFloat = (long ? 7 : 5) + (state.overSince != nil ? 1 : 0)
+        return chars * 32 * 0.6 + 2
+    }
+
+    /// 4 pt bar that moves by itself (timer-driven) in the status colour.
+    @ViewBuilder
+    private func jtBar(_ st: HDStatus) -> some View {
+        Group {
+            if state.overSince != nil || state.paused == true {
+                Capsule().fill(st == .failed ? HDTone.danger : HDTone.dim).frame(height: 4)
+            } else if let a = state.currentStart, let b = state.currentEnd, b > a, state.source != .free {
+                ProgressView(timerInterval: a...b, countsDown: false) { EmptyView() } currentValueLabel: { EmptyView() }
+                    .progressViewStyle(.linear).tint(st.color)
+            } else if let a = state.freeStart, let b = state.nextStart, b > a {
+                ProgressView(timerInterval: a...b, countsDown: false) { EmptyView() } currentValueLabel: { EmptyView() }
+                    .progressViewStyle(.linear).tint(HDTone.amber)
+            } else {
+                Capsule().fill(HDTone.hover).frame(height: 4)
+            }
+        }
+        .frame(height: 4)
     }
 
     /// Nothing running and nothing coming up (free, no next block, no timer).
@@ -904,11 +1067,12 @@ struct PauseButton: View {
             Button(intent: PauseBlockIntent(blockID: id, pause: !paused)) {
                 Image(systemName: paused ? "play.fill" : "pause.fill")
                     .font(.geist(size: 14, weight: .bold))
-                    .foregroundStyle(paused ? .black : .white)
+                    .foregroundStyle(paused ? .black : HDTone.soft)
                     .contentTransition(.symbolEffect(.replace.downUp))
                     .frame(width: 34, height: 34)
-                    // Paused: yellow so Resume stands out; running: quiet grey.
-                    .background(paused ? DayLiveStyle.stepYellow : Color.white.opacity(0.18), in: Chamfer(cut: 8))   // v55
+                    // v62 JobTrail: square hover button; paused = amber so Resume stands out.
+                    .background(paused ? HDTone.amber : HDTone.hover, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(paused ? Color.clear : HDTone.lineDark))
             }
             .buttonStyle(.plain)
             .accessibilityLabel(paused ? "Resume" : "Pause")
@@ -922,20 +1086,19 @@ struct BlockActionButton: View {
     var body: some View {
         if let id = state.actionBlockID, let action = state.action {
             Button(intent: BlockActionIntent(blockID: id, action: action)) {
-                // Done is always green, Step is yellow, "Start now" in free time stays grey.
-                let fill: Color = action == .done ? DayLiveStyle.doneGreen
-                    : action == .checkStep ? DayLiveStyle.stepYellow : Color.white.opacity(0.22)
-                let ink: Color = action == .checkStep ? .black : .white
+                // v62 JobTrail pills: Done = success, Step = accent, Start now = neutral.
+                let ink: Color = action == .done ? HDTone.green : action == .checkStep ? HDTone.amber : HDTone.soft
+                let fill: Color = action == .done ? HDTone.greenBG : action == .checkStep ? HDTone.amberBG : HDTone.hover
+                let line: Color = action == .done ? HDTone.green.opacity(0.45) : action == .checkStep ? HDTone.amber.opacity(0.45) : HDTone.lineDark
                 HStack(spacing: 5) {
-                    HDIcon(buttonSymbol(action), size: 15)
-                        .foregroundStyle(action == .checkStep ? Color(white: 0.3) : Color.white)
-                    Text(buttonTitle(action))
-                        .foregroundStyle(ink)
+                    HDIcon(buttonSymbol(action), size: 14).foregroundStyle(ink)
+                    Text(buttonTitle(action)).foregroundStyle(ink)
                 }
-                    .font(.geist(size: 14, weight: action == .startNext ? .semibold : .bold))
-                    .padding(.horizontal, 14)
+                    .font(.geist(size: 13.5, weight: .semibold))
+                    .padding(.horizontal, 12)
                     .frame(height: 34)
-                    .background(fill, in: Chamfer(cut: 8))   // v55
+                    .background(fill, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(line, lineWidth: 1))
             }
             .buttonStyle(.plain)
             .foregroundStyle(.white)
@@ -1401,5 +1564,66 @@ struct MacChip: View {
         .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Color.white.opacity(0.04)))
         .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous)
             .strokeBorder(status == .running ? HDTone.green.opacity(0.4) : (status == .failed ? HDTone.danger.opacity(0.4) : HDTone.lineDark), lineWidth: 1))
+    }
+}
+
+
+/// v62: the Macs as one quiet JobTrail row (no boxes): glyph · status · count · job · live clock, split by a hairline.
+struct MacRow: View {
+    let macs: [MacLive]
+    var body: some View {
+        HStack(spacing: 10) {
+            ForEach(Array(macs.prefix(2).enumerated()), id: \.offset) { i, m in
+                if i > 0 { Rectangle().fill(HDTone.hover).frame(width: 1, height: 14) }
+                MacRowItem(mac: m)
+            }
+        }
+        .frame(height: 16)
+    }
+}
+
+struct MacRowItem: View {
+    let mac: MacLive
+    private var status: HDStatus {
+        switch mac.statusRaw { case "running": .running; case "waiting": .waiting; case "failed": .failed; default: .idle }
+    }
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: mac.desktop ? "macmini" : "laptopcomputer")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(HDTone.dim)
+            Circle().fill(status == .idle ? HDTone.faintDark : status.color).frame(width: 5, height: 5)
+            if !mac.online {
+                Text("OFFLINE").font(.mono(9.5, .semibold)).kerning(0.6).foregroundStyle(HDTone.danger)
+                Spacer(minLength: 0)
+            } else if let top = mac.top {
+                Text(mac.running > 1 ? "\(mac.running)×" : (mac.topWaiting == true ? "WAIT" : ""))
+                    .font(.mono(9.5, .bold)).foregroundStyle(status.color)
+                    .fixedSize()
+                Text(Self.short(top))
+                    .font(.mono(10, .medium)).foregroundStyle(HDTone.soft)
+                    .lineLimit(1).truncationMode(.middle)
+                    .layoutPriority(-1)
+                Spacer(minLength: 2)
+                if let since = mac.topSince, mac.topWaiting != true {
+                    Text(timerInterval: since...since.addingTimeInterval(7 * 24 * 3600), countsDown: false)
+                        .font(.mono(10, .semibold)).foregroundStyle(status.color)
+                        .monospacedDigit().multilineTextAlignment(.trailing)
+                        .frame(width: 46, alignment: .trailing)
+                }
+            } else {
+                Text("IDLE").font(.mono(9.5, .semibold)).kerning(0.6).foregroundStyle(HDTone.faintDark)
+                Spacer(minLength: 0)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// "~/ai/ltx-2-video/run.sh --x" → "run.sh", "python3 train.py" → "train.py"
+    static func short(_ s: String) -> String {
+        let first = s.split(separator: " ").first.map(String.init) ?? s
+        let words = s.split(separator: " ").map(String.init)
+        let pick = ["python3", "python", "bash", "sh", "zsh", "node", "bun", "ssh"].contains(first) && words.count > 1 ? words[1] : first
+        return pick.split(separator: "/").last.map(String.init) ?? pick
     }
 }

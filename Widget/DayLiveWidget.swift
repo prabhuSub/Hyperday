@@ -29,7 +29,7 @@ struct DayLiveActivityWidget: Widget {
         ActivityConfiguration(for: DayActivityAttributes.self) { context in
             // Lock Screen / banner
             ActivityFamilyCard(state: context.state, isStale: context.isStale)
-                .activityBackgroundTint(DayLiveStyle.cardTint.opacity(DayLiveStyle.glassOpacity))
+                .activityBackgroundTint(Color(UIColor(hd: 0x0C0C0C)).opacity(0.9))   // v62: JobTrail near-black
                 .activitySystemActionForegroundColor(.white)
                 // Day closed: tapping the card opens the day review (set here, on the whole activity view;
                 // a widgetURL inside the card left the expanded Dynamic Island blank).

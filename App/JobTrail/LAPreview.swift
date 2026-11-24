@@ -6,20 +6,20 @@ import SwiftUI
 struct LAPreviewScreen: View {
     private static let macs = [
         MacLive(name: "MacBook Pro", desktop: false, online: true, running: 3, waiting: 1, gpu: 34,
-                top: "python3 train.py", topSince: .now.addingTimeInterval(-2843), topWaiting: false),
+                top: "S01_run2.sh --scene 4", topSince: .now.addingTimeInterval(-2843), topWaiting: false),
         MacLive(name: "Mac mini", desktop: true, online: true, running: 1, waiting: 0, gpu: 88,
-                top: "blender -b launch.blend", topSince: .now.addingTimeInterval(-1290), topWaiting: false),
+                top: "~/ai/ltx-2-video/render.sh", topSince: .now.addingTimeInterval(-1290), topWaiting: false),
     ]
     var body: some View {
         ScrollView {
             VStack(spacing: 14) {
-                ForEach(Array(LiveActivityManager.previewStates(now: .now).prefix(4).enumerated()), id: \.offset) { _, item in
+                ForEach(Array(LiveActivityManager.previewStates(now: .now).prefix(5).enumerated()), id: \.offset) { _, item in
                     var st = item.0
                     let _ = (st.macs = Self.macs)
                     LockScreenCard(state: st)
                         .frame(maxWidth: .infinity, maxHeight: 160, alignment: .top)
                         .frame(height: 160, alignment: .top)
-                        .background(DayLiveStyle.cardTint.opacity(DayLiveStyle.glassOpacity))
+                        .background(Color(UIColor(hd: 0x0C0C0C)).opacity(0.9))
                         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(.red.opacity(0.3)))
                 }

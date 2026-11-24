@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### v62: Live Activity rebuilt as one JobTrail card
+- Every Lock Screen state (running, last 5 min, free, over time, paused) uses one layout: mono status line + score, title with category icon, big Geist Mono clock with Pause/Done, a 4 pt bar that moves by itself, one NEXT line, then the Macs.
+- Macs as one quiet row (glyph · status · count · short job name · live clock), no boxes; nothing clipped at 160 pt.
+- JobTrail buttons (square Pause, success/accent pills), near-black card, status-coloured border. The tick strip and blue/green capsules are gone from the Lock Screen (the Island keeps its compact layout).
+
 ### v61: JobTrail inside Hyperday, Macs on the Live Activity
 - **JobTrail tab:** your MacBook's live JobTrail page (over Tailscale, with your key), unchanged. Only inside Hyperday its phone bar is hidden and Map · Jobs · Running · Macs sit in a native JobTrail switcher with a running count. The JobTrail web app everywhere else is untouched.
 - **Macs on the Live Activity:** MacBook Pro and Mac mini chips under every card: status dot, running count, newest job with a live elapsed clock, GPU bar. Polled from JobTrail's `/api/state` every 6 s while Hyperday is open (and on background refresh); the card updates when something you'd see changes.
