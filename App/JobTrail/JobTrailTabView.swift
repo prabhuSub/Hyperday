@@ -160,12 +160,19 @@ struct JobTrailWebView: UIViewRepresentable {
     let web: JobTrailWeb
 
     /// Only inside Hyperday: hide JobTrail's own bottom bar (Hyperday has its switcher there) and leave room
-    /// above Hyperday's tab bar. The page and the server are unchanged.
+    /// above Hyperday's tab bar. v69: on phone widths JobTrail draws its legend at the top of the map, where the
+    /// chat cards cover it; here it moves to the free strip at the map's bottom. The page and the server are unchanged.
     private static let css = """
     .bnav{display:none!important}
     main{padding-bottom:calc(110px + env(safe-area-inset-bottom))!important}
     .fcard.sheet{bottom:calc(84px + env(safe-area-inset-bottom))!important}
     .topbar{padding-top:10px!important}
+    @media (max-width:719px){
+      .map .legend{position:absolute!important;top:auto!important;bottom:4px!important;left:8px!important;right:8px!important;
+        padding:0!important;height:16px!important;flex-wrap:nowrap!important;justify-content:center!important;gap:9px!important;
+        font-size:9.5px!important;z-index:3}
+      .map .legend .hint{display:none!important}
+    }
     """
 
     func makeCoordinator() -> Coord { Coord(web: web) }

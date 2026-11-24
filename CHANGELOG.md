@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### v69: JobTrail legend no longer hidden
+- On phone widths JobTrail puts its map legend (running · waiting · done · failed · instructions) at the top, where the chat cards cover it. Inside Hyperday it now sits on one line in the free strip at the bottom of the map. JobTrail itself is unchanged (its own phone page has the same bug).
+
 ### v67–v68: no border, ↻ refresh on the Live Activity
 - v67: the Lock Screen cards have no outline (iOS trims the card's bottom corners, so a border always looked cut off); board sizes back to v65.
 - v68: ↻ on the Live Activity (day-done board and block card): reads JobTrail and redraws the card without opening Hyperday (`RefreshMacsIntent`). The board shows when the Macs were last read.
