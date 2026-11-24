@@ -152,7 +152,31 @@ struct JTECGShape: Shape {
 final class JobTrailWeb: ObservableObject {
     @Published var loaded = false
     weak var view: WKWebView?
+    private var backgroundedAt: Date?
+    private var tokens: [NSObjectProtocol] = []
+
+    /// v70: iOS freezes the page while Hyperday is in the background, so its map animations came back stalled
+    /// (opening from the Live Activity or a widget showed the frozen map until a pull-to-refresh). Coming back
+    /// after more than a few seconds now reloads the page fresh, the same as pull-to-refresh.
+    init() {
+        let nc = NotificationCenter.default
+        tokens.append(nc.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.backgroundedAt = Date() }
+        })
+        tokens.append(nc.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, let t = self.backgroundedAt else { return }
+                self.backgroundedAt = nil
+                if Date().timeIntervalSince(t) > 3 { self.refresh() }
+            }
+        })
+    }
+
     func run(_ js: String) { view?.evaluateJavaScript(js, completionHandler: nil) }
+    func refresh() {
+        guard let w = view else { return }
+        w.evaluateJavaScript("hardReload()") { _, err in if err != nil { w.reload() } }
+    }
 }
 
 struct JobTrailWebView: UIViewRepresentable {
