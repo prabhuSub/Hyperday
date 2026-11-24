@@ -29,6 +29,7 @@ struct StatsView: View {
                                     JTStatusDot(status: s.streak > 0 ? .running : .idle, size: 6)
                                     Text(s.subtitle).font(.geist(size: 15, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
                                     Spacer()
+                                    JTPulseLine(status: s.streak > 0 ? .running : .idle, boxed: false).frame(width: 44, height: 14)
                                     JTPill(text: range.rawValue, kind: .busy)
                                 }
                                 HStack(alignment: .top, spacing: 10) {

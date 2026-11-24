@@ -306,3 +306,107 @@ extension View {
         modifier(Reveal(anchor: anchor, horizontal: horizontal, delay: delay, duration: duration))
     }
 }
+
+// MARK: - Pulse graph (JobTrail job sparkline, v59)
+
+/// A small live activity trace that scrolls left like JobTrail's job sparklines.
+/// Running = green heartbeat with a spike every beat, waiting = slow amber drift, done/idle = flat.
+struct JTPulseLine: View {
+    var status: HDStatus
+    var animated = true
+    var boxed = true
+    @Environment(\.accessibilityReduceMotion) private var reduce
+
+    private var color: Color { status == .idle ? HDTone.faintDark : status.color }
+    private var live: Bool { animated && !reduce && (status == .running || status == .waiting || status == .failed) }
+
+    private func value(_ u: Double) -> Double {
+        switch status {
+        case .running, .failed:
+            let period = 46.0
+            let ph = u.truncatingRemainder(dividingBy: period) / period
+            var v = 0.32 + 0.06 * sin(u * 0.21) + 0.04 * sin(u * 0.53)
+            if ph > 0.55 && ph < 0.62 { v += (ph - 0.55) / 0.07 * 0.55 }
+            else if ph >= 0.62 && ph < 0.70 { v += 0.55 - (ph - 0.62) / 0.08 * 0.8 }
+            else if ph >= 0.70 && ph < 0.76 { v -= 0.25 * (1 - (ph - 0.70) / 0.06) }
+            return min(max(v, 0.04), 0.96)
+        case .waiting:
+            return 0.22 + 0.07 * sin(u * 0.11) + 0.03 * sin(u * 0.37)
+        default:
+            return 0.15
+        }
+    }
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1 / 30, paused: !live)) { ctx in
+            Canvas { c, size in
+                let t = live ? ctx.date.timeIntervalSinceReferenceDate : 0
+                let off = t * (status == .waiting ? 7 : 20)
+                var line = Path()
+                var x: CGFloat = 0
+                while x <= size.width {
+                    let y = size.height - CGFloat(value(Double(x) + off)) * (size.height - 2) - 1
+                    if x == 0 { line.move(to: CGPoint(x: x, y: y)) } else { line.addLine(to: CGPoint(x: x, y: y)) }
+                    x += 1.5
+                }
+                var fill = line
+                fill.addLine(to: CGPoint(x: size.width, y: size.height))
+                fill.addLine(to: CGPoint(x: 0, y: size.height))
+                fill.closeSubpath()
+                c.fill(fill, with: .linearGradient(Gradient(colors: [color.opacity(0.28), color.opacity(0)]),
+                                                   startPoint: .zero, endPoint: CGPoint(x: 0, y: size.height)))
+                c.stroke(line, with: .color(color), style: StrokeStyle(lineWidth: 1.2, lineCap: .round, lineJoin: .round))
+                // the "now" head of the trace glows
+                let hy = size.height - CGFloat(value(Double(size.width) + off)) * (size.height - 2) - 1
+                c.fill(Path(ellipseIn: CGRect(x: size.width - 2.5, y: hy - 2.5, width: 5, height: 5)), with: .color(color))
+            }
+            .mask(LinearGradient(colors: [.clear, .black, .black], startPoint: .leading, endPoint: .trailing))
+        }
+        .padding(boxed ? 3 : 0)
+        .background {
+            if boxed {
+                RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.white.opacity(0.025))
+                    .overlay(RoundedRectangle(cornerRadius: 5, style: .continuous).strokeBorder(HDTone.hover, lineWidth: 1))
+            }
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+// MARK: - Drifting glow (v59): a soft status-coloured light that slowly wanders inside a card.
+
+struct JTDriftGlow: View {
+    var color: Color
+    var active: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduce
+    var body: some View {
+        GeometryReader { g in
+            TimelineView(.animation(minimumInterval: 1 / 20, paused: !active || reduce)) { ctx in
+                let t = ctx.date.timeIntervalSinceReferenceDate
+                let center = UnitPoint(x: 0.5 + 0.38 * sin(t / 6.0), y: 0.5 + 0.30 * cos(t / 4.3))
+                RadialGradient(colors: [color.opacity(active ? 0.16 : 0), .clear], center: center,
+                               startRadius: 0, endRadius: max(g.size.width, g.size.height) * 0.55)
+                    .frame(width: g.size.width, height: g.size.height)
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+/// JobTrail chat-card accent edge: a 3pt bar on the leading side that breathes while live.
+struct JTEdge: View {
+    var color: Color
+    var live: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduce
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1 / 30, paused: !live || reduce)) { ctx in
+            let k = live && !reduce ? (1 - cos(ctx.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 2.6) / 2.6 * 2 * .pi)) / 2 : 0
+            Rectangle().fill(color)
+                .frame(width: 3)
+                .opacity(0.6 + 0.4 * k)
+                .shadow(color: color.opacity(0.8 * k), radius: 6)
+        }
+        .accessibilityHidden(true)
+    }
+}

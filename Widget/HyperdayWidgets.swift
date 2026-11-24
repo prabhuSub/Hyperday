@@ -202,9 +202,12 @@ private struct SmallWidget: View {
                 .lineLimit(2)
             Spacer(minLength: 0)
             if let c = current {
-                Text(timerInterval: entry.date...max(c.end, entry.date), countsDown: true)
-                    .font(.mono(22, .semibold)).foregroundStyle(HDTone.green)
-                    .monospacedDigit().lineLimit(1)
+                HStack(alignment: .center, spacing: 6) {
+                    Text(timerInterval: entry.date...max(c.end, entry.date), countsDown: true)
+                        .font(.mono(22, .semibold)).foregroundStyle(HDTone.green)
+                        .monospacedDigit().lineLimit(1)
+                    JTPulseLine(status: .running, animated: false, boxed: false).frame(width: 34, height: 16)   // v59
+                }
                 WTimerBar(start: c.start, end: c.end)
                 WCaps(text: c.stepsTotal > 0 ? "left · \(c.stepsDone)/\(c.stepsTotal) steps" : "left")
             } else if let n = next {
@@ -236,6 +239,7 @@ private struct MediumWidget: View {
                 JTPill(text: current != nil ? "running" : (rows.isEmpty ? "done" : "waiting"),
                        kind: current != nil ? .running : (rows.isEmpty ? .done : .busy))
                 Spacer()
+                JTPulseLine(status: current != nil ? .running : .waiting, animated: false, boxed: false).frame(width: 40, height: 14)
                 WCaps(text: "\(pct)% of day")
             }
             if let c = current { WTimerBar(start: c.start, end: c.end).padding(.vertical, 2) }

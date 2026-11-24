@@ -59,6 +59,10 @@ struct TodayView: View {
                 }
             }
             .background(DotPage())
+            .refreshable {                       // v59: pull to refresh the day + Live Activity
+                now = .now
+                await activity.refresh()
+            }
         }
         .sheet(isPresented: $showingWords) { PlanWithWordsSheet().presentationDetents([.large]) }
         .sheet(isPresented: $showingScan) { PhotoTaskSheet().presentationDetents([.large]) }   // v36
@@ -145,9 +149,14 @@ struct TodayView: View {
                     .contentTransition(.opacity)
                     .id(title)
                     .hdBlurIn()                      // v57: a new current block fades in from blur
-                Text(subtitle)
-                    .font(.hd(size: 14))
-                    .foregroundStyle(HDTone.soft)
+                HStack(alignment: .center, spacing: 10) {
+                    Text(subtitle)
+                        .font(.hd(size: 14))
+                        .foregroundStyle(HDTone.soft)
+                    Spacer(minLength: 4)
+                    // v59: JobTrail pulse graph: heartbeat while running, drift while waiting.
+                    JTPulseLine(status: heroStatus(snap)).frame(width: 64, height: 24)
+                }
                 if let c = snap.current {
                     // v57: JobTrail progress bar: green while running, red when over time.
                     let total = max(c.end.timeIntervalSince(c.start), 1)
@@ -177,7 +186,12 @@ struct TodayView: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(ZStack { InstrumentBackground(); DotGrid().fill(HDTone.instrumentDot) }.clipShape(Chamfer(cut: 14)))   // v58: JobTrail map dots
+        .background(ZStack(alignment: .leading) {
+            InstrumentBackground()
+            DotGrid().fill(HDTone.instrumentDot)                                        // v58: JobTrail map dots
+            JTDriftGlow(color: heroStatus(snap).color, active: heroStatus(snap) != .done)   // v59: wandering status light
+            JTEdge(color: heroStatus(snap).color, live: heroStatus(snap) == .running)        // v59: breathing accent edge
+        }.clipShape(Chamfer(cut: 14)))
         .overlay(Chamfer(cut: 14).strokeBorder(HDTone.lineDark, lineWidth: 1))
         // v57: active card = amber border + soft glow; while a block runs it is "hot" and the glow breathes.
         .hdGlow(radius: 16, active: heroStatus(snap) != .done, hot: heroStatus(snap) == .running || heroStatus(snap) == .failed)
@@ -270,7 +284,10 @@ struct TodayView: View {
                     JTStatusDot(status: snap.current != nil ? .running : (snap.next != nil ? .waiting : .done), size: 6)
                     Text("Today").font(.geist(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
                     Spacer()
+                    JTPulseLine(status: snap.current != nil ? .running : (snap.next != nil ? .waiting : .done), boxed: false)
+                        .frame(width: 44, height: 14)
                     Text("\(done)/\(snap.all.count) DONE").font(.mono(11, .medium)).kerning(0.6).foregroundStyle(HDTone.faintDark)
+                        .contentTransition(.numericText())
                 }
                 HStack(alignment: .top, spacing: 10) {
                     ForEach(Array(items.enumerated()), id: \.offset) { i, item in

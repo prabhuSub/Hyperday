@@ -8,6 +8,9 @@ enum HealthReality {
     static func authorize() async -> Bool {
         guard HKHealthStore.isHealthDataAvailable(),
               let sleep = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else { return false }
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: "hdDemo") { return false }   // v59: no Health sheet in screenshot runs
+        #endif
         do {
             try await store.requestAuthorization(toShare: [], read: [sleep, HKObjectType.workoutType()])
             return true

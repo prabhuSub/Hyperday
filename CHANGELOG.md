@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### v59: pulse graphs, JobTrail switcher, more motion
+- **Pulse graph** (`JTPulseLine`): JobTrail's live sparkline, heartbeat while running, amber drift while waiting. On the Now card, the running row, the Today and Stats meter cards, Settings › Live Activity, and (still) on the widgets.
+- **Traveling pulses:** glowing dots run along every connector line.
+- **Navigation:** the system tab bar is replaced by a JobTrail switcher: dark track, the selection slides between tabs, amber icon, mono labels, live dot on Today. Appearance button is a JobTrail square.
+- **More motion:** wandering status light + breathing accent edge in the Now card, the live "left" pill shimmers, pull to refresh on Today.
+- Debug: `-hdDemo YES` also skips the Health sheet.
+
 ### v58: JobTrail rebuild of every screen and widget
 - **JTKit** (`Shared/JTKit.swift`): JobTrail's components in SwiftUI: status dots with halos, section heads, pills, LIVE/IDLE badge, meters with growing bars, cards with glow states, dashed empty boxes, film grain, staggered entry, chart reveal, press style.
 - **Today:** map-dot Now card with shimmering running lane, meters card, Schedule head with run/wait/done legend, staggered entry.

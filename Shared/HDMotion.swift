@@ -180,6 +180,16 @@ struct FlowLine: View {
                                             style: StrokeStyle(lineWidth: lineWidth, lineCap: .round,
                                                                dash: [2, 14], dashPhase: phase))
                     }
+                    // v59: a glowing pulse travels along the line (JobTrail map dots).
+                    if state != .idle && !reduce {
+                        let p = loopPhase(ctx.date, period: state.period * 1.6)
+                        Circle().fill(state.color)
+                            .frame(width: 4, height: 4)
+                            .shadow(color: state.color, radius: 3)
+                            .opacity(sin(p * .pi))
+                            .position(x: vertical ? g.size.width / 2 : g.size.width * p,
+                                      y: vertical ? g.size.height * p : g.size.height / 2)
+                    }
                 }
             }
         }

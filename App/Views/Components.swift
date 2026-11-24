@@ -440,6 +440,9 @@ struct BlockRow: View {
             if let first = PhotoStore.shared.names(for: block.id).first {
                 PhotoThumb(name: first, width: 30, radius: 6)   // v36: the photo, small
             }
+            if st == .running || (st == .failed && !block.declined) {
+                JTPulseLine(status: st).frame(width: 40, height: 18)   // v59: live pulse graph
+            }
             if let pill {
                 RowPillView(pill: pill, now: now)
             } else if isNow {
@@ -492,10 +495,15 @@ struct AppearanceButton: View {
         Button {
             appearance = (current == .system ? Appearance.light : current == .light ? .dark : .system).rawValue
         } label: {
-            HDIcon(current == .system ? "auto" : current == .light ? "sun" : "moon", size: 16)
-                .foregroundStyle(Theme.text)
-                .frame(width: 44, height: 44)   // v52: 44 pt tap target (HIG), icon unchanged
-                .contentShape(Circle())
+            HDIcon(current == .system ? "auto" : current == .light ? "sun" : "moon", size: 15)
+                .foregroundStyle(Theme.soft)
+                .frame(width: 32, height: 32)
+                .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.card))   // v59: JobTrail square button
+                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Theme.navActive, lineWidth: 1))
+                .rotationEffect(.degrees(current == .dark ? 0 : current == .light ? 180 : 90))
+                .animation(HDEase.standard(0.5), value: appearance)
+                .frame(width: 44, height: 44)   // v52: 44 pt tap target
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .sensoryFeedback(.selection, trigger: appearance)
@@ -532,6 +540,8 @@ struct RowPillView: View {
                 Text("left")
             }
             .modifier(PillShape(status: .running))
+            .hdShimmer(true, color: HDTone.green)   // v59: the live pill shimmers
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         case .over(let since):
             HStack(spacing: 0) {
                 Text("+")
@@ -627,6 +637,7 @@ struct RootView: View {
     @State private var adding: AddMode?
     @State private var calDay = Calendar.current.component(.day, from: .now)
     @Environment(\.scenePhase) private var scenePhase
+    @EnvironmentObject private var activity: LiveActivityManager
 
     enum AddMode: String, Identifiable { case block, words, photo; var id: String { rawValue } }
 
@@ -664,6 +675,10 @@ struct RootView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { calDay = Calendar.current.component(.day, from: .now) }
+        }
+        // v59: JobTrail switcher replaces the system tab bar (same tabs, same order).
+        .overlay(alignment: .bottom) {
+            JTTabBar(tab: $tab, calDay: calDay, live: activity.isRunning)
         }
         // v35b: + is a floating button again (not a tab). Tap = Add block, hold = Apple's menu.
         .overlay(alignment: .bottomTrailing) { AddFab { adding = $0 } }
@@ -841,6 +856,8 @@ struct TabRoot<Content: View>: View {
     var body: some View {
         NavigationStack {
             content()
+                .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 64) }   // v59: room for the JobTrail switcher
+                .toolbar(.hidden, for: .tabBar)
                 .background(DotPage())
                 .overlay { JTGrain().ignoresSafeArea() }   // v58: JobTrail film grain
                 .navigationTitle(title)
@@ -892,4 +909,80 @@ extension ToolbarContent {
 
 extension Notification.Name {
     static let openCarTab = Notification.Name("hyperday.openCarTab")   // car widgets → Car tab
+}
+
+
+// MARK: - v59 JobTrail switcher (bottom navigation)
+
+/// JobTrail's `.switcher`: a dark rounded track, the chosen tab gets the hover fill, which slides between
+/// tabs with the standard easing. Mono labels, amber icon when selected, a live dot on Today while the
+/// Live Activity runs.
+struct JTTabBar: View {
+    @Binding var tab: AppTab
+    let calDay: Int
+    var live: Bool
+    @Namespace private var ns
+
+    private var tabs: [AppTab] { [.today, .calendar] + (Features.car ? [.car] : []) + [.stats, .settings] }
+
+    @ViewBuilder
+    private func icon(_ t: AppTab, on: Bool) -> some View {
+        switch t {
+        case .calendar: Image("hd-tab-cal-\(calDay)").renderingMode(.template).resizable().scaledToFit()
+        case .car: Image("hd-tab-car-front").renderingMode(.template).resizable().scaledToFit()
+        case .today: Image(systemName: "clock").resizable().scaledToFit().fontWeight(.medium)
+        case .stats: Image(systemName: "chart.bar").resizable().scaledToFit().fontWeight(.medium)
+        default: Image(systemName: "gearshape").resizable().scaledToFit().fontWeight(.medium)
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(tabs) { t in
+                let on = tab == t
+                Button {
+                    withAnimation(HDEase.standard(0.45)) { tab = t }
+                } label: {
+                    VStack(spacing: 4) {
+                        icon(t, on: on)
+                            .frame(width: 19, height: 19)
+                            .foregroundStyle(on ? HDTone.amber : HDTone.dim)
+                            .scaleEffect(on ? 1.08 : 1)
+                            .shadow(color: on ? HDTone.amber.opacity(0.5) : .clear, radius: 6)
+                        Text(t.title.uppercased())
+                            .font(.mono(9, .semibold)).kerning(0.6)
+                            .foregroundStyle(on ? HDTone.textHi : HDTone.faintDark)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background {
+                        if on {
+                            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                                .fill(HDTone.hover)
+                                .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous)
+                                    .strokeBorder(HDTone.amber.opacity(0.3), lineWidth: 1))
+                                .matchedGeometryEffect(id: "jt-tab", in: ns)
+                        }
+                    }
+                    .overlay(alignment: .topTrailing) {
+                        if t == .today && live {
+                            JTStatusDot(status: .running, size: 5).offset(x: -8, y: 2)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(JTPressStyle())
+                .accessibilityLabel(t.title)
+                .accessibilityAddTraits(on ? .isSelected : [])
+            }
+        }
+        .padding(4)
+        .background(RoundedRectangle(cornerRadius: 15, style: .continuous).fill(HDTone.surface.opacity(0.94)))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 15, style: .continuous).strokeBorder(HDTone.hover, lineWidth: 1))
+        .shadow(color: .black.opacity(0.7), radius: 18, y: 6)
+        .padding(.horizontal, 14)
+        .padding(.bottom, 2)
+        .sensoryFeedback(.selection, trigger: tab)
+    }
 }

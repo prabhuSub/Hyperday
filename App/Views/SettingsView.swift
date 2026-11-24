@@ -91,7 +91,10 @@ struct SettingsView: View {
                     .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Theme.navActive, lineWidth: 1))
                 Text(title).font(.hd(size: 15, weight: .medium)).foregroundStyle(Theme.text)
                 Spacer()
-                if let status { JTStatusDot(status: status, size: 6) }
+                if let status {
+                    if status == .running { JTPulseLine(status: .running, boxed: false).frame(width: 34, height: 12) }
+                    JTStatusDot(status: status, size: 6)
+                }
                 if let value { Text(value).font(.hdMono(size: 12)).foregroundStyle(Theme.muted) }
                 Image(systemName: "chevron.right").font(.geist(size: 11, weight: .semibold)).foregroundStyle(Theme.faint)
             }
