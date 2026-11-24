@@ -292,6 +292,7 @@ struct LockScreenCard: View {
                     Text("\(d)/\(t) DONE").font(.mono(10, .medium)).kerning(0.6).foregroundStyle(HDTone.faintDark)
                         .contentTransition(.numericText())
                 }
+                if hasMacs { MacsRefreshButton(updated: state.macsUpdated, size: 18, showTime: false) }
             }
             // title
             HStack(spacing: 7) {
@@ -323,12 +324,7 @@ struct LockScreenCard: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, hasMacs ? 7 : 14)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)   // v66: border on the card's real bounds
-        .background {
-            ContainerRelativeShape()
-                .strokeBorder(st == .running || st == .failed ? st.color.opacity(0.45)
-                              : (st == .waiting ? HDTone.amber.opacity(0.4) : HDTone.lineDark), lineWidth: 1)
-        }
+        .frame(maxWidth: .infinity, alignment: .leading)   // v67: no border (iOS trims the card's bottom corners)
     }
 
     /// Big Geist Mono clock: counts down to the end (or the next start in free time), up when over, frozen when paused.
@@ -1696,16 +1692,16 @@ struct JobTrailBoard: View {
 
     var body: some View {
         let run = macs.reduce(0) { $0 + $1.running }, wait = macs.reduce(0) { $0 + $1.waiting }
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 7) {
             HStack(spacing: 6) {
                 Image(systemName: "checkmark").font(.system(size: 9, weight: .heavy)).foregroundStyle(HDTone.green)
                 Text(headline.uppercased() + (state.totalCount.map { t in " · \(state.doneCount ?? 0)/\(t)" } ?? ""))
                     .font(.mono(9.5, .semibold)).kerning(0.8).foregroundStyle(HDTone.green).lineLimit(1)
                 Spacer(minLength: 6)
-                JTECGMark().frame(width: 12, height: 12)
-                Text(run > 0 ? "\(run) RUNNING" + (wait > 0 ? " · \(wait) WAIT" : "") : "JOBTRAIL · IDLE")
+                Text(run > 0 ? "\(run) RUN" + (wait > 0 ? " · \(wait) WAIT" : "") : "IDLE")
                     .font(.mono(9.5, .semibold)).kerning(0.6)
                     .foregroundStyle(run > 0 ? HDTone.green : HDTone.faintDark).lineLimit(1)
+                MacsRefreshButton(updated: state.macsUpdated, size: 22)
             }
             HStack(alignment: .top, spacing: 12) {
                 ForEach(Array(macs.enumerated()), id: \.offset) { i, m in
@@ -1715,12 +1711,9 @@ struct JobTrailBoard: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        // v66: border on the card's real bounds (not the content's), so iOS's 160 pt cut can't clip it
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background {
-            ContainerRelativeShape().strokeBorder(run > 0 ? HDTone.green.opacity(0.4) : HDTone.lineDark, lineWidth: 1)
-        }
+        .padding(.vertical, 11)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        // v67: no border: iOS trims the card's bottom corners, so a drawn outline always looked cut off.
     }
 }
 
@@ -1736,7 +1729,7 @@ private struct BoardColumn: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 5) {
             // name · battery (MacBook) / status
             HStack(spacing: 5) {
                 Image(systemName: mac.desktop ? "macmini" : "laptopcomputer")
@@ -1767,8 +1760,7 @@ private struct BoardColumn: View {
                     Text("\(mac.mem ?? 0)").font(.mono(9.5, .semibold)).foregroundStyle(HDTone.blue)
                 }
                 JTSpark(values: (mac.gpuHist ?? [mac.gpu ?? 0]).map(Double.init), color: hot ? HDTone.danger : HDTone.amber)
-                    .frame(height: 13)
-                    .padding(.bottom, 2)
+                    .frame(height: 16)
                     .background(alignment: .bottom) { Rectangle().fill(HDTone.hover).frame(height: 1) }
                 // jobs
                 let jobs = mac.jobs ?? []
@@ -1776,7 +1768,7 @@ private struct BoardColumn: View {
                     Text("NO JOBS").font(.mono(9, .semibold)).kerning(0.6).foregroundStyle(HDTone.faintDark)
                 }
                 ForEach(Array(jobs.prefix(3).enumerated()), id: \.offset) { _, j in
-                    HStack(spacing: 4) {   // v66: fixed 12 pt rows
+                    HStack(spacing: 4) {
                         Circle().fill(j.waiting ? HDTone.amber : HDTone.green).frame(width: 4, height: 4)
                         Text(j.label).font(.mono(9.5, .medium)).foregroundStyle(HDTone.soft)
                             .lineLimit(1).truncationMode(.middle).layoutPriority(-1)
@@ -1790,10 +1782,38 @@ private struct BoardColumn: View {
                                 .frame(width: Date.now.timeIntervalSince(j.since) >= 36_000 ? 54 : 46, alignment: .trailing)
                         }
                     }
-                    .frame(height: 12)
+
                 }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+
+// MARK: - v68 ↻ refresh
+
+/// Tap to read JobTrail now and redraw the card. Shows when the Macs were last read ("12:24").
+struct MacsRefreshButton: View {
+    let updated: Date?
+    var size: CGFloat = 22
+    var showTime = true
+    var body: some View {
+        HStack(spacing: 5) {
+            if showTime, let u = updated {
+                Text(u.formatted(date: .omitted, time: .shortened))
+                    .font(.mono(9, .medium)).foregroundStyle(HDTone.faintDark).lineLimit(1)
+            }
+            Button(intent: RefreshMacsIntent()) {
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: size * 0.5, weight: .bold))
+                    .foregroundStyle(HDTone.soft)
+                    .frame(width: size, height: size)
+                    .background(HDTone.hover, in: RoundedRectangle(cornerRadius: size * 0.28, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: size * 0.28, style: .continuous).strokeBorder(HDTone.lineDark, lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Refresh Macs")
+        }
     }
 }

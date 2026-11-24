@@ -305,6 +305,7 @@ final class LiveActivityManager: ObservableObject {
         // v61: your Macs from JobTrail ride along on every card.
         let macs = JobTrailLive.shared.macs
         state.macs = macs.isEmpty ? nil : macs
+        state.macsUpdated = macs.isEmpty ? nil : JobTrailLive.shared.lastUpdate
         let content = ActivityContent(state: state, staleDate: staleAt)
         let running = Self.liveActivities()
         let inForeground = UIApplication.shared.applicationState == .active

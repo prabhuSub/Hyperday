@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### v67–v68: no border, ↻ refresh on the Live Activity
+- v67: the Lock Screen cards have no outline (iOS trims the card's bottom corners, so a border always looked cut off); board sizes back to v65.
+- v68: ↻ on the Live Activity (day-done board and block card): reads JobTrail and redraws the card without opening Hyperday (`RefreshMacsIntent`). The board shows when the Macs were last read.
+
 ### v66: Live Activity border fix
 - The JobTrail board was a few points taller than iOS's 160 pt card, so its bottom (and border) got clipped. Tighter rows (fixed 12 pt job lines, smaller graph), and the border is now drawn on the card's real bounds on every card so it always closes. Long job clocks (10 h+) get a wider column.
 

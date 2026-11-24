@@ -67,3 +67,20 @@ struct PauseBlockIntent: LiveActivityIntent {
         return .result()
     }
 }
+
+/// v68: ↻ on the Live Activity: read JobTrail now and redraw the card (runs in the app's process,
+/// iOS wakes Hyperday in the background; no need to open it).
+struct RefreshMacsIntent: LiveActivityIntent {
+    static var title: LocalizedStringResource = "Refresh Macs"
+    static var isDiscoverable: Bool = false
+
+    init() {}
+
+    func perform() async throws -> some IntentResult {
+        #if !WIDGET_EXTENSION
+        await JobTrailLive.shared.poll()
+        await LiveActivityManager.shared.refresh()
+        #endif
+        return .result()
+    }
+}

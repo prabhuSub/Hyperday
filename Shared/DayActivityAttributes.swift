@@ -120,6 +120,7 @@ struct DayActivityAttributes: ActivityAttributes {
         var currentStart: Date?
         // v61: your Macs from JobTrail (MacBook Pro, Mac mini).
         var macs: [MacLive]?
+        var macsUpdated: Date?       // v68: when JobTrail was last read (shown next to ↻)
     }
 
     var dayStart: Date
