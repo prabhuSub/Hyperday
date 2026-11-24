@@ -42,7 +42,13 @@ struct DayLiveApp: App {
 
     var body: some Scene {
         WindowGroup {
-            TypeSizeRebuilder { RootView().font(.hd(size: 16)) }   // v52: fonts follow Text Size · v57: Geist by default
+            TypeSizeRebuilder {
+                #if DEBUG
+                if UserDefaults.standard.bool(forKey: "hdLAPreview") { LAPreviewScreen() } else { RootView().font(.hd(size: 16)) }
+                #else
+                RootView().font(.hd(size: 16))
+                #endif
+            }   // v52: fonts follow Text Size · v57: Geist by default
                 .preferredColorScheme((Appearance(rawValue: appearance) ?? .dark).scheme)
                 .tint(Theme.blue)
                 .environmentObject(store)
@@ -78,6 +84,7 @@ struct DayLiveApp: App {
                 }
         }
         .onChange(of: scenePhase) { _, phase in
+            if phase == .active { JobTrailLive.shared.start() } else if phase == .background { JobTrailLive.shared.stop() }   // v61
             if phase == .active {
                 HDLog.event("foreground")
                 // A save file that was locked at launch (after a reboot) can be read now.
@@ -96,6 +103,7 @@ struct DayLiveApp: App {
         }
         .backgroundTask(.appRefresh(BackgroundRefresh.id)) {
             HDLog.event("bg-fired")   // v52: did iOS actually wake us?
+            await JobTrailLive.shared.poll()   // v61: fresh Mac status for the card
             await LiveActivityManager.shared.refresh()
             if Features.car || Features.carWidgets { await CarStore.shared.refresh() }   // v38: keeps car widgets current
         }

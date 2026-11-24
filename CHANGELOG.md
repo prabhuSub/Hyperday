@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### v61: JobTrail inside Hyperday, Macs on the Live Activity
+- **JobTrail tab:** your MacBook's live JobTrail page (over Tailscale, with your key), unchanged. Only inside Hyperday its phone bar is hidden and Map · Jobs · Running · Macs sit in a native JobTrail switcher with a running count. The JobTrail web app everywhere else is untouched.
+- **Macs on the Live Activity:** MacBook Pro and Mac mini chips under every card: status dot, running count, newest job with a live elapsed clock, GPU bar. Polled from JobTrail's `/api/state` every 6 s while Hyperday is open (and on background refresh); the card updates when something you'd see changes.
+- **Live Activity:** JobTrail pulse graph beside the timer; with Macs shown the tick strip becomes a slim self-moving bar so everything fits iOS's 160 pt.
+- `deploy.sh` reads the JobTrail key (`~/.jobtrail/token`) and the MacBook's Tailscale address at build time; neither is stored in the repo.
+- Debug: `-hdLAPreview YES` shows every card state at 160 pt.
+
 ### v60: Add block screen, tappable graphs, scroll to top, battery colours, two modes
 - **Add block** rebuilt as a JobTrail screen: glowing title card, sliding Today/Tomorrow/Other switcher, Starts/Ends readouts, quick lengths, live preview row + day bar, pinned amber Add button with a ✓ on success.
 - **Tap a pulse graph** → a JobTrail detail popover: big live graph, elapsed/left clocks, moving bar, key facts.

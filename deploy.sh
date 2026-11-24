@@ -24,6 +24,12 @@ TESLA_CLIENT_ID=$(sed -n 's/^TESLA_CLIENT_ID=//p' .tesla-keys/client.env 2>/dev/
 export DEVELOPMENT_TEAM
 echo "› Team $DEVELOPMENT_TEAM"
 
+# v61: JobTrail (tab + Macs on the Live Activity). The key stays on this Mac and on your iPhone only.
+JOBTRAIL_KEY=$(tr -d '\r\n' < ~/.jobtrail/token 2>/dev/null || true)
+TS=/Applications/Tailscale.app/Contents/MacOS/Tailscale
+JOBTRAIL_HOSTS=$([[ -x "$TS" ]] && "$TS" ip -4 2>/dev/null | head -1 || true)
+if [[ -n "$JOBTRAIL_KEY" && -n "$JOBTRAIL_HOSTS" ]]; then echo "› JobTrail at $JOBTRAIL_HOSTS"; else echo "› JobTrail not found (tab will say how to set it up)"; fi
+
 echo "› Generating Xcode project…"
 xcodegen generate --quiet
 
@@ -34,6 +40,7 @@ build() {
     -destination 'generic/platform=iOS' -derivedDataPath build \
     -allowProvisioningUpdates -allowProvisioningDeviceRegistration \
     DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM" CODE_SIGN_STYLE=Automatic TESLA_CLIENT_ID="${TESLA_CLIENT_ID:-}" \
+    JOBTRAIL_KEY="${JOBTRAIL_KEY:-}" JOBTRAIL_HOSTS="${JOBTRAIL_HOSTS:-}" \
     "$@" -quiet build
 }
 

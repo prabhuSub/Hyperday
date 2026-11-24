@@ -302,6 +302,9 @@ final class LiveActivityManager: ObservableObject {
         if !closed, let since = RealityStore.shared.driveStartedAt {
             state = await driveState(from: snap, since: since, now: now)
         }
+        // v61: your Macs from JobTrail ride along on every card.
+        let macs = JobTrailLive.shared.macs
+        state.macs = macs.isEmpty ? nil : macs
         let content = ActivityContent(state: state, staleDate: staleAt)
         let running = Self.liveActivities()
         let inForeground = UIApplication.shared.applicationState == .active

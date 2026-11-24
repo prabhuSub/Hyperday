@@ -190,7 +190,12 @@ struct LockScreenCard: View {
 
     /// v28: each state is its own layout, exactly as mocked in v24.
     ///   B · last 5 minutes → Now → Next flight card.  C · free time → Now / Next / Later capsules.  A · otherwise.
+    /// v61: your Macs from JobTrail are on the card.
+    private var macs: [MacLive] { state.macs ?? [] }
+    private var hasMacs: Bool { !macs.isEmpty }
+
     var body: some View {
+        VStack(alignment: .leading, spacing: inIsland ? 5 : 7) {
         Group {
             if headsUp, let next = state.headsNextTitle, let nextStart = state.headsNextStart {
                 NowNextStrip(title: state.title, start: state.currentStart, end: state.currentEnd,
@@ -204,9 +209,11 @@ struct LockScreenCard: View {
                 journey
             }
         }
+        if hasMacs { MacStrip(macs: macs, compact: inIsland) }
+        }
         .foregroundStyle(.white)
         .padding(.horizontal, inIsland ? 4 : 14)   // v26: the same gap on every side (concentric)
-        .padding(.vertical, inIsland ? 2 : 12)   // v33: room for the taller card (iOS caps it at 160 pt)
+        .padding(.vertical, inIsland ? 2 : (hasMacs ? 9 : 12))   // v33 · v61: a little tighter with the Macs: room for the taller card (iOS caps it at 160 pt)
         .background { if !inIsland { ZStack {
             DotGrid().fill(HDTone.instrumentDot)   // v57: JobTrail map dots (22pt)
             EdgeTicks(state: state, headsUp: headsUp)
@@ -305,18 +312,32 @@ struct LockScreenCard: View {
             .foregroundStyle(nowColor)
 
             HStack(alignment: .center, spacing: 10) {
-                TimerLabel(state: state, size: inIsland ? 26 : 32)
+                TimerLabel(state: state, size: hasMacs ? 28 : (inIsland ? 26 : 32))
+                // v61: JobTrail pulse graph beside the timer
+                JTPulseLine(status: state.overSince != nil ? .failed : (state.paused == true ? .idle : .running),
+                            animated: false, boxed: false)
+                    .frame(width: 44, height: 20)
                 Spacer(minLength: 4)
                 PauseButton(state: state)
                 BlockActionButton(state: state)
             }
 
-            ZStack(alignment: .topLeading) {
-                TickStrip(tickHeight: h).fill(nowColor.opacity(0.28))
-                TickStrip(from: blockDone, tickHeight: h).fill(nowColor)
-                NowMarker(at: blockDone, top: h + 2).fill(.white)
+            if hasMacs {
+                // v61: with the Macs below, the tick strip becomes a slim live bar (it moves by itself).
+                if let a = state.currentStart, let b = state.currentEnd, b > a {
+                    ProgressView(timerInterval: a...b, countsDown: false) { EmptyView() } currentValueLabel: { EmptyView() }
+                        .progressViewStyle(.linear).tint(nowColor)
+                } else {
+                    Capsule().fill(nowColor).frame(height: 3)
+                }
+            } else {
+                ZStack(alignment: .topLeading) {
+                    TickStrip(tickHeight: h).fill(nowColor.opacity(0.28))
+                    TickStrip(from: blockDone, tickHeight: h).fill(nowColor)
+                    NowMarker(at: blockDone, top: h + 2).fill(.white)
+                }
+                .frame(height: h + 10)
             }
-            .frame(height: h + 10)
 
             bottomLeft
         }
@@ -1295,5 +1316,90 @@ struct IslandTimer: View {
                     .multilineTextAlignment(.trailing)
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
+    }
+}
+
+
+// MARK: - v61 Macs from JobTrail
+
+/// The MacBook Pro and Mac mini side by side: status dot, newest job with a live elapsed clock
+/// (it counts by itself, no updates needed), job counts and a GPU bar. Green running, amber waiting,
+/// red offline, grey idle.
+struct MacStrip: View {
+    let macs: [MacLive]
+    var compact = false
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(macs.prefix(2), id: \.name) { MacChip(mac: $0, compact: compact) }
+        }
+    }
+}
+
+struct MacChip: View {
+    let mac: MacLive
+    var compact = false
+
+    private var status: HDStatus {
+        switch mac.statusRaw {
+        case "running": return .running
+        case "waiting": return .waiting
+        case "failed": return .failed
+        default: return .idle
+        }
+    }
+    private var short: String { mac.desktop ? "MINI" : "MBP" }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 5) {
+                Image(systemName: mac.desktop ? "macmini" : "laptopcomputer")
+                    .font(.system(size: compact ? 9 : 10, weight: .semibold))
+                    .foregroundStyle(status == .idle ? HDTone.faintDark : status.color)
+                JTStatusDot(status: status, size: 5, animated: false)
+                if mac.running > 1 {
+                    Text("\(mac.running)").font(.mono(9, .bold)).foregroundStyle(.black)
+                        .padding(.horizontal, 3).background(Capsule().fill(HDTone.green))
+                }
+                if mac.online, let top = mac.top {
+                    Text(top)
+                        .font(.mono(compact ? 9.5 : 10, .medium))
+                        .foregroundStyle(HDTone.soft)
+                        .lineLimit(1)
+                        .layoutPriority(-1)
+                    Spacer(minLength: 2)
+                    if let since = mac.topSince, mac.topWaiting != true {
+                        Text(timerInterval: since...since.addingTimeInterval(24 * 3600), countsDown: false)
+                            .font(.mono(compact ? 9.5 : 10, .semibold))
+                            .foregroundStyle(status.color)
+                            .monospacedDigit()
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 48, alignment: .trailing)
+                    } else {
+                        Text("WAIT").font(.mono(9, .semibold)).foregroundStyle(HDTone.amber)
+                    }
+                } else {
+                    Text("\(short) · \(mac.online ? "IDLE" : "OFFLINE")")
+                        .font(.mono(9, .semibold)).kerning(0.5)
+                        .foregroundStyle(mac.online ? HDTone.faintDark : HDTone.danger)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                }
+            }
+            // GPU as a hairline bar (amber), no text: keeps the card inside iOS's 160 pt
+            GeometryReader { g in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(HDTone.hover)
+                    Capsule().fill(HDTone.amber.opacity(0.85))
+                        .frame(width: g.size.width * CGFloat(min(max(mac.gpu ?? 0, 0), 100)) / 100)
+                }
+            }
+            .frame(height: 2)
+        }
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Color.white.opacity(0.04)))
+        .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous)
+            .strokeBorder(status == .running ? HDTone.green.opacity(0.4) : (status == .failed ? HDTone.danger.opacity(0.4) : HDTone.lineDark), lineWidth: 1))
     }
 }

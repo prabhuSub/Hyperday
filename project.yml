@@ -39,6 +39,13 @@ targets:
         NSLocationAlwaysAndWhenInUseUsageDescription: "Hyperday notices when you arrive at or leave Home, Office and Gym, even when it's closed, to fill in what really happened and learn your commute. It stays on your iPhone."
         NSCameraUsageDescription: "Take a photo to attach to a task. It stays in Hyperday on this iPhone and is never read or uploaded."
         TeslaClientID: $(TESLA_CLIENT_ID)   # deploy.sh fills this from .tesla-keys/client.env (not a secret)
+        # v61 JobTrail tab + Macs on the Live Activity. deploy.sh fills these from ~/.jobtrail/token and
+        # `tailscale ip -4` on the MacBook; they are never written into the repo.
+        JTKey: $(JOBTRAIL_KEY)
+        JTHosts: $(JOBTRAIL_HOSTS)
+        NSLocalNetworkUsageDescription: "Hyperday connects to JobTrail on your Mac to show what your Claude chats are running."
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true   # JobTrail is plain http over Tailscale (Tailscale encrypts the link), same as the JobTrail app
         HyperdaySignInWithApple: false   # true after joining the Apple Developer Program
         CFBundleURLTypes:
           - CFBundleURLName: com.prabhu.daylive

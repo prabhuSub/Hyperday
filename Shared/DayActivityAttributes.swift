@@ -22,6 +22,22 @@ struct TrackSeg: Codable, Hashable {
     var hex: String
 }
 
+/// v61: one Mac from JobTrail (MacBook Pro / Mac mini), as the Live Activity shows it.
+struct MacLive: Codable, Hashable {
+    var name: String          // "MacBook Pro"
+    var desktop: Bool         // Mac mini → desktop glyph
+    var online: Bool
+    var running: Int
+    var waiting: Int
+    var gpu: Int?             // %
+    var top: String?          // label of the newest running (else waiting) job
+    var topSince: Date?       // when it started: the card counts up from here by itself
+    var topWaiting: Bool?
+
+    /// Green running, amber waiting, red offline, grey idle.
+    var statusRaw: String { !online ? "failed" : running > 0 ? "running" : waiting > 0 ? "waiting" : "idle" }
+}
+
 struct DayActivityAttributes: ActivityAttributes {
     /// Everything the Lock Screen card and Dynamic Island render.
     /// Kept small: ActivityKit caps the payload at 4 KB.
@@ -88,6 +104,8 @@ struct DayActivityAttributes: ActivityAttributes {
         var focusByHour: [Double]?   // minutes of focus in each hour
         // v16: start of the live block, so the Island ring fills across this block.
         var currentStart: Date?
+        // v61: your Macs from JobTrail (MacBook Pro, Mac mini).
+        var macs: [MacLive]?
     }
 
     var dayStart: Date

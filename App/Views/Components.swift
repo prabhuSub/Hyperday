@@ -621,13 +621,14 @@ enum Features {
 }
 
 enum AppTab: String, CaseIterable, Identifiable {
-    case today, calendar, car, stats, settings, add
+    case today, calendar, jobtrail, car, stats, settings, add
     var id: String { rawValue }
-    var title: String { rawValue.capitalized }
+    var title: String { self == .jobtrail ? "JobTrail" : rawValue.capitalized }
     var icon: String {
         switch self {
         case .today: return "today"
         case .calendar: return "calendar"
+        case .jobtrail: return "event"
         case .car: return "car"
         case .stats: return "stats"
         case .settings: return "settings"
@@ -660,6 +661,12 @@ struct RootView: View {
             } label: {
                 Label { Text("Calendar") } icon: { Image("hd-tab-cal-\(calDay)").renderingMode(.template) }   // today's date
             }
+            // v61: JobTrail, your Macs' live jobs (the web app, unchanged, inside Hyperday).
+            Tab(value: AppTab.jobtrail) {
+                JobTrailTabView()
+            } label: {
+                Label("JobTrail", systemImage: "waveform.path.ecg")
+            }
             if Features.car {
                 Tab(value: AppTab.car) {
                     TabRoot(title: "Car") { CarView().tabFade(tab == .car) }
@@ -688,7 +695,7 @@ struct RootView: View {
             JTTabBar(tab: $tab, calDay: calDay, live: activity.isRunning)
         }
         // v35b: + is a floating button again (not a tab). Tap = Add block, hold = Apple's menu.
-        .overlay(alignment: .bottomTrailing) { AddFab { adding = $0 } }
+        .overlay(alignment: .bottomTrailing) { if tab != .jobtrail { AddFab { adding = $0 } } }   // v61: not over JobTrail
         .onReceive(NotificationCenter.default.publisher(for: CalendarJump.notification)) { _ in
             tab = .calendar
         }
@@ -929,8 +936,10 @@ struct JTTabBar: View {
     let calDay: Int
     var live: Bool
     @Namespace private var ns
+    @ObservedObject private var jobtrail = JobTrailLive.shared
+    private var macsBusy: Bool { jobtrail.runningTotal > 0 }
 
-    private var tabs: [AppTab] { [.today, .calendar] + (Features.car ? [.car] : []) + [.stats, .settings] }
+    private var tabs: [AppTab] { [.today, .calendar, .jobtrail] + (Features.car ? [.car] : []) + [.stats, .settings] }
 
     @ViewBuilder
     private func icon(_ t: AppTab, on: Bool) -> some View {
@@ -938,6 +947,7 @@ struct JTTabBar: View {
         case .calendar: Image("hd-tab-cal-\(calDay)").renderingMode(.template).resizable().scaledToFit()
         case .car: Image("hd-tab-car-front").renderingMode(.template).resizable().scaledToFit()
         case .today: Image(systemName: "clock").resizable().scaledToFit().fontWeight(.medium)
+        case .jobtrail: JTECGShape().stroke(style: StrokeStyle(lineWidth: 1.7, lineCap: .round, lineJoin: .round))   // JobTrail's pulse
         case .stats: Image(systemName: "chart.bar").resizable().scaledToFit().fontWeight(.medium)
         default: Image(systemName: "gearshape").resizable().scaledToFit().fontWeight(.medium)
         }
@@ -961,7 +971,8 @@ struct JTTabBar: View {
                             .scaleEffect(on ? 1.08 : 1)
                             .shadow(color: on ? HDTone.amber.opacity(0.5) : .clear, radius: 6)
                         Text(t.title.uppercased())
-                            .font(.mono(9, .semibold)).kerning(0.6)
+                            .font(.mono(9, .semibold)).kerning(0.4)
+                            .lineLimit(1).minimumScaleFactor(0.75)
                             .foregroundStyle(on ? HDTone.textHi : HDTone.faintDark)
                     }
                     .frame(maxWidth: .infinity)
@@ -978,6 +989,9 @@ struct JTTabBar: View {
                     .overlay(alignment: .topTrailing) {
                         if t == .today && live {
                             JTStatusDot(status: .running, size: 5).offset(x: -8, y: 2)
+                        }
+                        if t == .jobtrail && macsBusy {
+                            JTStatusDot(status: .running, size: 5).offset(x: -6, y: 2)
                         }
                     }
                     .contentShape(Rectangle())
