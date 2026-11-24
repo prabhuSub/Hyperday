@@ -34,7 +34,7 @@ struct OnboardingView: View {
             VStack(spacing: 18) {
                 HStack(spacing: 6) {
                     ForEach(0..<3, id: \.self) { i in
-                        Capsule().fill(i == page ? Color.accentColor : Color(.systemGray4))
+                        Capsule().fill(i == page ? Theme.blue : Theme.border)
                             .frame(width: i == page ? 22 : 7, height: 7)
                     }
                 }
@@ -42,9 +42,9 @@ struct OnboardingView: View {
                     if page < 2 { page += 1 } else { finish() }
                 } label: {
                     Text(["Get started", "Continue", "Start my day"][page])
-                        .font(.hd(size: 17, weight: .semibold)).frame(maxWidth: .infinity).frame(height: 52)
+                        .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent).buttonBorderShape(.capsule)
+                .buttonStyle(PrimaryButtonStyle())   // v57: JobTrail amber button
                 if page == 2 {
                     Button("Try Pro free for 7 days") { showPro = true }.font(.hd(size: 15, weight: .medium))
                 }
@@ -81,7 +81,7 @@ struct OnboardingView: View {
     private var sampleActivity: some View {
         VStack(spacing: 12) {
             HStack(spacing: 10) {
-                HDIcon("deepwork", size: 22).foregroundStyle(Color(hex: "#30D158"))
+                HDIcon("deepwork", size: 22).foregroundStyle(HDTone.green)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Deep work").font(.hd(size: 16, weight: .bold))
                     Text("Next: Standup at 10:30").font(.hd(size: 12.5)).foregroundStyle(Color(.systemGray))
@@ -91,14 +91,14 @@ struct OnboardingView: View {
             }
             HStack(alignment: .bottom, spacing: 3) {
                 ForEach(0..<36, id: \.self) { k in
-                    RoundedRectangle(cornerRadius: 2).fill(k < 15 ? Color(hex: "#30D158") : Color(white: 0.24))
+                    RoundedRectangle(cornerRadius: 2).fill(k < 15 ? HDTone.green : Color(white: 0.24))
                         .frame(width: 4, height: k % 6 == 0 ? 14 : 9)
                 }
             }
             HStack(spacing: 8) {
                 Text("Pause").frame(maxWidth: .infinity).frame(height: 34).background(Color(white: 0.17), in: Capsule())
                 Text("Done").foregroundStyle(.black).frame(maxWidth: .infinity).frame(height: 34)
-                    .background(Color(hex: "#30D158"), in: Capsule())
+                    .background(HDTone.green, in: Capsule())
             }
             .font(.hd(size: 14, weight: .semibold))
         }
@@ -123,19 +123,19 @@ struct OnboardingView: View {
             Text("You can change any of these later in Settings.")
                 .font(.hd(size: 16)).foregroundStyle(.secondary).padding(.top, 10)
             VStack(spacing: 0) {
-                permRow(HDIcon("event", size: 28).foregroundStyle(Color(hex: "#FF3B30")), "Calendar",
+                permRow(HDIcon("event", size: 28).foregroundStyle(HDTone.danger), "Calendar",
                         "Shows your events between blocks. Read-only: Hyperday never edits them.", calendarOn) {
                     _ = await CalendarService.shared.requestAccess()
                     CalendarService.shared.invalidate()
                     await LiveActivityManager.shared.refresh()
                 }
                 Divider().padding(.leading, 58)
-                permRow(Image(systemName: "bell.fill").font(.hd(size: 24)).foregroundStyle(Color(hex: "#FF9F0A")),
+                permRow(Image(systemName: "bell.fill").font(.hd(size: 24)).foregroundStyle(HDTone.amber),
                         "Notifications", "A nudge when a block starts or runs over.", notificationsOn) {
                     _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
                 }
                 Divider().padding(.leading, 58)
-                permRow(Image(systemName: "platter.filled.bottom.iphone").font(.hd(size: 24)).foregroundStyle(Color(hex: "#30D158")),
+                permRow(Image(systemName: "platter.filled.bottom.iphone").font(.hd(size: 24)).foregroundStyle(HDTone.green),
                         "Live Activities", "The current block on your Lock Screen and Dynamic Island.", liveOn) {
                     // iOS has no prompt for this: it's on by default; if it was turned off, send them to Settings.
                     if let url = URL(string: UIApplication.openSettingsURLString) { await UIApplication.shared.open(url) }
@@ -160,10 +160,10 @@ struct OnboardingView: View {
             }
             Spacer(minLength: 8)
             if on {
-                Image(systemName: "checkmark").font(.hd(size: 18, weight: .bold)).foregroundStyle(Color(hex: "#30D158"))
+                Image(systemName: "checkmark").font(.hd(size: 18, weight: .bold)).foregroundStyle(HDTone.green)
             } else {
                 Button("Allow") { Task { await action(); await refreshStatus() } }
-                    .buttonStyle(.borderedProminent).buttonBorderShape(.capsule).controlSize(.small)
+                    .buttonStyle(PrimaryButtonStyle(width: 80))
             }
         }
         .padding(.horizontal, 16).padding(.vertical, 14)
@@ -189,8 +189,10 @@ struct OnboardingView: View {
                     } label: {
                         Text(s.0).font(.hd(size: 15, weight: .semibold))
                             .padding(.horizontal, 15).padding(.vertical, 9)
-                            .foregroundStyle(on ? Color.white : Color.primary)
-                            .background(on ? Color.accentColor : Color(.secondarySystemBackground), in: Capsule())
+                            .foregroundStyle(on ? Color.black : Theme.text)
+                            .background(on ? Theme.blue : Theme.card, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(on ? Color.clear : Theme.border))
+                            .animation(HDEase.standard(), value: on)
                     }
                     .buttonStyle(.plain)
                 }

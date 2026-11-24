@@ -17,17 +17,28 @@ enum Theme {
         Color(UIColor { $0.userInterfaceStyle == .dark ? UIColor(rgb: dark) : UIColor(rgb: light) })
     }
 
-    // v55: deeper "instrument" darks; light stays white/stainless.
-    static let bg = dyn(0xFFFFFF, 0x0E0F11)
-    static let section = dyn(0xF4F5F6, 0x0E0F11)
-    static let card = dyn(0xFFFFFF, 0x17181B)
-    static let border = dyn(0xDCDDE0, 0x2A2D31)
-    static let text = dyn(0x171A20, 0xF4F4F4)
-    static let muted = dyn(0x5C5E62, 0xA2A3A5)
-    static let faint = dyn(0xA2A3A5, 0x5C5E62)
-    static let navActive = dyn(0xEEEEEE, 0x2A2A2D)
-    static let blue = Color(UIColor(rgb: 0x3E6AE1))
-    static let red = Color(UIColor(rgb: 0xE31937))
+    // JobTrail palette (amber-on-black). Dark = JobTrail's exact tokens; light is a
+    // derived counterpart that keeps the amber identity and stays WCAG AA.
+    static let bg = dyn(0xFFFFFF, 0x000000)         // JobTrail --bg
+    static let section = dyn(0xF4F5F6, 0x000000)
+    static let card = dyn(0xFFFFFF, 0x181818)       // --surface
+    static let border = dyn(0xDCDDE0, 0x313131)     // --line
+    static let text = dyn(0x171A20, 0xFFFFFF)       // --text
+    static let muted = dyn(0x5C5E62, 0x9B9B9B)      // --dim
+    static let faint = dyn(0xA2A3A5, 0x686868)      // --faint
+    static let navActive = dyn(0xEEEEEE, 0x272727)  // --hover
+    // Signature accent. Was blue; now JobTrail amber (--accent #e9a23b). Light is a
+    // darkened amber so accent text clears AA on white (#e9a23b fails on white).
+    static let blue = dyn(0xB06F00, 0xE9A23B)       // --accent
+    static let red = dyn(0xC8102E, 0xDB6B67)        // --danger
+    static let green = dyn(0x3E7A2E, 0x7AA36A)      // --success
+    static let cyan = dyn(0x2F6FA8, 0x6EA8D9)       // --blue (done state)
+    static let raised = dyn(0xF4F5F6, 0x1F1F1F)     // --raised
+    static let hover = dyn(0xEEEEEE, 0x272727)      // --hover
+    static let soft = dyn(0x3A3C40, 0xD1D1D1)       // --soft
+    static let amberBG = dyn(0xFBEFD9, 0x2E220F)    // --accent-bg
+    static let greenBG = dyn(0xE6F0E1, 0x141F18)    // --success-bg
+    static let dangerBG = dyn(0xF8E2E1, 0x2A1514)   // --danger-bg
 }
 
 enum Appearance: String, CaseIterable, Hashable {
@@ -48,14 +59,14 @@ enum Appearance: String, CaseIterable, Hashable {
 
 struct HeaderBar: View {
     let section: String
-    @AppStorage("appearance") private var appearance = Appearance.system.rawValue
+    @AppStorage("appearance") private var appearance = Appearance.dark.rawValue
     private var current: Appearance { Appearance(rawValue: appearance) ?? .system }
 
     var body: some View {
         HStack(spacing: 10) {
             Text("HYPERDAY")
-                .font(.hd(size: 14, weight: .heavy))
-                .kerning(5)
+                .font(.hdMono(size: 13, weight: .semibold))
+                .kerning(2.4)
                 .foregroundStyle(Theme.text)
             Rectangle().fill(Theme.border).frame(width: 1, height: 16)
             Text(section)
@@ -93,8 +104,8 @@ struct Caps: View {
 
     var body: some View {
         Text(text.uppercased())
-            .font(.hdMono(size: 11, weight: .medium))   // v55: instrument caps
-            .kerning(2)
+            .font(.hdMono(size: 11, weight: .medium))   // v57: JobTrail label (Geist Mono, tracked caps)
+            .kerning(1.1)
             .foregroundStyle(color)
     }
 }
@@ -109,7 +120,9 @@ struct InfoItem: Identifiable {
 /// "3h 10m" → big digits, small letters (v24 card language).
 func bigSmallText(_ s: String, size: CGFloat) -> Text {
     s.reduce(Text("")) { acc, ch in
-        acc + Text(String(ch)).font(.hd(size: (ch.isNumber || ch == "—") ? size : size * 0.5, weight: .heavy))
+        // v57: stats in Geist Mono (JobTrail), small unit letters.
+        acc + Text(String(ch)).font((ch.isNumber || ch == "—" || ch == "/") ? .hdMono(size: size * 0.92, weight: .semibold)
+                                                                          : .hdMono(size: size * 0.46, weight: .medium))
     }
 }
 
@@ -136,7 +149,9 @@ struct InfoRow: View {
                 .padding(.vertical, 10)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Chamfer(cut: 12).fill(Theme.card))
-                .overlay(Chamfer(cut: 12).stroke(Theme.border, lineWidth: 1))
+                .overlay(Chamfer(cut: 12).strokeBorder(Theme.border, lineWidth: 1))
+                .animation(HDEase.standard(0.6), value: item.value)
+                .hdBlurIn()
             }
         }
     }
@@ -149,11 +164,12 @@ struct PrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.hd(size: 14, weight: .semibold))
-            .foregroundStyle(Color.white)
+            .foregroundStyle(Color.black)                    // v57: black on JobTrail amber (AA)
             .frame(maxWidth: width ?? .infinity)
             .frame(height: 40)
-            .background(Chamfer(cut: 8).fill(Theme.blue))   // v55: chamfered
-            .opacity(configuration.isPressed ? 0.8 : 1)
+            .background(Chamfer(cut: 7).fill(Theme.blue))
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .animation(HDEase.standard(0.25), value: configuration.isPressed)
     }
 }
 
@@ -165,16 +181,17 @@ struct SecondaryButtonStyle: ButtonStyle {
             .foregroundStyle(Theme.text)
             .frame(maxWidth: width ?? .infinity)
             .frame(height: 40)
-            .background(Chamfer(cut: 8).fill(Theme.card))
-            .overlay(Chamfer(cut: 8).stroke(Theme.border, lineWidth: 1))
-            .opacity(configuration.isPressed ? 0.7 : 1)
+            .background(Chamfer(cut: 7).fill(configuration.isPressed ? Theme.hover : Theme.raised))
+            .overlay(Chamfer(cut: 7).strokeBorder(Theme.border, lineWidth: 1))
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .animation(HDEase.standard(0.25), value: configuration.isPressed)
     }
 }
 
 /// v56: page background with faint canvas dots.
 struct DotPage: View {
     var body: some View {
-        ZStack { Theme.section; DotGrid(step: 14, radius: 1).fill(HDTone.pageDot) }.ignoresSafeArea()
+        Theme.bg.ignoresSafeArea()   // v57: JobTrail pages are flat black
     }
 }
 
@@ -188,8 +205,8 @@ struct CardBox: ViewModifier {
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Chamfer(cut: 12).fill(Theme.card))   // v55: chamfered panels
-            .overlay(Chamfer(cut: 12).stroke(Theme.border, lineWidth: 1))
             .clipShape(Chamfer(cut: 12))
+            .overlay(Chamfer(cut: 12).strokeBorder(Theme.border, lineWidth: 1))   // v57: 1px #313131
     }
 }
 
@@ -219,12 +236,14 @@ struct Chip: View {
                     .font(.hd(size: 15, weight: selected ? .semibold : .regular))
                     .lineLimit(1)
             }
-            .padding(.horizontal, 13)
+            .padding(.horizontal, 12)
             .padding(.vertical, 7)
-            .foregroundStyle(selected ? (color ?? Theme.text) : Theme.text)
-            // v34: Apple-style tinted capsules. Selected = the category's colour at 15%, others = system fill.
-            .background(Capsule().fill(selected ? (color ?? Theme.text).opacity(color == nil ? 0.10 : 0.16)
-                                                : Color(UIColor.tertiarySystemFill)))
+            .foregroundStyle(selected ? Theme.text : Theme.muted)
+            // v57: JobTrail pills: surface + 1px line; selected = hover fill + amber line.
+            .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(selected ? Theme.hover : Theme.card))
+            .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .strokeBorder(selected ? Theme.blue.opacity(0.55) : Theme.border, lineWidth: 1))
+            .animation(HDEase.standard(), value: selected)
         }
         .buttonStyle(.plain)
     }
@@ -234,11 +253,11 @@ struct Chip: View {
 struct BlueGlassCircle: ViewModifier {
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
-            content.glassEffect(.regular.tint(Theme.blue).interactive(), in: Chamfer(cut: 14))   // v55
+            content.glassEffect(.regular.tint(Theme.blue).interactive(), in: Chamfer(cut: 14))   // v57: amber
         } else {
             content
                 .background(Chamfer(cut: 14).fill(Theme.blue))
-                .shadow(color: .black.opacity(0.25), radius: 10, y: 6)
+                .shadow(color: HDTone.amber.opacity(0.25), radius: 14)
         }
     }
 }
@@ -328,22 +347,24 @@ struct PillNav<T: Hashable>: View {
             ForEach(options, id: \.self) { option in
                 let on = option == selection
                 Button {
-                    withAnimation(.snappy(duration: 0.2)) { selection = option }
+                    withAnimation(HDEase.standard(0.3)) { selection = option }
                 } label: {
-                    Text(label(option))
-                        .font(.hd(size: 13, weight: .bold))
-                        .foregroundStyle(on ? Theme.bg : Theme.muted)
+                    // v57: JobTrail range control: mono labels, selected = hover fill.
+                    Text(label(option).uppercased())
+                        .font(.hdMono(size: 11, weight: .medium))
+                        .kerning(0.8)
+                        .foregroundStyle(on ? Theme.text : Theme.faint)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 7)
-                        .background(Capsule().fill(on ? Theme.text : Color.clear))
-                        .contentShape(Capsule())
+                        .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(on ? Theme.hover : Color.clear))
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(4)
-        .background(Capsule().fill(Theme.card))
-        .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
+        .padding(3)
+        .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Theme.card))
+        .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(Theme.navActive, lineWidth: 1))
     }
 }
 
@@ -357,6 +378,8 @@ struct BlockRow: View {
     var showNow = true
     var icon: String? = nil
     var pill: RowPill? = nil   // Today: live timer / in 2h 07m / ✓ Done / Ended
+    var above: FlowState? = nil   // v57: connector line into this row's icon (Today)
+    var below: FlowState? = nil   // and out of it
 
     private var detail: String {
         var parts: [String] = []
@@ -370,24 +393,47 @@ struct BlockRow: View {
         return parts.joined(separator: " · ")
     }
 
+    /// v57 status: green = running, amber = waiting, blue = done, red = failed (over time / declined).
+    private func status(isNow: Bool, done: Bool) -> HDStatus {
+        if block.declined { return .failed }
+        if let pill {
+            switch pill {
+            case .live: return .running
+            case .over: return .failed
+            case .upcoming: return .waiting
+            case .done, .ended: return .done
+            }
+        }
+        return isNow ? .running : done ? .done : .waiting
+    }
+
     var body: some View {
         let isNow = showNow && block.contains(now)
         let done = block.end <= now
+        let st = status(isNow: isNow, done: done)
 
         HStack(spacing: 12) {
-            // v47: the block's solid icon in its category colour, no dot behind it.
-            HDIcon(icon ?? "event", size: 24)
-                .foregroundStyle(color.opacity(done ? 0.4 : 1))
-                .frame(width: 30, height: 30)
-            VStack(alignment: .leading, spacing: 2) {
+            // v57: JobTrail job tile: the icon on a raised tile, ringed by its status.
+            HDIcon(icon ?? "event", size: 18)
+                .foregroundStyle(color.opacity(done ? 0.45 : 1))
+                .frame(width: 32, height: 32)
+                .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Theme.raised))
+                .overlay { StatusRing(status: st) }
+                .overlay(alignment: .top) {
+                    if let above { FlowLine(state: above).frame(width: 2, height: 13).offset(y: -13) }
+                }
+                .overlay(alignment: .bottom) {
+                    if let below { FlowLine(state: below).frame(width: 2, height: 13).offset(y: 13) }
+                }
+            VStack(alignment: .leading, spacing: 3) {
                 Text(block.title)
-                    .font(.hd(size: 15, weight: isNow ? .semibold : .regular))
-                    .foregroundStyle(done ? Theme.faint : Theme.text)
+                    .font(.hd(size: 15, weight: isNow ? .semibold : .medium))
+                    .foregroundStyle(done ? Theme.muted : Theme.text)
                     .strikethrough(block.declined)
                     .lineLimit(1)
                 Text(detail)
-                    .font(.hd(size: 12))
-                    .foregroundStyle(done ? Theme.faint : Theme.muted)
+                    .font(.hdMono(size: 11))
+                    .foregroundStyle(Theme.faint)
                     .lineLimit(1)
             }
             Spacer(minLength: 6)
@@ -396,23 +442,42 @@ struct BlockRow: View {
             }
             if let pill {
                 RowPillView(pill: pill, now: now)
-            } else if block.source == .calendar && !isNow {
+            } else if isNow {
+                StatusTag(text: "Now", status: .running)
+            } else if block.source == .calendar {
                 // Calendar events are read-only in Hyperday (can't be moved or deleted here).
                 HDIcon("event", size: 14)
                     .foregroundStyle(Theme.faint)
                     .accessibilityLabel("Calendar event")
             }
-            if isNow && pill == nil {
-                Text("NOW")
-                    .font(.hd(size: 10, weight: .bold))
-                    .kerning(1.2)
-                    .foregroundStyle(Theme.red)
-            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .background(pill?.isLive == true ? DayLiveStyle.doneGreen.opacity(0.07) : .clear)
+        .background(pill?.isLive == true ? Theme.greenBG.opacity(0.55) : .clear)
         .contentShape(Rectangle())
+    }
+}
+
+/// v57: the ring around a row's icon tile. Running sweeps green, waiting is a dashed amber line,
+/// done is blue, failed is red.
+struct StatusRing: View {
+    let status: HDStatus
+    var radius: CGFloat = 9
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        switch status {
+        case .running:
+            SweepRing(radius: radius)
+        case .waiting:
+            shape.strokeBorder(Color(UIColor(rgb: 0x6B5223)), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+        case .done:
+            shape.strokeBorder(Color(UIColor(rgb: 0x2B4257)), lineWidth: 1)
+        case .failed:
+            shape.fill(HDTone.danger.opacity(0.06)).overlay(shape.strokeBorder(Color(UIColor(rgb: 0x5A2A28)), lineWidth: 1))
+        case .idle:
+            shape.strokeBorder(Theme.navActive, lineWidth: 1)
+        }
     }
 }
 
@@ -420,7 +485,7 @@ struct BlockRow: View {
 
 /// Same grey circle as the profile. Tap cycles System → Light → Dark; the icon shows the current mode.
 struct AppearanceButton: View {
-    @AppStorage("appearance") private var appearance = Appearance.system.rawValue
+    @AppStorage("appearance") private var appearance = Appearance.dark.rawValue
     private var current: Appearance { Appearance(rawValue: appearance) ?? .system }
 
     var body: some View {
@@ -456,16 +521,17 @@ struct RowPillView: View {
     let pill: RowPill
     let now: Date
 
+    // v57: JobTrail status pills: Geist Mono on the status tint.
     var body: some View {
         switch pill {
         case .live(let end):
             HStack(spacing: 5) {
-                Circle().fill(DayLiveStyle.doneGreen).frame(width: 6, height: 6)
+                PulseDot(color: HDTone.green, size: 5)
                 Text(timerInterval: Date.now...max(end, Date.now), countsDown: true)
                     .monospacedDigit()
                 Text("left")
             }
-            .modifier(PillShape(fill: DayLiveStyle.doneGreen.opacity(0.15), text: Color(red: 0.11, green: 0.48, blue: 0.21)))
+            .modifier(PillShape(status: .running))
         case .over(let since):
             HStack(spacing: 0) {
                 Text("+")
@@ -473,33 +539,32 @@ struct RowPillView: View {
                     .monospacedDigit()
                 Text(" over")
             }
-            .modifier(PillShape(fill: Color(red: 1, green: 0.84, blue: 0.04).opacity(0.25), text: Color(red: 0.54, green: 0.43, blue: 0)))
+            .modifier(PillShape(status: .failed))
         case .upcoming(let start):
-            Text("in \(start.timeIntervalSince(now).hoursMinutes)")
-                .monospacedDigit()
-                .modifier(PillShape(fill: .clear, text: Theme.muted, stroke: Theme.border))
+            HStack(spacing: 4) {
+                TiltingHourglass(size: 9)
+                Text("in \(start.timeIntervalSince(now).hoursMinutes)").monospacedDigit()
+            }
+            .modifier(PillShape(status: .waiting))
         case .done:
-            Text("✓ Done").modifier(PillShape(fill: Theme.border.opacity(0.6), text: Theme.muted))
+            Text("✓ Done").modifier(PillShape(status: .done))
         case .ended:
-            Text("Ended").modifier(PillShape(fill: Theme.border.opacity(0.6), text: Theme.faint))
+            Text("Ended").modifier(PillShape(status: .idle))
         }
     }
 }
 
 private struct PillShape: ViewModifier {
-    let fill: Color
-    let text: Color
-    var stroke: Color? = nil
+    let status: HDStatus
     func body(content: Content) -> some View {
         content
-            .font(.hd(size: 12, weight: .bold))
-            .foregroundStyle(text)
+            .font(.hdMono(size: 11, weight: .semibold))
+            .foregroundStyle(status == .idle ? Theme.faint : status.color)
             .lineLimit(1)
             .fixedSize()
-            .padding(.horizontal, 9)
-            .padding(.vertical, 4)
-            .background(Capsule().fill(fill))
-            .overlay(Capsule().stroke(stroke ?? .clear, lineWidth: 1))
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(status.background))
     }
 }
 
@@ -508,23 +573,22 @@ struct LiveTimerPill: View {
     let range: ClosedRange<Date>
     let down: Bool
     var prefix: String = ""
-    let fill: Color
-    let text: Color
+    let status: HDStatus
 
     var body: some View {
         HStack(spacing: 6) {
-            Rectangle().fill(text).frame(width: 6, height: 6)
+            PulseDot(color: status.color, size: 6)   // v57: live dot pulses
             HStack(spacing: 0) {
                 if !prefix.isEmpty { Text(prefix) }
                 Text(timerInterval: range, countsDown: down)
             }
         }
-        .font(.hdMono(size: 14, weight: .semibold))   // v55: mono readout
-        .foregroundStyle(text)
+        .font(.hdMono(size: 13, weight: .semibold))
+        .foregroundStyle(status.color)
         .fixedSize()
-        .padding(.horizontal, 10)
+        .padding(.horizontal, 9)
         .padding(.vertical, 5)
-        .background(Chamfer(cut: 6).fill(fill))
+        .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(status.background))
     }
 }
 
@@ -593,6 +657,7 @@ struct RootView: View {
             }
         }
         .tint(Theme.blue)
+        .scrollContentBackground(.hidden)   // v58: forms and lists sit on JobTrail black
         // The Calendar tab shows today's date: redraw at midnight and whenever the app comes back.
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
             calDay = Calendar.current.component(.day, from: .now)
@@ -628,13 +693,14 @@ private struct TabFade: ViewModifier {
     func body(content: Content) -> some View {
         content
             .opacity(shown ? 1 : 0)
+            .blur(radius: shown ? 0 : 4)      // v57: JobTrail pop
             .offset(y: shown ? 0 : 6)
             .onChange(of: active) { _, isActive in
                 guard isActive else { return }
                 var t = Transaction(); t.disablesAnimations = true
                 withTransaction(t) { shown = false }
                 DispatchQueue.main.async {
-                    withAnimation(.easeOut(duration: 0.2)) { shown = true }
+                    withAnimation(HDEase.entry(0.45)) { shown = true }
                 }
             }
     }
@@ -689,11 +755,11 @@ struct SwipeRow<Content: View>: View {
                         }
                         .onEnded { v in
                             guard abs(v.translation.width) > abs(v.translation.height) else {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { offset = startOffset }
+                                withAnimation(HDEase.standard(0.4)) { offset = startOffset }
                                 return
                             }
                             let target = startOffset + v.predictedEndTranslation.width
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                            withAnimation(HDEase.standard(0.4)) {
                                 if target < -width / 2 && maxRight > 0 { offset = -maxRight }
                                 else if target > width / 2 && maxLeft > 0 { offset = maxLeft }
                                 else { offset = 0 }
@@ -724,7 +790,7 @@ struct SwipeRow<Content: View>: View {
     }
 
     private func close() {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { offset = 0 }
+        withAnimation(HDEase.standard(0.4)) { offset = 0 }
         startOffset = 0
     }
 }
@@ -746,10 +812,11 @@ struct AddFab: View {
             Button { open(.photo) } label: { Label("Photo task", systemImage: "camera") }
         } label: {
             PlusMark(weight: 3.2)   // v55: drawn, so it's exactly centred
-                .fill(.white)
+                .fill(.black)       // v57: black on amber
                 .frame(width: 24, height: 24)
                 .frame(width: 58, height: 58)
                 .modifier(BlueGlassCircle())
+                .hdGlow(radius: 16, active: false, hot: true)   // v58: the + breathes amber
                 .contentShape(Chamfer(cut: 14))
         } primaryAction: {
             open(.block)
@@ -769,22 +836,29 @@ struct TabRoot<Content: View>: View {
     let title: String
     @ViewBuilder var content: () -> Content
     @State private var showProfile = false
+    @EnvironmentObject private var activity: LiveActivityManager
 
     var body: some View {
         NavigationStack {
             content()
-                .background(DotPage())   // v56: canvas dots
+                .background(DotPage())
+                .overlay { JTGrain().ignoresSafeArea() }   // v58: JobTrail film grain
                 .navigationTitle(title)
                 .navigationBarTitleDisplayMode(.large)
                 .toolbar {
                     // The HYPERDAY wordmark stays top-left, above the large title.
                     ToolbarItem(placement: .topBarLeading) {
-                        Text("HYPERDAY")
-                            .font(.hd(size: 14, weight: .heavy))
-                            .kerning(5)
-                            .foregroundStyle(Theme.text)
-                            .fixedSize()
-                            .accessibilityAddTraits(.isHeader)
+                        HStack(spacing: 10) {
+                            Text("HYPERDAY")
+                                .font(.hdMono(size: 13, weight: .semibold))   // v57: JobTrail mono wordmark
+                                .kerning(2.4)
+                                .foregroundStyle(Theme.text)
+                                .fixedSize()
+                                .accessibilityAddTraits(.isHeader)
+                            // v58: JobTrail topbar badge: LIVE pulses green while the Live Activity runs.
+                            JTBadge(text: activity.isRunning ? "Live" : "Idle", working: activity.isRunning)
+                                .fixedSize()
+                        }
                     }
                     .noGlass()
                     ToolbarItem(placement: .topBarTrailing) {

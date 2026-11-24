@@ -43,7 +43,7 @@ struct ScanSheet: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     TextField("Title", text: $p.title)
                                     Text("\(p.start.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute())) · \(p.minutes) min")
-                                        .font(.caption).foregroundStyle(.secondary)
+                                        .font(.hd(size: 12)).foregroundStyle(.secondary)
                                 }
                             }
                         }

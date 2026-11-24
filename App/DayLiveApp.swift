@@ -6,7 +6,7 @@ import UserNotifications
 @main
 struct DayLiveApp: App {
     @Environment(\.scenePhase) private var scenePhase
-    @AppStorage("appearance") private var appearance = Appearance.system.rawValue
+    @AppStorage("appearance") private var appearance = Appearance.dark.rawValue
     @StateObject private var store = BlockStore.shared
     @StateObject private var activity = LiveActivityManager.shared
     @StateObject private var categories = CategoryStore.shared
@@ -28,11 +28,21 @@ struct DayLiveApp: App {
             UserDefaults.standard.set(Appearance.system.rawValue, forKey: "appearance")
             UserDefaults.standard.set(true, forKey: "appearanceResetV6")
         }
+        // v57: the JobTrail look is a dark design, so the revamp starts in Dark once (Light still works).
+        if !UserDefaults.standard.bool(forKey: "appearanceResetV57") {
+            UserDefaults.standard.set(Appearance.dark.rawValue, forKey: "appearance")
+            UserDefaults.standard.set(true, forKey: "appearanceResetV57")
+        }
+        HDFonts.applyUIKit()
+        #if DEBUG
+        // v57: `-hdDemo YES` (simulator launch argument) loads sample data, for screenshots.
+        if UserDefaults.standard.bool(forKey: "hdDemo") && !HistoryStore.shared.hasDemo { DemoData.load() }
+        #endif
     }
 
     var body: some Scene {
         WindowGroup {
-            TypeSizeRebuilder { RootView() }   // v52: fonts follow Settings › Text Size
+            TypeSizeRebuilder { RootView().font(.hd(size: 16)) }   // v52: fonts follow Text Size · v57: Geist by default
                 .preferredColorScheme((Appearance(rawValue: appearance) ?? .system).scheme)
                 .tint(Theme.blue)
                 .environmentObject(store)
@@ -89,6 +99,22 @@ struct DayLiveApp: App {
             await LiveActivityManager.shared.refresh()
             if Features.car || Features.carWidgets { await CarStore.shared.refresh() }   // v38: keeps car widgets current
         }
+    }
+}
+
+/// v57: Geist in the UIKit parts SwiftUI doesn't reach (navigation titles, tab bar labels).
+enum HDFonts {
+    static func applyUIKit() {
+        func f(_ name: String, _ size: CGFloat, _ style: UIFont.TextStyle) -> UIFont {
+            let base = UIFont(name: name, size: size) ?? .systemFont(ofSize: size)
+            return UIFontMetrics(forTextStyle: style).scaledFont(for: base)
+        }
+        let nav = UINavigationBar.appearance()
+        nav.largeTitleTextAttributes = [.font: f("Geist-Bold", 32, .largeTitle)]
+        nav.titleTextAttributes = [.font: f("Geist-SemiBold", 17, .headline)]
+        let tab = UITabBarItem.appearance()
+        tab.setTitleTextAttributes([.font: f("GeistMono-Medium", 10, .caption2)], for: .normal)
+        UISegmentedControl.appearance().setTitleTextAttributes([.font: f("Geist-Medium", 13, .footnote)], for: .normal)
     }
 }
 

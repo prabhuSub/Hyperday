@@ -115,7 +115,7 @@ struct ProfileAvatar: View {
             } else if !profile.initials.isEmpty {
                 Theme.red   // v32: flat, no gradients
                     .overlay(Text(profile.initials)
-                        .font(.system(size: size * 0.4, weight: .bold))
+                        .font(.geist(size: size * 0.4, weight: .bold))
                         .foregroundStyle(.white))
             } else {
                 Theme.border.overlay(HDIcon("personal", size: size * 0.5).foregroundStyle(Theme.muted))
@@ -143,10 +143,10 @@ struct ProfileSheet: View {
                         signedOut
                     }
                     if let error {
-                        Text(error).font(.system(size: 12)).foregroundStyle(Theme.red)
+                        Text(error).font(.geist(size: 12)).foregroundStyle(Theme.red)
                     }
                     Text("Apple shares only your name and an email (you can hide it). It never shares your Apple ID photo, so the circle shows your initials until you pick a photo.")
-                        .font(.system(size: 11.5))
+                        .font(.geist(size: 11.5))
                         .foregroundStyle(Theme.muted)
                 }
                 .padding(20)
@@ -171,9 +171,9 @@ struct ProfileSheet: View {
     private var signedOut: some View {
         VStack(spacing: 12) {
             ProfileAvatar(size: 72)
-            Text(profile.name ?? (ProfileStore.signInAvailable ? "Not signed in" : "Your profile")).font(.system(size: 20, weight: .bold)).foregroundStyle(Theme.text)
+            Text(profile.name ?? (ProfileStore.signInAvailable ? "Not signed in" : "Your profile")).font(.geist(size: 20, weight: .bold)).foregroundStyle(Theme.text)
             Text("Sign in to put your name on Hyperday and get ready for iCloud sync across your devices.")
-                .font(.system(size: 13)).foregroundStyle(Theme.muted).multilineTextAlignment(.center)
+                .font(.geist(size: 13)).foregroundStyle(Theme.muted).multilineTextAlignment(.center)
             if ProfileStore.signInAvailable {
             SignInWithAppleButton(.signIn) { req in
                 req.requestedScopes = [.fullName, .email]
@@ -185,7 +185,7 @@ struct ProfileSheet: View {
             .clipShape(RoundedRectangle(cornerRadius: 8))
             } else {
                 Text("Sign in with Apple turns on once you join the Apple Developer Program.")
-                    .font(.system(size: 12)).foregroundStyle(Theme.muted).multilineTextAlignment(.center)
+                    .font(.geist(size: 12)).foregroundStyle(Theme.muted).multilineTextAlignment(.center)
             }
             photoRow.padding(.top, 6)
         }
@@ -198,16 +198,16 @@ struct ProfileSheet: View {
             HStack(spacing: 12) {
                 ProfileAvatar(size: 54)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(profile.name ?? "Signed in").font(.system(size: 18, weight: .bold)).foregroundStyle(Theme.text)
+                    Text(profile.name ?? "Signed in").font(.geist(size: 18, weight: .bold)).foregroundStyle(Theme.text)
                     Label("Signed in with Apple", systemImage: "applelogo")
-                        .font(.system(size: 12)).foregroundStyle(Theme.muted)
+                        .font(.geist(size: 12)).foregroundStyle(Theme.muted)
                 }
             }
             .padding(.bottom, 10)
             row("Email", profile.email ?? "Hidden")
             photoRow
             Button("Sign out", role: .destructive) { profile.signOut() }
-                .font(.system(size: 14, weight: .semibold))
+                .font(.geist(size: 14, weight: .semibold))
                 .frame(maxWidth: .infinity)
                 .padding(.top, 12)
         }
@@ -216,14 +216,14 @@ struct ProfileSheet: View {
 
     private var photoRow: some View {
         HStack {
-            Text("Photo").font(.system(size: 14)).foregroundStyle(Theme.text)
+            Text("Photo").font(.geist(size: 14)).foregroundStyle(Theme.text)
             Spacer()
             if profile.photo != nil {
-                Button("Remove") { profile.setPhoto(nil) }.font(.system(size: 14))
+                Button("Remove") { profile.setPhoto(nil) }.font(.geist(size: 14))
             }
             let label = profile.photo == nil ? "Choose…" : "Change"
             PhotosPicker(selection: $pick, matching: .images) {
-                Text(label).font(.system(size: 14))
+                Text(label).font(.geist(size: 14))
             }
         }
         .padding(.vertical, 11)
@@ -232,9 +232,9 @@ struct ProfileSheet: View {
 
     private func row(_ a: String, _ b: String) -> some View {
         HStack {
-            Text(a).font(.system(size: 14)).foregroundStyle(Theme.text)
+            Text(a).font(.geist(size: 14)).foregroundStyle(Theme.text)
             Spacer()
-            Text(b).font(.system(size: 13)).foregroundStyle(Theme.muted).lineLimit(1)
+            Text(b).font(.geist(size: 13)).foregroundStyle(Theme.muted).lineLimit(1)
         }
         .padding(.vertical, 11)
         .overlay(alignment: .top) { Rectangle().fill(Theme.border).frame(height: 1) }

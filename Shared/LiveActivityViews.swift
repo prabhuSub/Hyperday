@@ -4,13 +4,14 @@ import WidgetKit
 
 /// Shared by the widget extension (real Live Activity) and the app (preview card).
 enum DayLiveStyle {
-    static let accent = Color(red: 52 / 255, green: 199 / 255, blue: 89 / 255)      // #34c759
-    static let cardTint = Color(red: 20 / 255, green: 21 / 255, blue: 24 / 255)   // v55: instrument plate
+    // v57: JobTrail palette (green = running, amber = waiting, blue = done, red = failed).
+    static let accent = HDTone.green
+    static let cardTint = HDTone.surface
     static let glassOpacity = 0.9
-    static let calendarBlue = Color(red: 10 / 255, green: 132 / 255, blue: 255 / 255)
-    static let planGreen = Color(red: 36 / 255, green: 138 / 255, blue: 61 / 255)
-    static let stepYellow = Color(red: 255 / 255, green: 214 / 255, blue: 10 / 255)   // #FFD60A
-    static let doneGreen = Color(red: 48 / 255, green: 209 / 255, blue: 88 / 255)     // #30D158
+    static let calendarBlue = HDTone.blue
+    static let planGreen = HDTone.green
+    static let stepYellow = HDTone.amber
+    static let doneGreen = HDTone.green
 }
 
 extension Color {
@@ -93,7 +94,7 @@ struct LockScreenCard: View {
     /// Bar tint: yellow in the last 5 minutes, grey while paused.
     private var barState: DayActivityAttributes.ContentState {
         var s = state
-        if state.paused == true { s.accentHex = "#8E8E93" } else if headsUp { s.accentHex = "#FFD60A" }
+        if state.paused == true { s.accentHex = "#686868" } else if headsUp { s.accentHex = "#E9A23B" }
         return s
     }
 
@@ -114,12 +115,13 @@ struct LockScreenCard: View {
 
     private func pill(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 13, weight: .medium))
-            .foregroundStyle(.white)
+            .font(.mono(12, .medium))   // v58: JobTrail pill
+            .foregroundStyle(HDTone.soft)
             .lineLimit(1)
             .padding(.horizontal, 8)
             .padding(.vertical, 2)
-            .background(Color(white: 0.45).opacity(0.55), in: Capsule())
+            .background(HDTone.hover, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(HDTone.lineDark, lineWidth: 1))
     }
 
     /// v13: under the title. Step → [step pill][Next 3:00 pill]; overlap → "also:" text;
@@ -133,14 +135,14 @@ struct LockScreenCard: View {
             }
         } else if let also = state.also, state.source == .free || also.hasPrefix("also:") {
             Text(also)
-                .font(.system(size: 13))
+                .font(.geist(size: 13))
                 .foregroundStyle(.white.opacity(0.8))
                 .lineLimit(1)
         } else if let n = nextParts {
             pill("Next: \(n.title) · \(n.time)")
         } else if let also = state.also {
             Text(also)
-                .font(.system(size: 13))
+                .font(.geist(size: 13))
                 .foregroundStyle(.white.opacity(0.8))
                 .lineLimit(1)
         }
@@ -169,20 +171,20 @@ struct LockScreenCard: View {
         } else if state.alsoIsStep == true, let also = state.also {
             pill(also)
         } else if let also = state.also, also.hasPrefix("also:") {
-            Text(also).font(.system(size: 13)).opacity(0.8).lineLimit(1)
+            Text(also).font(.geist(size: 13)).opacity(0.8).lineLimit(1)
         } else if let n = nextParts {
             HStack(spacing: 8) {
                 let col = state.nextHex.map { Color(hex: $0) } ?? Color(white: 0.5)
                 HDIcon(state.nextIcon ?? "event", size: 20).foregroundStyle(col)   // v47: solid icon, no circle
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("Next: \(n.title)").font(.system(size: 14, weight: .bold)).lineLimit(1)
+                    Text("Next: \(n.title)").font(.geist(size: 14, weight: .bold)).lineLimit(1)
                     Text(score.map { "\(n.time) · \($0)" } ?? n.time)
                         .contentTransition(.numericText())
-                        .font(.system(size: 11.5, weight: .medium)).opacity(0.65).lineLimit(1)
+                        .font(.geist(size: 11.5, weight: .medium)).opacity(0.65).lineLimit(1)
                 }
             }
         } else if let score {
-            Text(score).contentTransition(.numericText()).font(.system(size: 13, weight: .semibold)).opacity(0.75)
+            Text(score).contentTransition(.numericText()).font(.geist(size: 13, weight: .semibold)).opacity(0.75)
         }
     }
 
@@ -205,7 +207,14 @@ struct LockScreenCard: View {
         .foregroundStyle(.white)
         .padding(.horizontal, inIsland ? 4 : 14)   // v26: the same gap on every side (concentric)
         .padding(.vertical, inIsland ? 2 : 12)   // v33: room for the taller card (iOS caps it at 160 pt)
-        .background { if !inIsland { ZStack { DotGrid().fill(HDTone.instrumentDot); EdgeTicks(state: state, headsUp: headsUp) } } }   // v55: hairline plate   // v23: ticks around the card
+        .background { if !inIsland { ZStack {
+            DotGrid().fill(HDTone.instrumentDot)   // v57: JobTrail map dots (22pt)
+            EdgeTicks(state: state, headsUp: headsUp)
+            // v57: the active card gets an amber border (Live Activities can't animate the glow).
+            if state.currentEnd != nil || state.overSince != nil {
+                ContainerRelativeShape().strokeBorder(HDTone.amber.opacity(0.5), lineWidth: 1)
+            }
+        } } }   // v55: hairline plate   // v23: ticks around the card
     }
 
     /// Nothing running and nothing coming up (free, no next block, no timer).
@@ -216,14 +225,14 @@ struct LockScreenCard: View {
     private var emptyDay: some View {
         HStack(spacing: inIsland ? 10 : 12) {
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: inIsland ? 30 : 38, weight: .semibold))
+                .font(.geist(size: inIsland ? 30 : 38, weight: .semibold))
                 .foregroundStyle(DayLiveStyle.doneGreen)
             VStack(alignment: .leading, spacing: 2) {
                 Text(state.title)
-                    .font(.system(size: inIsland ? 16 : 19, weight: .bold))
+                    .font(.geist(size: inIsland ? 16 : 19, weight: .bold))
                     .lineLimit(1)
                 Text(state.label)
-                    .font(.system(size: inIsland ? 12.5 : 14, weight: .medium))
+                    .font(.geist(size: inIsland ? 12.5 : 14, weight: .medium))
                     .opacity(0.7)
                     .lineLimit(1)
             }
@@ -247,12 +256,12 @@ struct LockScreenCard: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 HDIcon(state.iconName ?? "event", size: 17)
-                Text(state.title).font(.system(size: 14, weight: .semibold)).lineLimit(1).layoutPriority(-1)
-                Text("·").font(.system(size: 14, weight: .semibold)).opacity(0.6)
+                Text(state.title).font(.geist(size: 14, weight: .semibold)).lineLimit(1).layoutPriority(-1)
+                Text("·").font(.geist(size: 14, weight: .semibold)).opacity(0.6)
                 TimerLabel(state: state, size: 15).layoutPriority(1)   // not .fixedSize(): that blanks the Island
                 Spacer(minLength: 4)
                 if let endText, state.currentEnd != nil {
-                    Text(endText).font(.system(size: 12, weight: .semibold)).opacity(0.75).lineLimit(1)
+                    Text(endText).font(.geist(size: 12, weight: .semibold)).opacity(0.75).lineLimit(1)
                 }
             }
             .foregroundStyle(nowColor)
@@ -282,12 +291,12 @@ struct LockScreenCard: View {
             HStack(spacing: 7) {
                 HDIcon(state.iconName ?? "event", size: inIsland ? 17 : 20)
                 Text(state.title)
-                    .font(.system(size: inIsland ? 14 : 15, weight: .semibold))
+                    .font(.geist(size: inIsland ? 14 : 15, weight: .semibold))
                     .lineLimit(1)
                     .layoutPriority(-1)
                 Spacer(minLength: 6)
                 if outOfDate && !headsUp && state.paused != true {
-                    Text("Out of date").font(.system(size: 12, weight: .semibold)).opacity(0.7)
+                    Text("Out of date").font(.geist(size: 12, weight: .semibold)).opacity(0.7)
                 } else if let endText {
                     Text((state.currentEnd != nil ? "ends \(endText)" : endText).uppercased())
                         .font(.mono(11, .medium)).kerning(1.5).opacity(0.8).lineLimit(1)   // v55
@@ -332,16 +341,16 @@ struct NowNextStrip: View {
     var body: some View {
         VStack(spacing: 3) {
             HStack {
-                Text("Now")
+                Text("NOW")
                 Spacer()
-                Text("Next")
+                Text("NEXT")
             }
-            .font(.system(size: 12, weight: .semibold))
-            .opacity(0.6)
+            .font(.mono(10, .semibold)).kerning(0.8)   // v58: JobTrail caps
+            .foregroundStyle(HDTone.dim)
             HStack(spacing: 10) {
-                Text(title).font(.system(size: big, weight: .heavy)).lineLimit(1).minimumScaleFactor(0.6)
+                Text(title).font(.geist(size: big, weight: .heavy)).lineLimit(1).minimumScaleFactor(0.6)
                 ZStack {
-                    Capsule().fill(Color.white.opacity(0.15)).frame(height: 5)
+                    Capsule().fill(HDTone.hover).frame(height: 5)
                     if let s = start, let e = end, e > s {
                         ProgressView(timerInterval: s...e, countsDown: false) { EmptyView() } currentValueLabel: { EmptyView() }
                             .progressViewStyle(.linear).tint(color)
@@ -350,7 +359,7 @@ struct NowNextStrip: View {
                         .shadow(color: .black.opacity(0.5), radius: 2)
                 }
                 .frame(minWidth: 44)
-                Text(next).font(.system(size: big, weight: .heavy)).lineLimit(1).minimumScaleFactor(0.6)
+                Text(next).font(.geist(size: big, weight: .heavy)).lineLimit(1).minimumScaleFactor(0.6)
             }
             HStack {
                 Text(t(start))
@@ -365,7 +374,7 @@ struct NowNextStrip: View {
                 Spacer()
                 Text(t(nextStart))
             }
-            .font(.system(size: 14, weight: .bold))
+            .font(.geist(size: 14, weight: .bold))
         }
     }
 }
@@ -444,16 +453,16 @@ struct PhasesStrip: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
                     HDIcon("free", size: 17).foregroundStyle(DayLiveStyle.doneGreen)
-                    Text("Free").font(.system(size: 14, weight: .semibold)).foregroundStyle(DayLiveStyle.doneGreen)
-                    Text("·").font(.system(size: 14, weight: .semibold)).opacity(0.6)
+                    Text("Free").font(.geist(size: 14, weight: .semibold)).foregroundStyle(DayLiveStyle.doneGreen)
+                    Text("·").font(.geist(size: 14, weight: .semibold)).opacity(0.6)
                     TimerLabel(state: state, size: 15).layoutPriority(1)
                     Spacer(minLength: 4)
-                    Text("until \(t(state.nextStart))").font(.system(size: 12, weight: .semibold)).opacity(0.7).lineLimit(1)
+                    Text("until \(t(state.nextStart))").font(.geist(size: 12, weight: .semibold)).opacity(0.7).lineLimit(1)
                 }
                 strip
                 HStack(spacing: 8) {
                     Circle().fill(nextCol).frame(width: 9, height: 9)
-                    Text("Next: \(next)").font(.system(size: 13, weight: .bold)).lineLimit(1)
+                    Text("Next: \(next)").font(.geist(size: 13, weight: .bold)).lineLimit(1)
                     Spacer(minLength: 6)
                     BlockActionButton(state: state)
                 }
@@ -462,10 +471,10 @@ struct PhasesStrip: View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 7) {
                 HDIcon("free", size: inIsland ? 17 : 20).foregroundStyle(DayLiveStyle.doneGreen)
-                Text("Free time").font(.system(size: inIsland ? 14 : 15, weight: .semibold))
+                Text("Free time").font(.geist(size: inIsland ? 14 : 15, weight: .semibold))
                     .foregroundStyle(DayLiveStyle.doneGreen).lineLimit(1)
                 Spacer(minLength: 6)
-                Text("until \(t(state.nextStart))").font(.system(size: 13, weight: .semibold)).opacity(0.7).lineLimit(1)
+                Text("until \(t(state.nextStart))").font(.geist(size: 13, weight: .semibold)).opacity(0.7).lineLimit(1)
             }
             HStack(alignment: .center, spacing: 8) {
                 TimerLabel(state: state, size: inIsland ? 26 : 32)
@@ -475,10 +484,10 @@ struct PhasesStrip: View {
             strip
             HStack(spacing: 8) {
                 Circle().fill(nextCol).frame(width: 9, height: 9)
-                Text("Next: \(next)").font(.system(size: 13.5, weight: .bold)).lineLimit(1)
+                Text("Next: \(next)").font(.geist(size: 13.5, weight: .bold)).lineLimit(1)
                 Spacer(minLength: 6)
                 if fr.count > 2, let later = state.laterTitle, !inIsland {
-                    Text("then \(later)").font(.system(size: 12.5, weight: .semibold)).opacity(0.6).lineLimit(1)
+                    Text("then \(later)").font(.geist(size: 12.5, weight: .semibold)).opacity(0.6).lineLimit(1)
                         .layoutPriority(-1)
                 }
             }
@@ -633,7 +642,7 @@ struct HeadsUpBand: View {
             Spacer(minLength: 4)
             if let place { Text(place).lineLimit(1).opacity(0.85) }
         }
-        .font(.system(size: 13, weight: .heavy))
+        .font(.geist(size: 13, weight: .heavy))
         .foregroundStyle(color)
         .padding(.horizontal, 9)
         .padding(.vertical, 3)
@@ -749,7 +758,7 @@ struct TimeLeft: View {
         if let end, end > Date.now {
             Text(timerInterval: Date.now...end, countsDown: true)
                 .monospacedDigit()
-                .font(.system(size: 15, weight: .semibold))
+                .font(.geist(size: 15, weight: .semibold))
                 .foregroundStyle(accent)
                 .multilineTextAlignment(.trailing)
                 .frame(width: 60)
@@ -765,14 +774,14 @@ struct CardTitle: View {
     var body: some View {
         if state.source == .free && state.nextStart != nil {
             Text(state.title)
-                .font(.system(size: size * 0.8, weight: .bold))
+                .font(.geist(size: size * 0.8, weight: .bold))
                 .foregroundStyle(.white)
                 .padding(.horizontal, size * 0.55)
                 .padding(.vertical, size * 0.14)
                 .background(DayLiveStyle.doneGreen, in: Capsule())
         } else {
             Text(state.title)
-                .font(.system(size: size, weight: .bold))
+                .font(.geist(size: size, weight: .bold))
                 .lineLimit(1)
         }
     }
@@ -784,7 +793,7 @@ struct TimerLabel: View {
     var size: CGFloat = 14
 
     private func unit(_ s: String) -> some View {
-        Text(s).font(.system(size: size * 0.6, weight: .bold)).kerning(0.6).opacity(0.85).lineLimit(1)
+        Text(s).font(.geist(size: size * 0.6, weight: .bold)).kerning(0.6).opacity(0.85).lineLimit(1)
     }
 
     /// 1930 s -> "32:10", 4210 s -> "1:10:10"
@@ -873,7 +882,7 @@ struct PauseButton: View {
             let paused = state.paused == true
             Button(intent: PauseBlockIntent(blockID: id, pause: !paused)) {
                 Image(systemName: paused ? "play.fill" : "pause.fill")
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.geist(size: 14, weight: .bold))
                     .foregroundStyle(paused ? .black : .white)
                     .contentTransition(.symbolEffect(.replace.downUp))
                     .frame(width: 34, height: 34)
@@ -902,7 +911,7 @@ struct BlockActionButton: View {
                     Text(buttonTitle(action))
                         .foregroundStyle(ink)
                 }
-                    .font(.system(size: 14, weight: action == .startNext ? .semibold : .bold))
+                    .font(.geist(size: 14, weight: action == .startNext ? .semibold : .bold))
                     .padding(.horizontal, 14)
                     .frame(height: 34)
                     .background(fill, in: Chamfer(cut: 8))   // v55
@@ -958,13 +967,13 @@ struct WatchCard: View {
                 Spacer(minLength: 2)
                 if let nextTime {
                     Text(nextTime)
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.geist(size: 11, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.7))
                         .lineLimit(1)
                 }
             }
             Text(state.title)
-                .font(.system(size: 16, weight: .bold))
+                .font(.geist(size: 16, weight: .bold))
                 .lineLimit(1)
             HStack(spacing: 6) {
                 JourneyTrack(state: state, knob: state.paused == true ? Color(white: 0.6) : state.accentColor)   // v24 journey
@@ -1020,7 +1029,7 @@ struct DayClosedCard: View {
     private func reviewLink(_ n: Int, _ url: URL) -> some View {
         Link(destination: url) {
             Text("Review \(n)")
-                .font(.system(size: 12, weight: .bold))
+                .font(.geist(size: 12, weight: .bold))
                 .padding(.horizontal, 10)
                 .frame(height: 24)
                 .background(Color.white.opacity(0.2), in: Capsule())
@@ -1031,8 +1040,8 @@ struct DayClosedCard: View {
     private var focusText: some View {
         let m = state.focusMinutes ?? 0
         let big = compact ? 22.0 : 32.0
-        func n(_ s: String) -> Text { Text(s).font(.system(size: big, weight: .heavy)) }
-        func u(_ s: String) -> Text { Text(s).font(.system(size: big * 0.45, weight: .heavy)) }
+        func n(_ s: String) -> Text { Text(s).font(.geist(size: big, weight: .heavy)) }
+        func u(_ s: String) -> Text { Text(s).font(.geist(size: big * 0.45, weight: .heavy)) }
         return Group {
             if compact {
                 m >= 60 ? n("\(m / 60)h \(m % 60)m") + u(" active") : n("\(m)m") + u(" active")
@@ -1079,7 +1088,7 @@ struct DayClosedCard: View {
                 Spacer(minLength: 6)
                 if let nextLine { Text(nextLine).lineLimit(1) }
             }
-            .font(.system(size: 13, weight: .semibold))
+            .font(.geist(size: 13, weight: .semibold))
             .opacity(0.7)
         }
         .foregroundStyle(.white)
@@ -1090,7 +1099,7 @@ struct DayClosedCard: View {
     private func stat(_ label: String, _ value: String, _ color: Color) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(label.uppercased())
-                .font(.system(size: 9, weight: .heavy))
+                .font(.geist(size: 9, weight: .heavy))
                 .kerning(1)
                 .foregroundStyle(.white.opacity(0.6))
             Text(value)
@@ -1116,9 +1125,9 @@ struct DriveCard: View {
                 HDIcon("car", size: 26).foregroundStyle(DayLiveStyle.calendarBlue)   // v47
                 if let a = state.arriveAt {
                     Text("Arrive \(a.formatted(date: .omitted, time: .shortened))")
-                        .font(.system(size: 16, weight: .heavy))
+                        .font(.geist(size: 16, weight: .heavy))
                 } else {
-                    Text("Driving").font(.system(size: 16, weight: .heavy))
+                    Text("Driving").font(.geist(size: 16, weight: .heavy))
                 }
                 Spacer(minLength: 4)
                 if let since = state.driveSince {
@@ -1128,17 +1137,17 @@ struct DriveCard: View {
                             .monospacedDigit()
                             .frame(width: 56, alignment: .leading)   // fits 1:02:03
                     }
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.geist(size: 12, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.72))
                 }
             }
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(state.title).font(.system(size: 21, weight: .bold)).lineLimit(1)
+                    Text(state.title).font(.geist(size: 21, weight: .bold)).lineLimit(1)
                     if let spare {
                         Text(late ? "\(-spare) min late" : "\(spare) min to spare")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(late ? Color(red: 1, green: 0.27, blue: 0.23) : DayLiveStyle.doneGreen)
+                            .font(.geist(size: 13, weight: .bold))
+                            .foregroundStyle(late ? HDTone.danger : DayLiveStyle.doneGreen)
                     }
                 }
                 Spacer(minLength: 0)
@@ -1190,7 +1199,7 @@ struct IslandRingIcon: View {
     let state: DayActivityAttributes.ContentState
     var size: CGFloat = 24
 
-    private static let overYellow = Color(red: 1, green: 0.84, blue: 0.04)
+    private static let overYellow = HDTone.amber
 
     /// v23: the block's icon in a soft capsule of its color (the timer beside it uses the same color).
     /// Free time = a solid green F (kept from v22). Minimal view = this capsule alone.
@@ -1240,7 +1249,7 @@ struct IslandTimer: View {
                     Text("+")
                     sized(since...since.addingTimeInterval(24 * 3600), down: false)
                 }
-                .foregroundStyle(Color(red: 1, green: 0.84, blue: 0.04))
+                .foregroundStyle(HDTone.amber)
             case .upNext(let next):
                 HStack(spacing: 3) {
                     Text("in")
@@ -1259,7 +1268,7 @@ struct IslandTimer: View {
     /// "1d 4h" → big digits, small letters (v23 #3).
     static func bigSmall(_ s: String) -> Text {
         s.reduce(Text("")) { acc, ch in
-            acc + Text(String(ch)).font(.system(size: ch.isNumber ? 14 : 9, weight: .semibold))
+            acc + Text(String(ch)).font(.geist(size: ch.isNumber ? 14 : 9, weight: .semibold))
         }
     }
 

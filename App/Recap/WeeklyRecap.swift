@@ -140,9 +140,9 @@ struct GreenCheck: View {
     var size: CGFloat
     var body: some View {
         ZStack {
-            Circle().fill(Color(red: 0.19, green: 0.82, blue: 0.35))   // #30D158
+            Circle().fill(HDTone.green)   // #30D158
             Image(systemName: "checkmark")
-                .font(.system(size: size * 0.5, weight: .heavy))
+                .font(.geist(size: size * 0.5, weight: .heavy))
                 .foregroundStyle(.white)
         }
         .frame(width: size, height: size)
@@ -161,7 +161,7 @@ struct RecapCard: View {
             HStack {
                 HStack(spacing: 8) {
                     GreenCheck(size: 13)
-                    Text("HYPERDAY").font(.system(size: 12, weight: .heavy)).kerning(4)
+                    Text("HYPERDAY").font(.geist(size: 12, weight: .heavy)).kerning(4)
                 }
                 Spacer()
                 caps(recap.range)
@@ -170,11 +170,11 @@ struct RecapCard: View {
             VStack(alignment: .leading, spacing: 2) {
                 caps("Your week")
                 Text(hoursText(recap.focusedHours))
-                    .font(.system(size: 64, weight: .heavy))
+                    .font(.geist(size: 64, weight: .heavy))
                     .kerning(-2)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
-                Text(subline).font(.system(size: 15)).foregroundStyle(muted)
+                Text(subline).font(.geist(size: 15)).foregroundStyle(muted)
             }
 
             HStack(spacing: 14) {
@@ -200,7 +200,7 @@ struct RecapCard: View {
                         ForEach(recap.byCategory) { c in
                             HStack(spacing: 5) {
                                 Circle().fill(c.color).frame(width: 7, height: 7)
-                                Text(c.name).font(.system(size: 11)).foregroundStyle(muted)
+                                Text(c.name).font(.geist(size: 11)).foregroundStyle(muted)
                             }
                         }
                     }
@@ -213,14 +213,14 @@ struct RecapCard: View {
                 (Text("Top category: ").foregroundStyle(muted)
                  + Text(top).bold()
                  + Text(recap.meetingShare.map { " · Meetings took \($0)% of your time" } ?? "").foregroundStyle(muted))
-                    .font(.system(size: 12))
+                    .font(.geist(size: 12))
             }
         }
         .foregroundStyle(Color(white: 0.96))
         .padding(.horizontal, 24)
         .padding(.vertical, 26)
         .background(
-            Color(red: 0.09, green: 0.094, blue: 0.11),   // v32: flat, no gradients
+            HDTone.surface,   // v32: flat, no gradients
             in: RoundedRectangle(cornerRadius: 28, style: .continuous)
         )
         .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).strokeBorder(line))
@@ -232,13 +232,13 @@ struct RecapCard: View {
     }
 
     private func caps(_ s: String) -> some View {
-        Text(s.uppercased()).font(.system(size: 10, weight: .bold)).kerning(1.4).foregroundStyle(muted)
+        Text(s.uppercased()).font(.geist(size: 10, weight: .bold)).kerning(1.4).foregroundStyle(muted)
     }
 
     private func stat(_ label: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             caps(label)
-            Text(value).font(.system(size: 20, weight: .bold)).lineLimit(1).minimumScaleFactor(0.7)
+            Text(value).font(.geist(size: 20, weight: .bold)).lineLimit(1).minimumScaleFactor(0.7)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 8)
@@ -258,14 +258,14 @@ struct WeeklyRecapView: View {
 
     private func render() -> UIImage? {
         let r = ImageRenderer(content: RecapCard(recap: recap).frame(width: 350, height: 540).padding(20)
-            .background(Color(red: 0.05, green: 0.055, blue: 0.063)))
+            .background(Color.black))
         r.scale = 3
         return r.uiImage
     }
 
     var body: some View {
         ZStack {
-            Color(red: 0.05, green: 0.055, blue: 0.063).ignoresSafeArea()
+            Color.black.ignoresSafeArea()
             VStack(spacing: 20) {
                 HStack {
                     Spacer()
@@ -310,7 +310,7 @@ private struct RecapButton: ButtonStyle {
     let filled: Bool
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 14, weight: .semibold))
+            .font(.geist(size: 14, weight: .semibold))
             .foregroundStyle(.white)
             .frame(height: 44)
             .background(filled ? Theme.blue : Color.clear, in: RoundedRectangle(cornerRadius: 4))

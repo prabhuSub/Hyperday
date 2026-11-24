@@ -2,8 +2,8 @@ import SwiftUI
 
 // v51: dot-matrix + line charts for the Stats tab (Apple look, square dots like a LED board).
 
-private let doneColor = Theme.text           // dots above the line
-private let missColor = Color(hex: "#FF9F0A") // dots below the line
+private let doneColor = HDTone.green          // v58: done = JobTrail green
+private let missColor = HDTone.amber // dots below the line
 
 extension HistoryStore {
     /// Hours spent in your own planned blocks on a day.
@@ -52,6 +52,7 @@ private struct DotColumn: View {
             }
         }
         .frame(width: CGFloat(columns) * (dot + gap) - gap)
+        .jtReveal(horizontal: false, from: down ? .top : .bottom, delay: 0.2, duration: 0.8)   // v58: columns grow in
     }
 }
 
@@ -60,7 +61,7 @@ private struct ChartHeader: View {
     var right: String
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(title).font(.hd(size: 15, weight: .bold)).foregroundStyle(Theme.text)
+            Text(title).font(.hd(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
             Spacer()
             Text(right.uppercased()).font(.hdMono(size: 10.5, weight: .medium)).kerning(1.5).foregroundStyle(Theme.muted).lineLimit(1)
         }
@@ -73,7 +74,7 @@ private func hoursText(_ h: Double) -> String {
 
 private func bigNumber(_ value: String, _ note: String?, good: Bool, trailing: String? = nil) -> some View {
     HStack(alignment: .firstTextBaseline, spacing: 6) {
-        Text(value.uppercased()).font(.hdMono(size: 30, weight: .light)).foregroundStyle(Theme.text)
+        Text(value.uppercased()).font(.hdMono(size: 28, weight: .medium)).foregroundStyle(Theme.text)
         if let note {
             Text(note).font(.hd(size: 13, weight: .bold))
                 .foregroundStyle(good ? DayLiveStyle.doneGreen : missColor)
@@ -276,10 +277,22 @@ private struct LineChartShape: View {
             }
             ctx.stroke(line(last), with: .color(missColor), style: StrokeStyle(lineWidth: 2, dash: [4, 4]))
             ctx.stroke(line(cur), with: .color(Theme.blue), style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
-            if let v = cur.last {
-                let c = pt(cur.count - 1, v)
-                ctx.fill(Path(ellipseIn: CGRect(x: c.x - 6, y: c.y - 6, width: 12, height: 12)), with: .color(Theme.card))
-                ctx.fill(Path(ellipseIn: CGRect(x: c.x - 4.5, y: c.y - 4.5, width: 9, height: 9)), with: .color(Theme.blue))
+        }
+        .jtReveal(duration: 1.2)   // v58: the line draws in from the left
+        .overlay {
+            // v58: today's point pulses with ripples (JobTrail live dot).
+            GeometryReader { g in
+                if let v = cur.last {
+                    let top = max((cur + last).max() ?? 1, 1) * 1.05
+                    let x = g.size.width * CGFloat(cur.count - 1) / CGFloat(span)
+                    let y = g.size.height - g.size.height * CGFloat(v / top)
+                    ZStack {
+                        RippleRings(color: Theme.blue, size: 9)
+                        Circle().fill(Theme.card).frame(width: 12, height: 12)
+                        PulseDot(color: Theme.blue, size: 9)
+                    }
+                    .position(x: x, y: y)
+                }
             }
         }
     }

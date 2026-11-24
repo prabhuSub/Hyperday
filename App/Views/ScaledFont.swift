@@ -5,15 +5,17 @@ import UIKit
 /// `.hd(size:)` is a drop-in for `.hd(size:)` that grows with the user's text size,
 /// capped at XXX Large so card layouts don't break (the accessibility sizes are a later step).
 extension Font {
+    /// v57: Geist (Geist Mono when `design: .monospaced`), following Text Size.
     static func hd(size: CGFloat, weight: Font.Weight = .regular, design: Font.Design = .default) -> Font {
-        .system(size: HDType.scaled(size), weight: weight, design: design)
+        design == .monospaced ? .geistMono(size: HDType.scaled(size), weight: weight)
+                              : .geist(size: HDType.scaled(size), weight: weight)
     }
 }
 
 extension Font {
-    /// v55: SF Mono readouts that follow Text Size.
+    /// v57: Geist Mono readouts (labels, times, stats) that follow Text Size.
     static func hdMono(size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        .system(size: HDType.scaled(size), weight: weight, design: .monospaced)
+        .geistMono(size: HDType.scaled(size), weight: weight)
     }
 }
 

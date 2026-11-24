@@ -5,14 +5,14 @@ import WidgetKit
 // v47 dock-style widgets (CoolDock look, Prabhu approved): a black tray, slightly lighter rounded tiles,
 // big light numbers, thin ring gauges, solid icons with no background.
 
-private let trayFill = Color(red: 0.06, green: 0.063, blue: 0.07)
+private let trayFill = Color.black
 /// v55: the tray gets brushed hairlines.
 private var tray: some View { ZStack { trayFill; DotGrid().fill(HDTone.instrumentDot) } }
-private let tileFill = Color(red: 0.12, green: 0.125, blue: 0.14)
-private let ink = Color(white: 0.95)
-private let muted = Color(white: 0.55)
-private let green = Color(red: 48 / 255, green: 209 / 255, blue: 88 / 255)
-private let cyan = Color(hex: "#64D2FF")
+private let tileFill = HDTone.surface
+private let ink = HDTone.textHi            // v58: JobTrail text tokens
+private let muted = HDTone.dim
+private let green = HDTone.green
+private let cyan = HDTone.blue
 
 private struct Tile<C: View>: View {
     var padding: CGFloat = 10
@@ -22,6 +22,7 @@ private struct Tile<C: View>: View {
             .padding(padding)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Chamfer(cut: 8).fill(tileFill))
+            .overlay(Chamfer(cut: 8).strokeBorder(HDTone.lineDark, lineWidth: 1))   // v58: 1px #313131
     }
 }
 
@@ -32,7 +33,7 @@ private struct Ring<C: View>: View {
     @ViewBuilder var center: () -> C
     var body: some View {
         ZStack {
-            Circle().stroke(Color(white: 0.22), lineWidth: line)
+            Circle().stroke(HDTone.hover, lineWidth: line)
             Circle().trim(from: 0, to: max(0.001, min(1, value)))
                 .stroke(color, style: StrokeStyle(lineWidth: line, lineCap: .round))
                 .rotationEffect(.degrees(-90))
@@ -56,19 +57,28 @@ struct DockNowView: View {
         HStack(spacing: 6) {
             Tile {
                 VStack(alignment: .leading, spacing: 3) {
+                    // v58: status dot + live countdown (green running, amber waiting) + a self-moving bar.
+                    HStack(spacing: 5) {
+                        JTStatusDot(status: cur != nil ? .running : (next != nil ? .waiting : .done), size: 5, animated: false)
+                        Text(cur != nil ? "RUNNING" : (next != nil ? "WAITING" : "DONE"))
+                            .font(.mono(8.5, .semibold)).kerning(0.6)
+                            .foregroundStyle(cur != nil ? HDTone.green : (next != nil ? HDTone.amber : HDTone.blue))
+                    }
                     if let cur {
                         Text(timerInterval: now...max(now, cur.end), countsDown: true)
-                            .font(.mono(24, .semibold))
+                            .font(.mono(22, .semibold)).foregroundStyle(HDTone.green)
                             .lineLimit(1).minimumScaleFactor(0.7)
-                        Text("\(cur.title) left").font(.system(size: 10.5)).foregroundStyle(muted).lineLimit(1)
+                        ProgressView(timerInterval: cur.start...max(cur.end, cur.start.addingTimeInterval(1)), countsDown: false) { EmptyView() } currentValueLabel: { EmptyView() }
+                            .progressViewStyle(.linear).tint(HDTone.green)
+                        Text("\(cur.title) left").font(.geist(size: 10.5)).foregroundStyle(muted).lineLimit(1)
                     } else if let next {
                         Text(timerInterval: now...max(now, next.start), countsDown: true)
-                            .font(.mono(24, .semibold))
+                            .font(.mono(22, .semibold)).foregroundStyle(HDTone.amber)
                             .lineLimit(1).minimumScaleFactor(0.7)
-                        Text("free").font(.system(size: 10.5)).foregroundStyle(muted)
+                        Text("free").font(.geist(size: 10.5)).foregroundStyle(muted)
                     } else {
-                        Text("Done").font(.system(size: 24, weight: .semibold))
-                        Text("for today").font(.system(size: 10.5)).foregroundStyle(muted)
+                        Text("Done").font(.geist(size: 24, weight: .semibold))
+                        Text("for today").font(.geist(size: 10.5)).foregroundStyle(muted)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -78,12 +88,12 @@ struct DockNowView: View {
                     if let next {
                         HDIcon(next.icon ?? "event", size: 22).foregroundStyle(Color(hex: next.colorHex))
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(next.title).font(.system(size: 12.5, weight: .semibold)).lineLimit(1)
-                            Text(t(next.start)).font(.system(size: 10.5)).foregroundStyle(muted)
+                            Text(next.title).font(.geist(size: 12.5, weight: .semibold)).lineLimit(1)
+                            Text(t(next.start)).font(.geist(size: 10.5)).foregroundStyle(muted)
                         }
                     } else {
                         HDIcon("done", size: 20).foregroundStyle(green)
-                        Text("Nothing next").font(.system(size: 12.5, weight: .semibold)).lineLimit(1)
+                        Text("Nothing next").font(.geist(size: 12.5, weight: .semibold)).lineLimit(1)
                     }
                     Spacer(minLength: 0)
                 }
@@ -92,7 +102,7 @@ struct DockNowView: View {
             Tile(padding: 9) {
                 let p = day?.progress(at: now) ?? 0
                 Ring(value: p, color: green) {
-                    Text("\(Int((p * 100).rounded()))").font(.system(size: 15, weight: .semibold))
+                    Text("\(Int((p * 100).rounded()))").font(.geist(size: 15, weight: .semibold))
                 }
             }
             .frame(width: 72)
@@ -144,7 +154,7 @@ struct DockDayView: View {
                     HDIcon("done", size: 20).foregroundStyle(green)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("\(done)/\(blocks.count)").font(.mono(20, .semibold))
-                        Text("blocks done").font(.system(size: 10.5)).foregroundStyle(muted)
+                        Text("blocks done").font(.geist(size: 10.5)).foregroundStyle(muted)
                     }
                     Spacer(minLength: 0)
                 }
@@ -156,7 +166,7 @@ struct DockDayView: View {
                         Spacer()
                         Text("\(Int(active) / 60)h \(Int(active) % 60)m")
                     }
-                    .font(.system(size: 10.5))
+                    .font(.geist(size: 10.5))
                     HStack(alignment: .bottom, spacing: 3) {
                         ForEach(bars.indices, id: \.self) { i in
                             Chamfer(cut: 8)
@@ -173,7 +183,7 @@ struct DockDayView: View {
                     if let car {
                         VStack(spacing: 0) {
                             HDIcon("bolt", size: 13)
-                            Text("\(car.battery)").font(.system(size: 12, weight: .semibold))
+                            Text("\(car.battery)").font(.geist(size: 12, weight: .semibold))
                         }
                     } else {
                         HDIcon("car", size: 22)
@@ -201,17 +211,17 @@ struct DockSmallNowView: View {
                     HDIcon((cur ?? next)?.icon ?? "free", size: 22)
                         .foregroundStyle((cur ?? next).map { Color(hex: $0.colorHex) } ?? green)
                     Spacer()
-                    if let cur { Text("ends \(t(cur.end))").font(.system(size: 11)).foregroundStyle(muted) }
+                    if let cur { Text("ends \(t(cur.end))").font(.geist(size: 11)).foregroundStyle(muted) }
                 }
                 Spacer(minLength: 2)
                 if let b = cur ?? next {
                     Text(timerInterval: now...max(now, cur?.end ?? b.start), countsDown: true)
                         .font(.mono(30, .semibold))
                         .lineLimit(1).minimumScaleFactor(0.6)
-                    Text(cur == nil ? "until \(b.title)" : b.title).font(.system(size: 12)).foregroundStyle(muted).lineLimit(1)
+                    Text(cur == nil ? "until \(b.title)" : b.title).font(.geist(size: 12)).foregroundStyle(muted).lineLimit(1)
                 } else {
-                    Text("Done").font(.system(size: 30, weight: .semibold))
-                    Text("for today").font(.system(size: 12)).foregroundStyle(muted)
+                    Text("Done").font(.geist(size: 30, weight: .semibold))
+                    Text("for today").font(.geist(size: 12)).foregroundStyle(muted)
                 }
                 Spacer(minLength: 6)
                 if let cur, cur.done != true {
@@ -219,7 +229,7 @@ struct DockSmallNowView: View {
                         if cur.isPlan == true {
                             Button(intent: PauseBlockIntent(blockID: cur.id, pause: cur.paused != true)) {
                                 Image(systemName: cur.paused == true ? "play.fill" : "pause.fill")
-                                    .font(.system(size: 13, weight: .bold))
+                                    .font(.geist(size: 13, weight: .bold))
                                     .frame(maxWidth: .infinity).frame(height: 30)
                                     .background(Capsule().fill(Color(white: 0.2)))
                             }
@@ -255,31 +265,31 @@ struct DockSmallTilesView: View {
                 Tile(padding: 6) {
                     VStack(spacing: 3) {
                         Ring(value: p, color: green, line: 4) {
-                            Text("\(Int((p * 100).rounded()))").font(.system(size: 11, weight: .semibold))
+                            Text("\(Int((p * 100).rounded()))").font(.geist(size: 11, weight: .semibold))
                         }
-                        Text("Day").font(.system(size: 9.5)).foregroundStyle(muted)
+                        Text("Day").font(.geist(size: 9.5)).foregroundStyle(muted)
                     }
                 }
                 Tile(padding: 6) {
                     VStack(spacing: 4) {
                         HDIcon(car?.locked == false ? "lock" : "lock", size: 20)
-                            .foregroundStyle(car?.locked == false ? Color(hex: "#FF453A") : ink)
+                            .foregroundStyle(car?.locked == false ? HDTone.danger : ink)
                         Text(car?.locked == false ? "Unlocked" : (car == nil ? "Car" : "Locked"))
-                            .font(.system(size: 9.5)).foregroundStyle(muted)
+                            .font(.geist(size: 9.5)).foregroundStyle(muted)
                     }
                 }
             }
             GridRow {
                 Tile(padding: 6) {
                     VStack(spacing: 2) {
-                        Text(car.map { "\($0.battery)%" } ?? "–").font(.system(size: 18, weight: .semibold))
-                        Text("Car").font(.system(size: 9.5)).foregroundStyle(muted)
+                        Text(car.map { "\($0.battery)%" } ?? "–").font(.geist(size: 18, weight: .semibold))
+                        Text("Car").font(.geist(size: 9.5)).foregroundStyle(muted)
                     }
                 }
                 Tile(padding: 6) {
                     VStack(spacing: 2) {
-                        Text("\(left)").font(.system(size: 18, weight: .semibold))
-                        Text("Left").font(.system(size: 9.5)).foregroundStyle(muted)
+                        Text("\(left)").font(.geist(size: 18, weight: .semibold))
+                        Text("Left").font(.geist(size: 9.5)).foregroundStyle(muted)
                     }
                 }
             }

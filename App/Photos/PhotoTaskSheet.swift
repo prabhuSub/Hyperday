@@ -34,7 +34,7 @@ struct PhotoTaskSheet: View {
                                 .clipShape(Chamfer(cut: 8))
                             VStack(alignment: .leading, spacing: 10) {
                                 Text(images.count > 1 ? "\(images.count) photos · saved as is, not read." : "Saved as is, not read.")
-                                    .font(.subheadline).foregroundStyle(.secondary)
+                                    .font(.hd(size: 15)).foregroundStyle(.secondary)
                                 Button("Retake") {
                                     replacingFirst = true
                                     if hasCamera { showCamera = true } else { showLibrary = true }

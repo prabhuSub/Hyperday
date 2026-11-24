@@ -173,8 +173,8 @@ struct PhotosSection: View {
                         Button { showLibrary = true } label: { Label("Choose photo", systemImage: "photo.on.rectangle") }
                     } label: {
                         VStack(spacing: 4) {
-                            Image(systemName: "plus").font(.system(size: 24, weight: .semibold))
-                            Text("Add photo").font(.footnote.weight(.semibold))
+                            Image(systemName: "plus").font(.geist(size: 24, weight: .semibold))
+                            Text("Add photo").font(.hd(size: 13, weight: .semibold))
                         }
                         .frame(width: 96, height: 128)
                         .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)

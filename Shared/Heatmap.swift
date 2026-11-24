@@ -136,7 +136,7 @@ struct HeatGrid: View {
                                 ? d.formatted(.dateTime.month(.abbreviated)) : nil
                         }
                         Text(label ?? "")
-                            .font(.system(size: max(8, cell * 0.8)))
+                            .font(.geist(size: max(8, cell * 0.8)))
                             .foregroundStyle(.secondary)
                             .fixedSize()
                             .frame(width: cell, alignment: .leading)
@@ -184,7 +184,7 @@ struct HeatLegend: View {
             }
             Text("More")
         }
-        .font(.system(size: 10))
+        .font(.geist(size: 10))
         .foregroundStyle(.secondary)
     }
 }

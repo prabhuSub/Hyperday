@@ -80,16 +80,16 @@ struct GoodDayCard: View {
             Caps("What your good days have in common")
             if let report {
                 if let missing = report.missing {
-                    Text(missing).font(.system(size: 13)).foregroundStyle(Theme.muted)
+                    Text(missing).font(.geist(size: 13)).foregroundStyle(Theme.muted)
                 } else {
                     Text("Good day = \(GoodDay.goodThreshold)+ blocks done. Last 8 weeks: \(report.goodDays) good days, \(report.otherDays) others.")
-                        .font(.system(size: 12.5)).foregroundStyle(Theme.muted)
+                        .font(.geist(size: 12.5)).foregroundStyle(Theme.muted)
                     ForEach(report.factors) { f in
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
-                                Text(f.name).font(.system(size: 13.5, weight: .semibold)).foregroundStyle(Theme.text)
+                                Text(f.name).font(.geist(size: 13.5, weight: .semibold)).foregroundStyle(Theme.text)
                                 Spacer()
-                                Text("\(f.good)% vs \(f.other)%").font(.system(size: 12)).foregroundStyle(Theme.muted)
+                                Text("\(f.good)% vs \(f.other)%").font(.geist(size: 12)).foregroundStyle(Theme.muted)
                             }
                             GeometryReader { g in
                                 VStack(alignment: .leading, spacing: 3) {
@@ -103,11 +103,11 @@ struct GoodDayCard: View {
                     }
                     if let flat = report.factors.last, abs(flat.good - flat.other) < 10 {
                         Text("\(flat.name) barely differs, so it doesn't seem to matter for you.")
-                            .font(.system(size: 11.5)).foregroundStyle(Theme.muted)
+                            .font(.geist(size: 11.5)).foregroundStyle(Theme.muted)
                     }
                 }
             } else {
-                Text("Looking at your last 8 weeks…").font(.system(size: 13)).foregroundStyle(Theme.muted)
+                Text("Looking at your last 8 weeks…").font(.geist(size: 13)).foregroundStyle(Theme.muted)
             }
         }
         .cardBox()

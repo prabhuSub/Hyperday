@@ -16,7 +16,14 @@ struct PlanWithWordsSheet: View {
                     TextField("gym after work, call mom at lunch, finish the ORBIT doc (90 min)", text: $text, axis: .vertical)
                         .lineLimit(3...6)
                         .focused($focused)
-                    Button(working ? "Planning…" : "Fit into my day") { Task { await plan() } }
+                        .hdShimmer(working)   // v57: what's being written shimmers
+                    Button { Task { await plan() } } label: {
+                        HStack(spacing: 4) {
+                            Text(working ? "Planning" : "Fit into my day")
+                            if working { BlinkCursor() }   // v57: typing cursor while writing
+                        }
+                    }
+                        .hdShimmer(working)
                         .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty || working || !AIPlanner.isAvailable)
                 } footer: {
                     Text(AIPlanner.isAvailable
@@ -33,9 +40,10 @@ struct PlanWithWordsSheet: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(p.title)
                                     Text("\(p.start.formatted(.dateTime.weekday(.abbreviated).hour().minute())) · \(p.minutes) min")
-                                        .font(.caption).foregroundStyle(.secondary)
+                                        .font(.hdMono(size: 11)).foregroundStyle(.secondary)
                                 }
                             }
+                            .hdBlurIn()   // v57: proposals fade in from blur
                         }
                     }
                 }

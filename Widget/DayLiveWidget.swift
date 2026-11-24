@@ -93,7 +93,7 @@ struct DayLiveActivityWidget: Widget {
 struct EmptyDayCheck: View {
     var body: some View {
         Image(systemName: "checkmark")
-            .font(.system(size: 15, weight: .heavy))
+            .font(.geist(size: 15, weight: .heavy))
             .foregroundStyle(DayLiveStyle.doneGreen)
             .accessibilityLabel("Nothing planned")
     }
@@ -103,7 +103,7 @@ struct EmptyDayCheck: View {
 struct ClosedCheck: View {
     var body: some View {
         Image(systemName: "checkmark")
-            .font(.system(size: 12, weight: .heavy))
+            .font(.geist(size: 12, weight: .heavy))
             .foregroundStyle(DayLiveStyle.doneGreen)
             .frame(width: 30, height: 22)
             .background(Capsule().fill(DayLiveStyle.doneGreen.opacity(0.24)))

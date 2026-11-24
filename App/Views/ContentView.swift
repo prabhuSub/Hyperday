@@ -17,6 +17,7 @@ struct TodayView: View {
     @State private var extending: Block?   // v32: long-press the running plan block
     @State private var now = Date.now
     @State private var calendarGranted = CalendarService.shared.hasAccess
+    @State private var seenIDs: Set<String>?   // v57: rows not seen before blur in and flash
     @Environment(\.scenePhase) private var scenePhase
 
     private let tick = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
@@ -30,8 +31,8 @@ struct TodayView: View {
                     // Card + buttons move as one block: TV-app style, they lift and fade together
                     // as they scroll up under the title. The round + covers adding once they're gone.
                     VStack(alignment: .leading, spacing: 12) {
-                        hero(snap: snap)
-                        heroButtons   // same left/right edges as the card above
+                        hero(snap: snap).jtStagger(0)
+                        heroButtons.jtStagger(1)   // same left/right edges as the card above
                     }
                     .padding(.horizontal, 20)   // same margin as the title and the cards below
                     .padding(.top, 6)
@@ -42,18 +43,14 @@ struct TodayView: View {
                             .scaleEffect(phase.value < 0 ? 1 + phase.value * 0.04 : 1, anchor: .top)
                     }
 
-                    VStack(alignment: .leading, spacing: 14) {
-                        if !calendarGranted { calendarBanner }
-                        InfoRow(items: todayNumbers(snap))
-                        Text("Schedule")
-                            .font(.hd(size: 22, weight: .bold))
-                            .foregroundStyle(Theme.text)
-                        timeline(snap: snap)
-                        Text("Plan vs real")
-                            .font(.hd(size: 22, weight: .bold))
-                            .foregroundStyle(Theme.text)
-                            .padding(.top, 8)
-                        RealityCard(blocks: snap.all, now: now)
+                    VStack(alignment: .leading, spacing: 10) {
+                        if !calendarGranted { calendarBanner.jtStagger(0) }
+                        meters(snap).jtStagger(1)          // v58: JobTrail fleet-card meters
+                        JTSectionHead("Schedule", sub: "\(snap.all.count) block\(snap.all.count == 1 ? "" : "s")") { legend }
+                            .jtStagger(2)
+                        timeline(snap: snap).jtStagger(3)
+                        JTSectionHead("Plan vs real").jtStagger(4)
+                        RealityCard(blocks: snap.all, now: now).jtStagger(5)
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
@@ -96,7 +93,7 @@ struct TodayView: View {
             if phase == .active { calendarGranted = CalendarService.shared.hasAccess; now = .now }
         }
         .task {
-            if CalendarService.shared.needsPrompt {
+            if CalendarService.shared.needsPrompt && !UserDefaults.standard.bool(forKey: "hdDemo") {   // v57: no prompt in screenshot runs
                 calendarGranted = await CalendarService.shared.requestAccess()
             }
             await activity.refresh()
@@ -126,22 +123,38 @@ struct TodayView: View {
         let state = snap.current != nil ? (snap.overtime ? "OVER TIME" : "NOW") : (snap.next != nil ? "FREE" : "TODAY")
         return VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
-                HStack {
+                HStack(spacing: 8) {
+                    // v57: live status dot (pulses; ripples while a block is running).
+                    ZStack {
+                        if heroStatus(snap) == .running { RippleRings(color: HDTone.green, size: 7) }
+                        PulseDot(color: heroStatus(snap).color, size: 7, live: heroStatus(snap) != .done)
+                    }
+                    .frame(width: 10, height: 10)
                     Text("\(date) · \(state)")
-                        .font(.hdMono(size: 11, weight: .medium))   // v55: instrument caps
-                        .kerning(2)
-                        .foregroundStyle(HDTone.instrumentMuted)
+                        .font(.hdMono(size: 11, weight: .medium))
+                        .kerning(0.9)
+                        .foregroundStyle(HDTone.dim)
                     Spacer(minLength: 8)
                     heroTimer(snap: snap)
                 }
                 Text(title)
-                    .font(.hd(size: 30, weight: .heavy))
+                    .font(.hd(size: 28, weight: .semibold))
                     .foregroundStyle(.white)
                     .lineLimit(2)
                     .minimumScaleFactor(0.7)
+                    .contentTransition(.opacity)
+                    .id(title)
+                    .hdBlurIn()                      // v57: a new current block fades in from blur
                 Text(subtitle)
                     .font(.hd(size: 14))
-                    .foregroundStyle(.white.opacity(0.75))
+                    .foregroundStyle(HDTone.soft)
+                if let c = snap.current {
+                    // v57: JobTrail progress bar: green while running, red when over time.
+                    let total = max(c.end.timeIntervalSince(c.start), 1)
+                    HDProgressBar(value: now.timeIntervalSince(c.start) / total,
+                                  color: snap.overtime ? HDTone.danger : HDTone.green)
+                        .padding(.top, 4)
+                }
                 if snap.lanes.count > 0 {
                     AppJourney(lanes: snap.lanes, now: now, color: { categories.displayColor(for: $0) })
                         .padding(.top, 8)
@@ -159,12 +172,22 @@ struct TodayView: View {
             if !activity.isRunning || activity.lastError != nil {
                 Text(activity.statusText)
                     .font(.hd(size: 12))
-                    .foregroundStyle(activity.lastError == nil ? Color.white.opacity(0.7) : Theme.red)
+                    .foregroundStyle(activity.lastError == nil ? HDTone.dim : HDTone.danger)
             }
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(InstrumentBackground().clipShape(Chamfer(cut: 14)))   // v55: instrument panel, no gradient
+        .background(ZStack { InstrumentBackground(); DotGrid().fill(HDTone.instrumentDot) }.clipShape(Chamfer(cut: 14)))   // v58: JobTrail map dots
+        .overlay(Chamfer(cut: 14).strokeBorder(HDTone.lineDark, lineWidth: 1))
+        // v57: active card = amber border + soft glow; while a block runs it is "hot" and the glow breathes.
+        .hdGlow(radius: 16, active: heroStatus(snap) != .done, hot: heroStatus(snap) == .running || heroStatus(snap) == .failed)
+        .animation(HDEase.standard(0.5), value: heroStatus(snap) == .running)
+    }
+
+    /// Running = a block is live · failed = over time · waiting = free until the next · done = day complete.
+    private func heroStatus(_ snap: DaySnapshot) -> HDStatus {
+        if snap.current != nil { return snap.overtime ? .failed : .running }
+        return snap.next != nil ? .waiting : .done
     }
 
     /// Add block · Go/Stop Live · Plan with words · Scan — one row under the card.
@@ -185,9 +208,9 @@ struct TodayView: View {
                     .font(.hd(size: 17, weight: .medium))
                     .foregroundStyle(Theme.text)
                     .frame(width: 40, height: 40)
-                    .background(Circle().fill(Theme.card))
-                    .overlay(Circle().stroke(Theme.border, lineWidth: 1))
-                    .contentShape(Circle())
+                    .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Theme.raised))
+                    .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(Theme.border, lineWidth: 1))
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Photo task")
@@ -198,15 +221,14 @@ struct TodayView: View {
     @ViewBuilder
     private func heroTimer(snap: DaySnapshot) -> some View {
         if let c = snap.current, snap.overtime {
-            LiveTimerPill(range: c.end...c.end.addingTimeInterval(24 * 3600), down: false, prefix: "+",
-                          fill: Color(red: 1, green: 0.84, blue: 0.04), text: .black)
+            LiveTimerPill(range: c.end...c.end.addingTimeInterval(24 * 3600), down: false, prefix: "+", status: .failed)
         } else if let c = snap.current, c.end > now {
             // One clock for check and range (the 30s `now` can be behind Date.now → inverted range crash).
             let t = min(Date.now, c.end)
-            LiveTimerPill(range: t...c.end, down: true, fill: DayLiveStyle.doneGreen, text: .white)
+            LiveTimerPill(range: t...c.end, down: true, status: .running)
         } else if snap.current == nil, let n = snap.next, n.start > now {
             let t = min(Date.now, n.start)
-            LiveTimerPill(range: t...n.start, down: true, fill: .white.opacity(0.18), text: .white)
+            LiveTimerPill(range: t...n.start, down: true, status: .waiting)
         }
     }
 
@@ -218,6 +240,61 @@ struct TodayView: View {
         if block.end <= now { return .ended }
         if block.start > now { return .upcoming(block.start) }
         return .live(block.end)
+    }
+
+    /// v58: JobTrail legend (run · wait · done) beside the Schedule head.
+    private var legend: some View {
+        HStack(spacing: 10) {
+            ForEach([("run", HDStatus.running), ("wait", .waiting), ("done", .done)], id: \.0) { item in
+                HStack(spacing: 4) {
+                    Circle().fill(item.1.color).frame(width: 6, height: 6)
+                    Text(item.0).font(.mono(10)).foregroundStyle(HDTone.faintDark)
+                }
+            }
+        }
+    }
+
+    /// v58: three meters with growing bars in one glowing card (JobTrail fleet card).
+    private func meters(_ snap: DaySnapshot) -> some View {
+        let items = todayNumbers(snap)
+        let done = snap.all.filter { $0.end <= now }.count
+        let fractions: [Double] = [
+            min(1, focusedSeconds(snap) / (6 * 3600)),                       // a 6h focus day fills the bar
+            stepsFraction(snap),
+            snap.all.isEmpty ? 0 : Double(done) / Double(snap.all.count),   // day progress
+        ]
+        let colors = [HDTone.green, HDTone.amber, HDTone.blue]
+        return JTCard(state: activity.isRunning ? .glow : .normal, padding: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 10) {
+                    JTStatusDot(status: snap.current != nil ? .running : (snap.next != nil ? .waiting : .done), size: 6)
+                    Text("Today").font(.geist(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+                    Spacer()
+                    Text("\(done)/\(snap.all.count) DONE").font(.mono(11, .medium)).kerning(0.6).foregroundStyle(HDTone.faintDark)
+                }
+                HStack(alignment: .top, spacing: 10) {
+                    ForEach(Array(items.enumerated()), id: \.offset) { i, item in
+                        JTMeter(key: item.label, value: item.value, fraction: fractions[i], color: colors[i])
+                    }
+                }
+            }
+        }
+    }
+
+    private func focusedSeconds(_ snap: DaySnapshot) -> TimeInterval {
+        var focused: TimeInterval = 0
+        for b in snap.all {
+            let cats = categories.categories(for: b).map(\.id)
+            let share = 1 / Double(max(cats.count, 1))
+            let focusCount = cats.filter { $0 == "work" || $0 == "deepwork" }.count
+            focused += max(0, min(b.end, now).timeIntervalSince(b.start)) * share * Double(focusCount)
+        }
+        return focused
+    }
+
+    private func stepsFraction(_ snap: DaySnapshot) -> Double {
+        let st = snap.all.flatMap { store.steps(for: $0.id) }
+        return st.isEmpty ? 0 : Double(st.filter(\.done).count) / Double(st.count)
     }
 
     /// FOCUSED (Work + Deep Work so far) · STEPS · MEETINGS LEFT
@@ -237,7 +314,7 @@ struct TodayView: View {
         return [
             InfoItem(label: "Focused", value: focused.hoursMinutes, color: DayLiveStyle.doneGreen),
             InfoItem(label: "Steps", value: stepsTotal == 0 ? "—" : "\(stepsDone)/\(stepsTotal)", color: Theme.blue),
-            InfoItem(label: "Meetings left", value: "\(meetingsLeft)", color: Color(hex: "#BF5AF2")),
+            InfoItem(label: "Meetings left", value: "\(meetingsLeft)", color: HDTone.blue),
         ]
     }
 
@@ -251,21 +328,42 @@ struct TodayView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             ForEach(Array(snap.all.enumerated()), id: \.element.id) { index, block in
-                if index > 0 { Rectangle().fill(Theme.border).frame(height: 1) }
+                // v57: inset hairline so the connector line runs unbroken down the icon column.
+                if index > 0 { Rectangle().fill(Theme.navActive).frame(height: 1).padding(.leading, 60) }
+                let isNew = seenIDs.map { !$0.contains(block.id) } ?? false
                 SwipeRow(leading: leadingActions(block), trailing: trailingActions(block)) {
                     BlockRow(block: block, now: now,
                              color: categories.displayColor(for: block),
                              steps: store.steps(for: block.id),
                              icon: categories.category(for: block).iconName,
-                             pill: rowPill(block, snap: snap))
+                             pill: rowPill(block, snap: snap),
+                             above: index > 0 ? flow(snap.all[index - 1], block, snap: snap) : nil,
+                             below: index < snap.all.count - 1 ? flow(block, snap.all[index + 1], snap: snap) : nil)
+                        .hdRowFlash(isNew)
                         .contentShape(Rectangle())
                         .onTapGesture { editing = block }
                         // v35: long-press = Apple's own menu. Calendar events: Edit and Mark done only.
                         .contextMenu { blockMenu(block) }
                 }
+                .hdBlurIn(isNew)
             }
         }
-        .cardBox(padding: 0)
+        .background(HDTone.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Theme.border, lineWidth: 1))
+        .onAppear { if seenIDs == nil { seenIDs = Set(snap.all.map(\.id)) } }
+        .onChange(of: snap.all.map(\.id)) { _, ids in
+            // Let the new rows render once with their entry effects, then remember them.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { seenIDs = Set(ids) }
+        }
+    }
+
+    /// Connector between two neighbouring rows: green flowing into the running block,
+    /// amber along what's still waiting, still grey through the past.
+    private func flow(_ a: Block, _ b: Block, snap: DaySnapshot) -> FlowState {
+        if b.id == snap.current?.id { return .running }
+        if a.id == snap.current?.id || b.start > now { return .waiting }
+        return .idle
     }
 
     private func iconButton(_ icon: String, label: String, action: @escaping () -> Void) -> some View {
@@ -273,9 +371,9 @@ struct TodayView: View {
             HDIcon(icon, size: 20)
                 .foregroundStyle(Theme.text)
                 .frame(width: 40, height: 40)
-                .background(Circle().fill(Theme.card))   // v24: round icon buttons
-                .overlay(Circle().stroke(Theme.border, lineWidth: 1))
-                .contentShape(Circle())
+                .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Theme.raised))   // v24: round icon buttons
+                .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(Theme.border, lineWidth: 1))
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)
@@ -383,16 +481,20 @@ struct AppJourney: View {
                 let w = g.size.width
                 // v45: thick bars (16 pt, were 8) so short blocks read as blocks, not dots.
                 ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.white.opacity(0.15)).frame(height: 16)
+                    RoundedRectangle(cornerRadius: 5, style: .continuous).fill(HDTone.hover).frame(height: 16)
                     ForEach(lanes) { b in
                         RoundedRectangle(cornerRadius: 4, style: .continuous).fill(color(b).opacity(b.end <= now ? 0.55 : 1))
                             .frame(width: max(6, w * (f(b.end) - f(b.start)) - 2), height: 16)
+                            .hdShimmer(b.contains(now), color: .white)   // v58: the running lane shimmers
+                            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
                             .offset(x: w * f(b.start))
                     }
-                    Circle().fill(Color.white).frame(width: 26, height: 26)
-                        .shadow(color: .black.opacity(0.3), radius: 3)
-                        .offset(x: min(max(w * f(now) - 13, 0), w - 26))
-                        .animation(.easeInOut(duration: 0.6), value: now)
+                    // v57: amber "now" knob with a soft glow.
+                    Circle().fill(HDTone.amber).frame(width: 14, height: 14)
+                        .overlay(Circle().strokeBorder(Color.black, lineWidth: 2))
+                        .shadow(color: HDTone.amber.opacity(0.5), radius: 6)
+                        .offset(x: min(max(w * f(now) - 7, 0), w - 14))
+                        .animation(HDEase.standard(0.6), value: now)
                 }
                 .frame(height: 28)
             }
@@ -403,8 +505,8 @@ struct AppJourney: View {
                     if d != Self.ticks(from, to).last { Spacer(minLength: 0) }
                 }
             }
-            .font(.hd(size: 10, weight: .semibold))
-            .foregroundStyle(.white.opacity(0.55))
+            .font(.hdMono(size: 10, weight: .medium))
+            .foregroundStyle(HDTone.faintDark)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Today's blocks on a timeline")

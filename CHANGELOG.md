@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### v58: JobTrail rebuild of every screen and widget
+- **JTKit** (`Shared/JTKit.swift`): JobTrail's components in SwiftUI: status dots with halos, section heads, pills, LIVE/IDLE badge, meters with growing bars, cards with glow states, dashed empty boxes, film grain, staggered entry, chart reveal, press style.
+- **Today:** map-dot Now card with shimmering running lane, meters card, Schedule head with run/wait/done legend, staggered entry.
+- **Calendar:** amber today tile with breathing glow, glowing today card with flowing connectors, amber now-line with pulse + ripple in Week, running cells sweep green.
+- **Stats:** meters card, columns grow in, line draws in with a rippling today point, category and meeting bars grow.
+- **Settings:** rebuilt as JobTrail cards (same pages behind every row).
+- **Topbar:** LIVE badge pulses while the Live Activity runs; + button breathes amber.
+- **Widgets:** status dots, mono caps, live countdowns and timer-driven bars that move on their own, amber frame when a block is running; Heat and Calendar widgets on the JobTrail dark card, today amber.
+- **Live Activity:** JobTrail pills, mono NOW/NEXT, amber heads-up.
+
+### v57: JobTrail look and motion
+- **Palette:** JobTrail tokens (bg #000, surface #181818, lines #313131, amber accent #e9a23b). Status colours everywhere: green running, amber waiting, blue done, red failed. Starts in Dark once.
+- **Type:** Geist for UI, Geist Mono for labels, times and stats (bundled in app + widget, `Shared/Fonts`, OFL).
+- **Surfaces:** chamfers are now rounded cards with 1px borders; the Now card gets an amber border + glow.
+- **Motion** (`Shared/HDMotion.swift`): pulsing live dots, blur-in for new items, breathing amber glow, sweeping green ring on running rows, ripples, shimmer + typing cursor while planning, flowing connector dashes, row flash, tilting hourglass, progress bar. Reduce Motion gets still frames; widgets/Live Activities get the static look.
+- Debug: `-hdDemo YES` loads sample data for screenshots.
+
 ### v56: canvas dots + empty-day Island
 - **Dot grid** (`DotGrid` in `Shared/HDTheme.swift`) replaces the hairlines: Now card, Lock Screen card, every widget plate, Car stage floor, and faint dots on the Today, Stats and Calendar page backgrounds.
 - **Island on an empty day:** just a solid green check (compact and minimal). No more calendar icon + empty ring.

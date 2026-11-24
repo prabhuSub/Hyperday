@@ -24,7 +24,7 @@ private struct Caps: View {
     let text: String
     var body: some View {
         Text(text.uppercased())
-            .font(.system(size: 10, weight: .bold))
+            .font(.mono(9.5, .semibold)).kerning(0.6)   // v58: JobTrail mono caps
             .foregroundStyle(.secondary)
             .lineLimit(1)
     }
@@ -79,12 +79,18 @@ struct NowRect: View {
         let now = entry.date
         VStack(alignment: .leading, spacing: 2) {
             if let c = day.current(at: now) {
-                Caps(text: "Now · \(minutesLeft(now, c.end)) left")
-                Text(c.title).font(.system(size: 15, weight: .bold)).lineLimit(1)
+                // v58: the countdown and the bar move by themselves (timer-driven).
+                HStack(spacing: 4) {
+                    Caps(text: "Now ·")
+                    Text(timerInterval: now...max(now, c.end), countsDown: true)
+                        .font(.mono(9.5, .semibold)).foregroundStyle(.secondary).monospacedDigit()
+                }
+                Text(c.title).font(.geist(size: 15, weight: .semibold)).lineLimit(1)
                 if c.stepsTotal > 0 {
                     Segments(done: c.stepsDone, total: c.stepsTotal).padding(.vertical, 1)
                 } else {
-                    TimeBar(progress: now.timeIntervalSince(c.start) / max(c.end.timeIntervalSince(c.start), 1))
+                    ProgressView(timerInterval: c.start...max(c.end, c.start.addingTimeInterval(1)), countsDown: false) { EmptyView() } currentValueLabel: { EmptyView() }
+                        .progressViewStyle(.linear)
                         .padding(.vertical, 1)
                 }
                 Group {
@@ -96,21 +102,21 @@ struct NowRect: View {
                         Text("Last one today")
                     }
                 }
-                .font(.system(size: 11, weight: .medium))
+                .font(.geist(size: 11, weight: .medium))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
             } else if let n = day.upcoming(at: now, limit: 1).first {
                 Caps(text: "Next · in \(minutesLeft(now, n.start))")
-                Text(n.title).font(.system(size: 15, weight: .bold)).lineLimit(1)
+                Text(n.title).font(.geist(size: 15, weight: .bold)).lineLimit(1)
                 Text("\(clock(n.start)) – \(clock(n.end)) · \(n.detail)")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.geist(size: 11, weight: .medium))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             } else {
                 Caps(text: "Hyperday")
                 // Yesterday's data (app not opened today) isn't "Day complete".
                 Text(entry.day?.isToday(now) == true ? "Day complete" : "Open Hyperday")
-                    .font(.system(size: 15, weight: .bold))
+                    .font(.geist(size: 15, weight: .bold))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -205,15 +211,15 @@ struct DayStripRect: View {
                     if i < marks.count - 1 { Spacer(minLength: 0) }
                 }
             }
-            .font(.system(size: 8))
+            .font(.geist(size: 8))
             .foregroundStyle(.secondary)
             if let n = day.upcoming(at: now, limit: 1).first {
                 Text("Next: \(n.title) \(clock(n.start))")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.geist(size: 12, weight: .semibold))
                     .lineLimit(1)
             } else {
                 Text(entry.day == nil ? "Open Hyperday" : "Nothing else today")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.geist(size: 12, weight: .semibold))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -307,7 +313,7 @@ struct CircleView: View {
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)
                 Text(small)
-                    .font(.system(size: 8, weight: .semibold))
+                    .font(.geist(size: 8, weight: .semibold))
                     .foregroundStyle(.secondary)
             }
             .padding(.horizontal, 7)

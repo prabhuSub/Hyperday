@@ -243,7 +243,7 @@ struct BlockEditorSheet: View {
                     } header: { Text("2 · Time") }
                 } else {
                     Section {
-                        Text(block.title).font(.headline)
+                        Text(block.title).font(.hd(size: 17, weight: .semibold))
                         Text("\(block.start.shortTime) – \(block.end.shortTime)")
                             .foregroundStyle(.secondary)
                     } footer: {

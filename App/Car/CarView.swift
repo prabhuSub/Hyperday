@@ -25,10 +25,10 @@ struct CarView: View {
                     plateRow
                     if !cars.signedIn { connectCard }
                     if let m = cars.message {
-                        Text(m).font(.system(size: 12)).foregroundStyle(Theme.muted)
+                        Text(m).font(.geist(size: 12)).foregroundStyle(Theme.muted)
                     }
                     Text("3D model: “2021 Tesla Model Y” by tonielpro520 on Sketchfab, CC BY 4.0, repainted Quicksilver.")
-                        .font(.system(size: 10))
+                        .font(.geist(size: 10))
                         .foregroundStyle(Theme.faint)
                 }
                 .padding(.horizontal, 16)
@@ -44,10 +44,10 @@ struct CarView: View {
     private var plateRow: some View {
         HStack(spacing: 10) {
             Image(systemName: "rectangle.and.text.magnifyingglass").foregroundStyle(Theme.muted)
-            Text("Plate").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text)
+            Text("Plate").font(.geist(size: 14, weight: .semibold)).foregroundStyle(Theme.text)
             TextField("Type your plate", text: $cars.plate)
                 .textInputAutocapitalization(.characters).autocorrectionDisabled().submitLabel(.done)
-                .multilineTextAlignment(.trailing).font(.system(size: 15, weight: .heavy))
+                .multilineTextAlignment(.trailing).font(.geist(size: 15, weight: .heavy))
         }
         .cardBox(padding: 14)
     }
@@ -57,10 +57,10 @@ struct CarView: View {
             let c = cars.car
             let color: Color = c?.charging == true ? DayLiveStyle.doneGreen : (c?.locked == false ? .red : DayLiveStyle.doneGreen)
             Circle().fill(color).frame(width: 8, height: 8)
-            Text(statusText).font(.system(size: 13, weight: .bold)).foregroundStyle(color)
+            Text(statusText).font(.geist(size: 13, weight: .bold)).foregroundStyle(color)
             if let c, !c.isSample {
                 Text("· " + c.updatedAt.formatted(.relative(presentation: .named)))
-                    .font(.system(size: 12)).foregroundStyle(Theme.muted)
+                    .font(.geist(size: 12)).foregroundStyle(Theme.muted)
             }
             if cars.busy { ProgressView().controlSize(.mini) }
         }
@@ -221,7 +221,7 @@ struct CarView: View {
             }
         }
         .frame(height: 320)
-        .background(scheme == .dark ? Color(red: 0.06, green: 0.07, blue: 0.08) : Color(red: 0.93, green: 0.94, blue: 0.95))   // v41: follows the phone
+        .background(scheme == .dark ? Color.black : Color(red: 0.93, green: 0.94, blue: 0.95))   // v41: follows the phone
     }
 
     private struct Badge { let id: String; let icon: String; let text: String; let color: Color }
@@ -231,15 +231,15 @@ struct CarView: View {
     private var statusChips: some View {
         if let c = cars.car {
             let grey = Color(white: 0.55)
-            let red = Color(hex: "#FF453A")
+            let red = HDTone.danger
             FlowLayout(spacing: 8) {
                 if let l = c.locked { StatusChip(color: l ? DayLiveStyle.doneGreen : red, text: l ? "Locked" : "Unlocked") }
-                if let s = c.sentry { StatusChip(color: s ? Color(hex: "#BF5AF2") : grey, text: s ? "Sentry on" : "Sentry off") }
+                if let s = c.sentry { StatusChip(color: s ? HDTone.blue : grey, text: s ? "Sentry on" : "Sentry off") }
                 StatusChip(color: c.charging ? DayLiveStyle.doneGreen : grey,
                            text: c.charging ? "Charging" + (c.chargeKW.map { " · \(Int($0)) kW" } ?? "") : "Port closed")
                 if let f = c.insideF { StatusChip(color: Theme.blue, text: "\(f)° inside") }
                 if let w = c.windowsOpen { StatusChip(color: w ? red : grey, text: w ? "Window open" : "Windows closed") }
-                if let t = c.tiresLow { StatusChip(color: t ? Color(hex: "#FF9F0A") : grey, text: t ? "Check tires" : "Tires OK") }
+                if let t = c.tiresLow { StatusChip(color: t ? HDTone.amber : grey, text: t ? "Check tires" : "Tires OK") }
             }
         }
     }
@@ -257,22 +257,22 @@ struct CarView: View {
                          color: c.charging ? DayLiveStyle.doneGreen : grey))
         if let s = c.sentry {
             out.append(Badge(id: "Anchor_Roof", icon: "shield.fill", text: s ? "Sentry on" : "Sentry off",
-                             color: s ? Color(hex: "#BF5AF2") : grey))
+                             color: s ? HDTone.blue : grey))
         }
         return out
     }
 
     private var connectCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            SectionHeader("Connect your Tesla", icon: "car", color: Color(hex: "#64D2FF"))
+            SectionHeader("Connect your Tesla", icon: "car", color: HDTone.blue)
             Text("Sign in with Tesla once. Hyperday reads battery, range, lock and location; your login stays in this iPhone's Keychain.")
-                .font(.system(size: 13)).foregroundStyle(Theme.muted)
+                .font(.geist(size: 13)).foregroundStyle(Theme.muted)
             Button("Sign in with Tesla") { Task { await cars.connect() } }
                 .buttonStyle(PrimaryButtonStyle())
                 .disabled(!cars.hasClientID)
             if !cars.hasClientID {
                 Text("Add the Client ID in Settings › Car first (or run deploy.sh, which reads it from .tesla-keys).")
-                    .font(.system(size: 12)).foregroundStyle(Theme.muted)
+                    .font(.geist(size: 12)).foregroundStyle(Theme.muted)
             }
         }
         .cardBox()
@@ -286,7 +286,7 @@ struct StatusChip: View {
     var body: some View {
         HStack(spacing: 6) {
             Circle().fill(color).frame(width: 8, height: 8)
-            Text(text).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text)
+            Text(text).font(.geist(size: 13, weight: .semibold)).foregroundStyle(Theme.text)
         }
         .padding(.horizontal, 11).padding(.vertical, 7)
         .background(Capsule().fill(Theme.card))
@@ -301,9 +301,9 @@ struct CarBadge: View {
 
     var body: some View {
         HStack(spacing: 5) {
-            Image(systemName: icon).font(.system(size: 9, weight: .bold)).foregroundStyle(.white)
+            Image(systemName: icon).font(.geist(size: 9, weight: .bold)).foregroundStyle(.white)
                 .frame(width: 18, height: 18).background(Circle().fill(color))
-            Text(text).font(.system(size: 11.5, weight: .heavy)).foregroundStyle(.white).fixedSize()
+            Text(text).font(.geist(size: 11.5, weight: .heavy)).foregroundStyle(.white).fixedSize()
         }
         .padding(.leading, 3).padding(.trailing, 9).padding(.vertical, 3)
         .background(Capsule().fill(Color(red: 0.08, green: 0.09, blue: 0.12).opacity(0.75)))

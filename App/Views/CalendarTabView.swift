@@ -239,8 +239,8 @@ struct CalendarTabView: View {
             HDIcon(symbol, size: 16)
                 .foregroundStyle(Theme.text)
                 .frame(width: 30, height: 30)
-                .overlay(Circle().stroke(Theme.border, lineWidth: 1))   // v27 round
-                .contentShape(Circle())
+                .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(Theme.border, lineWidth: 1))   // v27 round
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(symbol == "back" ? "Previous" : "Next")
@@ -283,7 +283,7 @@ struct CalendarTabView: View {
                 Button { tapDay(day) } label: {
                     VStack(spacing: 4) {
                         Text(day.formatted(.dateTime.weekday(.narrow)))
-                            .font(.hd(size: 10, weight: .bold))
+                            .font(.hdMono(size: 10, weight: .semibold))
                             .foregroundStyle(Theme.muted)
                         dayNumber(day, size: 34)
                         dots(byDay[day] ?? [], faded: false)
@@ -308,7 +308,7 @@ struct CalendarTabView: View {
             HStack(spacing: 0) {
                 ForEach(Array(ordered.enumerated()), id: \.offset) { _, s in
                     Text(s)
-                        .font(.hd(size: 10, weight: .bold))
+                        .font(.hdMono(size: 10, weight: .semibold))
                         .foregroundStyle(Theme.muted)
                         .frame(maxWidth: .infinity)
                 }
@@ -341,12 +341,16 @@ struct CalendarTabView: View {
         let isToday = cal.isDateInToday(day)
         let isSelected = cal.isDate(day, inSameDayAs: selected)
         let past = day < cal.startOfDay(for: .now)
+        // v58: today = amber tile with a breathing glow; selected = amber outline (JobTrail active card).
         return Text(day.formatted(.dateTime.day()))
-            .font(.hd(size: size > 30 ? 16 : 14, weight: isToday ? .bold : .medium))
-            .foregroundStyle(isToday ? Theme.bg : (dimPast && past ? Theme.faint : Theme.text))
+            .font(.hdMono(size: size > 30 ? 15 : 13, weight: isToday ? .bold : .medium))
+            .foregroundStyle(isToday ? Color.black : (dimPast && past ? Theme.faint : Theme.text))
             .frame(width: size, height: size)
-            .background(RoundedRectangle(cornerRadius: size * 0.34, style: .continuous).fill(isToday ? Theme.text : Color.clear))   // v27
-            .overlay(RoundedRectangle(cornerRadius: size * 0.34, style: .continuous).stroke(isSelected && !isToday ? Theme.text : Color.clear, lineWidth: 1.5))
+            .background(RoundedRectangle(cornerRadius: size * 0.3, style: .continuous).fill(isToday ? HDTone.amber : Color.clear))
+            .overlay(RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
+                .strokeBorder(isSelected && !isToday ? HDTone.amber.opacity(0.8) : Color.clear, lineWidth: 1.2))
+            .hdGlow(radius: size * 0.3, active: false, hot: isToday)
+            .animation(HDEase.standard(0.35), value: isSelected)
     }
 
     private func dots(_ items: [Block], faded: Bool) -> some View {
@@ -377,30 +381,44 @@ struct CalendarTabView: View {
 
     private func daySection(_ day: Date, items: [Block]) -> some View {
         let now = Date.now
+        let isToday = cal.isDateInToday(day)
         return VStack(alignment: .leading, spacing: 8) {
-            Caps("\(sectionTitle(day)) · \(items.count) item\(items.count == 1 ? "" : "s")")
-                .padding(.top, 6)
+            // v58: JobTrail section head; today's card glows amber.
+            JTSectionHead(sectionTitle(day), sub: "\(items.count) item\(items.count == 1 ? "" : "s")") {
+                if isToday { JTStatusDot(status: items.contains { $0.contains(now) } ? .running : .waiting, size: 6) }
+            }
             VStack(spacing: 0) {
                 if items.isEmpty {
-                    Text("Nothing scheduled")
-                        .font(.hd(size: 13))
+                    Text("NOTHING SCHEDULED")
+                        .font(.hdMono(size: 11, weight: .medium)).kerning(0.8)
                         .foregroundStyle(Theme.faint)
                         .padding(14)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 ForEach(Array(items.enumerated()), id: \.element.id) { index, block in
-                    if index > 0 { Rectangle().fill(Theme.border).frame(height: 1) }
+                    if index > 0 { Rectangle().fill(Theme.navActive).frame(height: 1).padding(.leading, 60) }
                     Button { editing = block } label: {
                         BlockRow(block: block, now: now,
                                  color: categories.displayColor(for: block),
                                  steps: store.steps(for: block.id),
-                                 icon: categories.category(for: block).iconName)
+                                 icon: categories.category(for: block).iconName,
+                                 above: index > 0 && isToday ? flowState(items[index - 1], block, now) : nil,
+                                 below: index < items.count - 1 && isToday ? flowState(block, items[index + 1], now) : nil)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(JTPressStyle())
+                    .hdBlurIn()
                 }
             }
             .cardBox(padding: 0)
+            .hdGlow(radius: 14, active: isToday && !items.isEmpty)
         }
+        .jtStagger(0)
+    }
+
+    private func flowState(_ a: Block, _ b: Block, _ now: Date) -> FlowState {
+        if b.contains(now) { return .running }
+        if a.contains(now) || b.start > now { return .waiting }
+        return .idle
     }
 }
 
@@ -537,8 +555,16 @@ struct WeekGrid: View {
                     if minutes >= Double(startHour * 60) && minutes <= Double(endHour * 60) {
                         let y = CGFloat(minutes / 60 - Double(startHour)) * hourHeight
                         let x = Self.labelWidth + CGFloat(todayIndex) * colW
-                        Rectangle().fill(Theme.red).frame(width: colW, height: 2).offset(x: x, y: y)
-                        Circle().fill(Theme.red).frame(width: 7, height: 7).offset(x: x - 3.5, y: y - 2.5)
+                        // v58: the now line glows amber; its dot pulses and ripples.
+                        Rectangle().fill(HDTone.amber).frame(width: colW, height: 1.5)
+                            .shadow(color: HDTone.amber.opacity(0.7), radius: 4)
+                            .offset(x: x, y: y - 0.25)
+                        ZStack {
+                            RippleRings(color: HDTone.amber, size: 7)
+                            PulseDot(color: HDTone.amber, size: 7)
+                        }
+                        .frame(width: 7, height: 7)
+                        .offset(x: x - 3.5, y: y - 3)
                     }
                 }
             }
@@ -642,6 +668,7 @@ struct WeekGrid: View {
 
     private func cellBody(_ b: Block, height: CGFloat, width: CGFloat, past: Bool, selected: Bool) -> some View {
         let c: Color = color(b)
+        let running = b.contains(.now)
         return Text(b.title)
             .font(.hd(size: 9, weight: .semibold))
             .foregroundStyle(past ? Theme.faint : Theme.text)
@@ -654,9 +681,10 @@ struct WeekGrid: View {
                 Rectangle().fill(c.opacity(past ? 0.5 : 1)).frame(width: 3)
             }
             .overlay {
-                if selected { RoundedRectangle(cornerRadius: 3).strokeBorder(c, lineWidth: 1.5) }
+                if selected { RoundedRectangle(cornerRadius: 5, style: .continuous).strokeBorder(c, lineWidth: 1.5) }
             }
-            .clipShape(RoundedRectangle(cornerRadius: 3))
+            .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+            .overlay { if running { SweepRing(radius: 5) } }   // v58: the block happening now sweeps green
     }
 
     private func hourLabel(_ h: Int) -> String {

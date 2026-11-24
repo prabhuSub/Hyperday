@@ -92,13 +92,13 @@ struct CarBatteryView: View {
             HStack(spacing: 4) {
                 VStack(alignment: .leading, spacing: 1) {
                     if let c {
-                        Label { Text("\(c.battery)% · \(c.rangeMiles) mi").font(.system(size: 14, weight: .bold)) }
+                        Label { Text("\(c.battery)% · \(c.rangeMiles) mi").font(.geist(size: 14, weight: .bold)) }
                             icon: { Image("hd-car").renderingMode(.template) }
                         HStack(spacing: 4) {
                             Image(systemName: c.locked == false ? "lock.open.fill" : "lock.fill")
                             if let f = c.insideF { Text("\(f)° inside") } else { Text(c.locked == false ? "Unlocked" : "Locked") }
                         }
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.geist(size: 12, weight: .semibold))
                         Group {
                             if let leave = c.leaveBy {
                                 Label("Leave \(leave.formatted(date: .omitted, time: .shortened))", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
@@ -106,10 +106,10 @@ struct CarBatteryView: View {
                                 Text([c.place, Self.ago(c.updatedAt, entry.date)].compactMap { $0 }.joined(separator: " · "))
                             }
                         }
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.geist(size: 12, weight: .semibold))
                     } else {
-                        Text("Car").font(.system(size: 14, weight: .bold))
-                        Text("Open Hyperday").font(.system(size: 12, weight: .semibold))
+                        Text("Car").font(.geist(size: 14, weight: .bold))
+                        Text("Open Hyperday").font(.geist(size: 12, weight: .semibold))
                     }
                 }
                 .lineLimit(1)
@@ -144,8 +144,8 @@ struct CarBatteryView: View {
                 EmptyView()
             } currentValueLabel: {
                 VStack(spacing: 0) {
-                    Image(systemName: "bolt.fill").font(.system(size: 11, weight: .bold))
-                    Text("\(c.battery)").font(.system(size: 15, weight: .bold))
+                    Image(systemName: "bolt.fill").font(.geist(size: 11, weight: .bold))
+                    Text("\(c.battery)").font(.geist(size: 15, weight: .bold))
                 }
             }
             .gaugeStyle(.accessoryCircularCapacity)
@@ -155,7 +155,7 @@ struct CarBatteryView: View {
             } currentValueLabel: {
                 VStack(spacing: 0) {
                     Image("CarFront").resizable().scaledToFit().frame(width: 30)   // v40: front view
-                    Text(c.map { "\($0.battery)" } ?? "–").font(.system(size: 14, weight: .bold))
+                    Text(c.map { "\($0.battery)" } ?? "–").font(.geist(size: 14, weight: .bold))
                 }
             }
             .gaugeStyle(.accessoryCircular)
@@ -173,7 +173,7 @@ struct CarBatteryLockView: View {
             CarBatteryView(entry: entry)
             if let c {
                 Image(systemName: c.locked == false ? "lock.open.fill" : "lock.fill")
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.geist(size: 9, weight: .bold))
                     .frame(width: 18, height: 18)
                     .background(Circle().fill(.black))
                     .overlay(Circle().stroke(.primary.opacity(0.4), lineWidth: 1))
@@ -185,12 +185,12 @@ struct CarBatteryLockView: View {
 
 // MARK: M · Home Screen small (front view) + medium
 
-private let homeGreen = Color(red: 48 / 255, green: 209 / 255, blue: 88 / 255)
+private let homeGreen = HDTone.green
 
 private func lockIcon(_ c: CarSnapshot, size: CGFloat = 12) -> some View {
     Image(systemName: c.locked == false ? "lock.open.fill" : "lock.fill")
-        .font(.system(size: size, weight: .semibold))
-        .foregroundStyle(c.locked == false ? Color(hex: "#FF453A") : .white)
+        .font(.geist(size: size, weight: .semibold))
+        .foregroundStyle(c.locked == false ? HDTone.danger : .white)
         .accessibilityLabel(c.locked == false ? "Unlocked" : "Locked")
 }
 
@@ -204,7 +204,7 @@ struct CarListView: View {
         } else {
             VStack(alignment: .leading, spacing: 6) {
                 Image("CarFront").resizable().scaledToFit().frame(width: 80)
-                Text("Open Hyperday to read your car").font(.system(size: 13, weight: .bold)).foregroundStyle(.white)
+                Text("Open Hyperday to read your car").font(.geist(size: 13, weight: .bold)).foregroundStyle(.white)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
@@ -213,16 +213,16 @@ struct CarListView: View {
     private func small(_ c: CarSnapshot) -> some View {
         VStack(spacing: 4) {
             HStack {
-                Text(c.name).font(.system(size: 12, weight: .bold)).foregroundStyle(.white.opacity(0.7)).lineLimit(1)
+                Text(c.name).font(.geist(size: 12, weight: .bold)).foregroundStyle(.white.opacity(0.7)).lineLimit(1)
                 Spacer(minLength: 4)
-                Text(ago(c.updatedAt, entry.date)).font(.system(size: 10, weight: .semibold)).foregroundStyle(.white.opacity(0.45))
+                Text(ago(c.updatedAt, entry.date)).font(.geist(size: 10, weight: .semibold)).foregroundStyle(.white.opacity(0.45))
             }
             Image("CarFront").resizable().scaledToFit().frame(maxHeight: .infinity)
             HStack(alignment: .firstTextBaseline) {
-                (Text("\(c.battery)").font(.system(size: 24, weight: .bold)) + Text("%").font(.system(size: 12, weight: .bold)))
+                (Text("\(c.battery)").font(.geist(size: 24, weight: .bold)) + Text("%").font(.geist(size: 12, weight: .bold)))
                     .foregroundStyle(homeGreen)
                 Spacer(minLength: 4)
-                HStack(spacing: 5) { lockIcon(c); Text("\(c.rangeMiles) mi").font(.system(size: 13, weight: .semibold)) }
+                HStack(spacing: 5) { lockIcon(c); Text("\(c.rangeMiles) mi").font(.geist(size: 13, weight: .semibold)) }
                     .foregroundStyle(.white)
             }
         }
@@ -232,11 +232,11 @@ struct CarListView: View {
     private func medium(_ c: CarSnapshot) -> some View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(c.name).font(.system(size: 13, weight: .bold)).foregroundStyle(.white.opacity(0.7)).lineLimit(1)
-                Text("\(c.battery)%").font(.system(size: 36, weight: .bold)).foregroundStyle(homeGreen)
-                HStack(spacing: 6) { lockIcon(c, size: 13); Text("\(c.rangeMiles) mi").font(.system(size: 14, weight: .semibold)) }
+                Text(c.name).font(.geist(size: 13, weight: .bold)).foregroundStyle(.white.opacity(0.7)).lineLimit(1)
+                Text("\(c.battery)%").font(.geist(size: 36, weight: .bold)).foregroundStyle(homeGreen)
+                HStack(spacing: 6) { lockIcon(c, size: 13); Text("\(c.rangeMiles) mi").font(.geist(size: 14, weight: .semibold)) }
                     .foregroundStyle(.white)
-                Text(ago(c.updatedAt, entry.date)).font(.system(size: 10, weight: .semibold)).foregroundStyle(.white.opacity(0.45))
+                Text(ago(c.updatedAt, entry.date)).font(.geist(size: 10, weight: .semibold)).foregroundStyle(.white.opacity(0.45))
                     .padding(.top, 2)
             }
             Spacer(minLength: 0)
@@ -320,7 +320,7 @@ struct HyperdayCarListWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: CarShared.listKind, provider: CarProvider()) {
             CarListView(entry: $0)
-                .containerBackground(for: .widget) { ZStack { Color(red: 0.11, green: 0.114, blue: 0.13); DotGrid().fill(HDTone.instrumentDot) } }   // v55
+                .containerBackground(for: .widget) { ZStack { InstrumentBackground() } }   // v55
         }
         .configurationDisplayName("Car").description("Your car from the front, battery, range and lock.")
         .supportedFamilies([.systemSmall, .systemMedium])
@@ -331,7 +331,7 @@ struct HyperdayCarBigWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: CarShared.bigKind, provider: CarProvider()) {
             CarBigView(entry: $0)
-                .containerBackground(for: .widget) { ZStack { Color(red: 0.11, green: 0.114, blue: 0.13); DotGrid().fill(HDTone.instrumentDot) } }   // v55
+                .containerBackground(for: .widget) { ZStack { InstrumentBackground() } }   // v55
         }
         .configurationDisplayName("Big car").description("Your car fills the widget, with battery and lock.")
         .supportedFamilies([.systemSmall])

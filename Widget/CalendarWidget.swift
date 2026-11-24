@@ -74,8 +74,8 @@ struct CalendarWidgetView: View {
             HStack(spacing: 1) {
                 ForEach(Array(["M", "T", "W", "T", "F", "S", "S"].enumerated()), id: \.offset) { _, s in
                     Text(s)
-                        .font(.system(size: big ? 10 : 7.5, weight: .bold))
-                        .kerning(1)
+                        .font(.mono(big ? 10 : 7.5, .semibold))
+                        .kerning(0.6)
                         .opacity(0.6)
                         .frame(maxWidth: .infinity)
                 }
@@ -97,8 +97,9 @@ struct CalendarWidgetView: View {
         }
         .padding(.horizontal, big ? 0 : 1)
         .containerBackground(for: .widget) {
-            if family == .accessoryRectangular { Color.clear } else { ZStack { Color(UIColor.systemBackground); DotGrid(step: 10).fill(HDTone.hair) } }   // v55
+            if family == .accessoryRectangular { Color.clear } else { InstrumentBackground() }   // v58: JobTrail card
         }
+        .environment(\.colorScheme, .dark)
         .widgetURL(URL(string: "hyperday://calendar"))
     }
 
@@ -107,15 +108,15 @@ struct CalendarWidgetView: View {
         let l = level(d)
         let barColor: Color = family == .accessoryRectangular
             ? (isToday ? .black : .white)
-            : [Color.clear, Color(hex: "#30D158"), Color(hex: "#FFD60A"), Color(hex: "#FF9F0A")][l]
+            : (isToday && l > 0 ? Color.black : [Color.clear, HDTone.green, HDTone.amber, HDTone.amber][l])
         let widths: [CGFloat] = big ? [0, 7, 12, 17] : [0, 5, 9, 13]
         return VStack(spacing: big ? 3 : 2) {
             Text("\(Calendar.current.component(.day, from: d))")
-                .font(.system(size: big ? 16 : 12.5, weight: isToday ? .heavy : .semibold))
+                .font(.mono(big ? 15 : 12, isToday ? .bold : .medium))
                 .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
-                .foregroundStyle(isToday ? (family == .accessoryRectangular ? Color.black : Color(UIColor.systemBackground)) : Color.primary)
+                .foregroundStyle(isToday ? Color.black : Color.primary)
             Capsule()
                 .fill(barColor)
                 .frame(width: widths[l], height: big ? 2.5 : 1.6)
@@ -124,7 +125,10 @@ struct CalendarWidgetView: View {
         .frame(height: big ? 30 : 19)
         .background {
             if isToday {
-                RoundedRectangle(cornerRadius: big ? 8 : 6, style: .continuous).fill(Color.primary)
+                // v58: today is the amber active tile with a soft glow (white on the Lock Screen).
+                RoundedRectangle(cornerRadius: big ? 8 : 6, style: .continuous)
+                    .fill(family == .accessoryRectangular ? Color.white : HDTone.amber)
+                    .shadow(color: HDTone.amber.opacity(family == .accessoryRectangular ? 0 : 0.5), radius: 5)
             }
         }
     }

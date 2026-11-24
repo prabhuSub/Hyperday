@@ -57,8 +57,8 @@ private enum Trend {
 
     var color: Color {
         switch self {
-        case .up: return Color(hex: "#30D158")
-        case .down: return Color(hex: "#FF453A")
+        case .up: return HDTone.green
+        case .down: return HDTone.danger
         case .same: return Color(hex: "#8E8E93")
         }
     }
@@ -105,14 +105,15 @@ struct HeatWidgetView: View {
             }
         }
         .containerBackground(for: .widget) {
-            if family == .accessoryRectangular { AccessoryWidgetBackground() } else { ZStack { Color(UIColor.systemBackground); DotGrid(step: 10).fill(HDTone.hair) } }   // v55
+            if family == .accessoryRectangular { AccessoryWidgetBackground() } else { InstrumentBackground() }   // v58: JobTrail card
         }
+        .environment(\.colorScheme, family == .accessoryRectangular ? .dark : .dark)
     }
 
     private func caps(_ s: String) -> some View {
         Text(s.uppercased())
-            .font(.system(size: 9.5, weight: .heavy))
-            .kerning(1.3)
+            .font(.mono(9.5, .semibold))
+            .kerning(0.8)
             .foregroundStyle(.secondary)
             .lineLimit(1)
     }
@@ -137,7 +138,7 @@ struct HeatWidgetView: View {
                 caps("Streak")
                 Spacer()
                 trendText("\(n.streak)d", n.streakTrend, "")
-                    .font(.system(size: 13, weight: .heavy))
+                    .font(.geist(size: 13, weight: .heavy))
             }
             GeometryReader { geo in
                 fullGrid(d, weeks: 9, width: geo.size.width, gap: 2.6, months: false)
@@ -155,7 +156,7 @@ struct HeatWidgetView: View {
                 (trendText("\(n.streak)d streak", n.streakTrend, "")
                  + Text("  ·  ").foregroundColor(.secondary)
                  + trendText("\(n.week) this wk", n.weekTrend, ""))
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.geist(size: 11, weight: .bold))
                     .lineLimit(1)
             }
             GeometryReader { geo in
@@ -172,7 +173,7 @@ struct HeatWidgetView: View {
                 HStack {
                     caps("Blocks done · 6 months")
                     Spacer()
-                    Text("\(d.total()) total").font(.system(size: 11)).foregroundStyle(.secondary)
+                    Text("\(d.total()) total").font(.geist(size: 11)).foregroundStyle(.secondary)
                 }
                 fullGrid(d, weeks: 26, width: geo.size.width, gap: 2.6)
                 Divider()
@@ -198,14 +199,14 @@ struct HeatWidgetView: View {
         let maxH = max(4, vals.map { max($0[0], $0[1]) }.max() ?? 4)
         let planned = vals.reduce(0) { $0 + $1[0] }
         let done = vals.reduce(0) { $0 + $1[1] }
-        let green = Color(hex: "#30D158")
+        let green = HDTone.green
         return VStack(alignment: .leading, spacing: 5) {
             HStack {
                 caps("This week · workload")
                 Spacer()
                 (Text("\(Int(planned.rounded()))h").bold() + Text(" planned · ")
                  + Text("\(Int(done.rounded()))h").bold().foregroundColor(green) + Text(" done"))
-                    .font(.system(size: 10.5))
+                    .font(.geist(size: 10.5))
                     .foregroundStyle(.secondary)
             }
             GeometryReader { g in
@@ -216,7 +217,7 @@ struct HeatWidgetView: View {
                     let isToday = Calendar.current.isDate(days[i], inSameDayAs: entry.date)
                     VStack(spacing: 3) {
                         Text(vals[i][0] == 0 ? "–" : (vals[i][0].formatted(.number.precision(.fractionLength(0...(vals[i][0] < 10 ? 1 : 0)))) + "h"))
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.geist(size: 9, weight: .bold))
                             .foregroundStyle(isToday ? .primary : .secondary)
                         ZStack(alignment: .bottom) {
                             RoundedRectangle(cornerRadius: 4).fill(Color.primary.opacity(0.12))
@@ -226,7 +227,7 @@ struct HeatWidgetView: View {
                         }
                         .frame(width: 20, height: barH, alignment: .bottom)
                         Text(["M", "T", "W", "T", "F", "S", "S"][i])
-                            .font(.system(size: 10, weight: .heavy))
+                            .font(.geist(size: 10, weight: .heavy))
                             .foregroundStyle(isToday ? Color(UIColor.systemBackground) : .secondary)
                             .frame(width: 20, height: 17)
                             .background { if isToday { RoundedRectangle(cornerRadius: 5).fill(Color.primary) } }
@@ -243,9 +244,9 @@ struct HeatWidgetView: View {
         VStack(spacing: 1) {
             caps(label)
             HStack(alignment: .firstTextBaseline, spacing: 5) {
-                Text(value).font(.system(size: 24, weight: .heavy))
+                Text(value).font(.geist(size: 24, weight: .heavy))
                 Text("\(trend.arrow)\(delta.isEmpty || delta == "0" ? "" : " " + delta)")
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.geist(size: 11, weight: .bold))
             }
             .foregroundStyle(trend.color)
         }
@@ -255,7 +256,7 @@ struct HeatWidgetView: View {
     private func lock(_ d: HeatData) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text("\(d.streak(now: entry.date))-DAY STREAK")
-                .font(.system(size: 10, weight: .bold))
+                .font(.geist(size: 10, weight: .bold))
                 .foregroundStyle(.secondary)
             HeatGrid(data: d, weeks: 16, cell: 5.6, gap: 1.8, style: .white, showMonths: false, now: entry.date)
         }

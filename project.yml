@@ -27,6 +27,7 @@ targets:
       path: App/Info.plist
       properties:
         CFBundleDisplayName: Hyperday
+        UIAppFonts: [Geist-Regular.ttf, Geist-Medium.ttf, Geist-SemiBold.ttf, Geist-Bold.ttf, GeistMono-Regular.ttf, GeistMono-Medium.ttf, GeistMono-SemiBold.ttf, GeistMono-Bold.ttf]   # v57: JobTrail type (Geist, OFL)
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIRequiresFullScreen: true   # portrait-only iPhone app; silences the orientation warning
@@ -51,6 +52,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.prabhu.daylive
         CODE_SIGN_ENTITLEMENTS: App/Hyperday.entitlements   # App Group + HealthKit (deploy.sh falls back if refused)
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor   # v57: JobTrail amber
     dependencies:
       - target: DayLiveWidget
 
@@ -67,10 +69,14 @@ targets:
       - Shared/HDIcon.swift
       - Shared/Heatmap.swift
       - Shared/CarData.swift
+      - Shared/HDMotion.swift
+      - Shared/JTKit.swift
+      - Shared/Fonts
     info:
       path: Widget/Info.plist
       properties:
         CFBundleDisplayName: Hyperday
+        UIAppFonts: [Geist-Regular.ttf, Geist-Medium.ttf, Geist-SemiBold.ttf, Geist-Bold.ttf, GeistMono-Regular.ttf, GeistMono-Medium.ttf, GeistMono-SemiBold.ttf, GeistMono-Bold.ttf]
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:

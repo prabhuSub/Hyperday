@@ -7,64 +7,101 @@ import UIKit
 struct SettingsView: View {
     @EnvironmentObject private var categories: CategoryStore
     @EnvironmentObject private var activity: LiveActivityManager
-    @AppStorage("appearance") private var appearance = Appearance.system.rawValue
+    @AppStorage("appearance") private var appearance = Appearance.dark.rawValue
     @ObservedObject private var profile = ProfileStore.shared
     @State private var showProfile = false
 
+    // v58: JobTrail settings: grouped cards with mono section heads; every row opens the same page as before.
     var body: some View {
-        List {
-            Section {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
                 Button { showProfile = true } label: {
-                    HStack(spacing: 14) {
-                        ProfileAvatar(size: 60)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(profile.name.flatMap { $0.isEmpty ? nil : $0 } ?? "Your profile")
-                                .font(.title3.weight(.semibold)).foregroundStyle(.primary)
-                            Text("Photo and name").font(.subheadline).foregroundStyle(.secondary)
+                    JTCard(padding: 16) {
+                        HStack(spacing: 14) {
+                            ProfileAvatar(size: 54)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(profile.name.flatMap { $0.isEmpty ? nil : $0 } ?? "Your profile")
+                                    .font(.hd(size: 18, weight: .semibold)).foregroundStyle(Theme.text)
+                                Text("PHOTO AND NAME").font(.hdMono(size: 10, weight: .semibold)).kerning(0.8)
+                                    .foregroundStyle(Theme.faint)
+                            }
+                            Spacer()
+                            JTBadge(text: activity.isRunning ? "Live" : "Idle", working: activity.isRunning)
                         }
-                        Spacer()
-                        Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
                     }
-                    .padding(.vertical, 4)
                 }
-            }
-            Section {
-                link("Appearance", "sun.max.fill", .orange, value: (Appearance(rawValue: appearance) ?? .system).label) { AppearanceSettings() }
-                link("Categories", "tag.fill", .purple, value: "\(categories.categories.count)") { CategoriesSettings() }
-                link("Calendars", "calendar", .red, value: "\(CalendarService.shared.calendarList().count)") { CalendarsSettings() }
-                link("Auto rules", "bolt.fill", .indigo, value: "\(categories.rules.count)") { RulesSettings() }
-            }
-            Section {
-                link("Live Activity", "timer", .green, value: activity.autoStart ? "On" : "Off") { LiveActivitySettings() }
-                link("Close the day", "moon.fill", .indigo) { CardSettingsPage(title: "Close the day") { DayCloseSettingsCard() } }
-                link("Reality line", "mappin", .blue) { CardSettingsPage(title: "Reality line") { RealitySettingsCard() } }
-                link("Focus & Siri", "mic.fill", .purple) { FocusSettings() }
-            }
-            Section {
-                link("Backup", "externaldrive.fill", .gray) { CardSettingsPage(title: "Backup") { BackupCard() } }
-                link("Developer", "hammer.fill", Color(white: 0.4)) { DeveloperSettings() }
-                // Car section: Features.car (back on in v39).
-                if Features.car {
-                    link("Car", "car.fill", .red) { CardSettingsPage(title: "Car") { CarSettingsCard() } }
+                .buttonStyle(JTPressStyle())
+                .jtStagger(0)
+
+                group("Your day", index: 1) {
+                    link("Appearance", "sun.max.fill", .orange, value: (Appearance(rawValue: appearance) ?? .system).label) { AppearanceSettings() }
+                    link("Categories", "tag.fill", .purple, value: "\(categories.categories.count)") { CategoriesSettings() }
+                    link("Calendars", "calendar", .red, value: "\(CalendarService.shared.calendarList().count)") { CalendarsSettings() }
+                    link("Auto rules", "bolt.fill", .indigo, value: "\(categories.rules.count)", last: true) { RulesSettings() }
                 }
+                group("Live", index: 2) {
+                    link("Live Activity", "timer", .green, value: activity.autoStart ? "On" : "Off", status: activity.isRunning ? .running : .idle) { LiveActivitySettings() }
+                    link("Close the day", "moon.fill", .indigo) { CardSettingsPage(title: "Close the day") { DayCloseSettingsCard() } }
+                    link("Reality line", "mappin", .blue) { CardSettingsPage(title: "Reality line") { RealitySettingsCard() } }
+                    link("Focus & Siri", "mic.fill", .purple, last: true) { FocusSettings() }
+                }
+                group("System", index: 3) {
+                    link("Backup", "externaldrive.fill", .gray) { CardSettingsPage(title: "Backup") { BackupCard() } }
+                    link("Developer", "hammer.fill", Color(white: 0.4), last: !Features.car) { DeveloperSettings() }
+                    if Features.car {
+                        link("Car", "car.fill", .red, last: true) { CardSettingsPage(title: "Car") { CarSettingsCard() } }
+                    }
+                }
+                Text("HYPERDAY · v58")
+                    .font(.hdMono(size: 10, weight: .medium)).kerning(1.2)
+                    .foregroundStyle(Theme.faint)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 28)
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 120)
         }
-        .listStyle(.insetGrouped)
         .sheet(isPresented: $showProfile) { ProfileSheet() }
     }
 
+    private func group<C: View>(_ title: String, index: Int, @ViewBuilder _ rows: () -> C) -> some View {
+        let content = rows()
+        return VStack(alignment: .leading, spacing: 8) {
+            JTSectionHead(title)
+            JTCard { VStack(spacing: 0) { content } }
+        }
+        .jtStagger(index)
+    }
+
     private func link<D: View>(_ title: String, _ symbol: String, _ color: Color, value: String? = nil,
+                               status: HDStatus? = nil, last: Bool = false,
                                @ViewBuilder _ dest: @escaping () -> D) -> some View {
         NavigationLink {
             dest().navigationTitle(title).navigationBarTitleDisplayMode(.inline)
+                .scrollContentBackground(.hidden)
+                .background(Theme.bg)
         } label: {
             HStack(spacing: 12) {
-                SettingsIcon(symbol: symbol, color: color)
-                Text(title)
+                Image(systemName: symbol)
+                    .font(.geist(size: 14, weight: .semibold))
+                    .foregroundStyle(color)
+                    .frame(width: 30, height: 30)
+                    .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.raised))
+                    .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Theme.navActive, lineWidth: 1))
+                Text(title).font(.hd(size: 15, weight: .medium)).foregroundStyle(Theme.text)
                 Spacer()
-                if let value { Text(value).foregroundStyle(.secondary) }
+                if let status { JTStatusDot(status: status, size: 6) }
+                if let value { Text(value).font(.hdMono(size: 12)).foregroundStyle(Theme.muted) }
+                Image(systemName: "chevron.right").font(.geist(size: 11, weight: .semibold)).foregroundStyle(Theme.faint)
+            }
+            .padding(.horizontal, 14).padding(.vertical, 10)
+            .contentShape(Rectangle())
+            .overlay(alignment: .bottom) {
+                if !last { Rectangle().fill(Theme.navActive).frame(height: 1).padding(.leading, 56) }
             }
         }
+        .buttonStyle(JTPressStyle())
     }
 }
 
@@ -85,13 +122,13 @@ struct CardSettingsPage<C: View>: View {
     let title: String
     @ViewBuilder var content: () -> C
     var body: some View {
-        ScrollView { content().padding(16) }
-            .background(Color(UIColor.systemGroupedBackground))
+        ScrollView { content().padding(16).jtStagger(0) }
+            .background(Theme.bg)
     }
 }
 
 struct AppearanceSettings: View {
-    @AppStorage("appearance") private var appearance = Appearance.system.rawValue
+    @AppStorage("appearance") private var appearance = Appearance.dark.rawValue
     var body: some View {
         Form {
             Picker("Appearance", selection: $appearance) {
@@ -115,7 +152,7 @@ struct CategoriesSettings: View {
                             Circle().fill(c.color).frame(width: 12, height: 12)
                             Text(c.name).foregroundStyle(.primary)
                             Spacer()
-                            Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                            Image(systemName: "chevron.right").font(.hd(size: 13, weight: .semibold)).foregroundStyle(.tertiary)
                         }
                     }
                 }
@@ -175,7 +212,7 @@ struct RulesSettings: View {
                         Circle().fill(categories.category(id: rule.categoryID)?.color ?? .secondary).frame(width: 10, height: 10)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("\(rule.kind.label) “\(rule.keywords)”").lineLimit(2)
-                            Text(categories.category(id: rule.categoryID)?.name ?? "—").font(.subheadline).foregroundStyle(.secondary)
+                            Text(categories.category(id: rule.categoryID)?.name ?? "—").font(.hd(size: 15)).foregroundStyle(.secondary)
                         }
                     }
                     .swipeActions {
@@ -485,7 +522,7 @@ struct BackupCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            SectionHeader("Backup", icon: "share", color: Color(hex: "#64D2FF")).padding(.bottom, 8)
+            SectionHeader("Backup", icon: "share", color: HDTone.blue).padding(.bottom, 8)
             Toggle("Weekly backup", isOn: $backups.weekly)
                 .font(.hd(size: 14, weight: .semibold))
                 .tint(DayLiveStyle.doneGreen)
