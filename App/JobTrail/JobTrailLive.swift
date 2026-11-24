@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import WidgetKit
 
 /// v61: JobTrail, reached from Hyperday. The key and the MacBook's Tailscale address come from Info.plist
 /// (deploy.sh reads them from ~/.jobtrail/token and `tailscale ip`; nothing is stored in the repo).
@@ -78,31 +79,31 @@ final class JobTrailLive: ObservableObject {
         }
     }
 
+    private var lastHistoryAt = Date.distantPast
+    private var lastWidgetReload = Date.distantPast
+
     private func apply(_ json: [String: Any]) {
-        let machines = json["machines"] as? [[String: Any]] ?? []
-        let live = (json["live"] as? [[String: Any]] ?? []).filter { ($0["kind"] as? String ?? "job") == "job" }
-        var out: [MacLive] = []
-        for m in machines {
-            let id = m["id"] as? String ?? ""
-            let jobs = live.filter { ($0["machine"] as? String) == id }
-            let run = jobs.filter { ($0["state"] as? String) == "running" }
-            let wait = jobs.filter { ($0["state"] as? String) == "waiting" }
-            let newest = { (list: [[String: Any]]) in list.max { ($0["startedAt"] as? Double ?? 0) < ($1["startedAt"] as? Double ?? 0) } }
-            let top = newest(run) ?? newest(wait)
-            let gpu = (m["gpu"] as? Double).map { Int($0.rounded()) }
-            let mem = (m["memFree"] as? Double).map { max(0, 100 - Int($0.rounded())) }
-            out.append(MacLive(
-                name: m["name"] as? String ?? id,
-                desktop: (m["device"] as? String) == "desktop",
-                online: m["online"] as? Bool ?? false,
-                running: run.count, waiting: wait.count, gpu: gpu, mem: mem,
-                top: top.flatMap { $0["label"] as? String },
-                topSince: (top?["startedAt"] as? Double).map { Date(timeIntervalSince1970: $0 / 1000) },
-                topWaiting: top.map { ($0["state"] as? String) == "waiting" }))
-        }
-        macs = out
-        runningTotal = out.reduce(0) { $0 + $1.running }
+        // v64: one parser for the app and the widgets (JTStore); the snapshot is saved for the Macs widgets.
+        macs = JTStore.macs(from: json)
+        runningTotal = macs.reduce(0) { $0 + $1.running }
         lastUpdate = .now
+        let prev = JTStore.load() ?? .empty
+        let needHistory = Date.now.timeIntervalSince(lastHistoryAt) > 60
+        let jobsChanged = Set(prev.live.map(\.id)) != Set((json["live"] as? [[String: Any]] ?? []).compactMap { $0["id"] as? String })
+        Task {
+            var history: [[String: Any]]? = nil
+            if needHistory, let h = host {
+                history = await JTStore.get("/api/history?days=1", host: h, timeout: 8) as? [[String: Any]]
+                if history != nil { lastHistoryAt = .now }
+            }
+            JTStore.save(JTStore.merge(prev: prev, state: json, history: history))
+            // Widgets: right away when jobs start/finish, otherwise at most every 5 minutes (WidgetKit budget).
+            if jobsChanged || Date.now.timeIntervalSince(lastWidgetReload) > 300 {
+                lastWidgetReload = .now
+                WidgetCenter.shared.reloadTimelines(ofKind: JTStore.kind)
+                WidgetCenter.shared.reloadTimelines(ofKind: JTStore.lockKind)
+            }
+        }
         changed()
     }
 

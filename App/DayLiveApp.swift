@@ -44,7 +44,9 @@ struct DayLiveApp: App {
         WindowGroup {
             TypeSizeRebuilder {
                 #if DEBUG
-                if UserDefaults.standard.bool(forKey: "hdLAPreview") { LAPreviewScreen() } else { RootView().font(.hd(size: 16)) }
+                if UserDefaults.standard.bool(forKey: "hdLAPreview") { LAPreviewScreen() }
+                else if UserDefaults.standard.bool(forKey: "hdWidgetPreview") { WidgetPreviewScreen() }
+                else { RootView().font(.hd(size: 16)) }
                 #else
                 RootView().font(.hd(size: 16))
                 #endif
@@ -71,6 +73,7 @@ struct DayLiveApp: App {
                     if url.host == "close" { showCloseDay = true }
                     if url.host == "onboarding" { showOnboarding = true }   // v50 test link
                     if url.host == "calendar" { CalendarJump.open(.now) }
+                    if url.host == "jobtrail" { NotificationCenter.default.post(name: .openJobTrailTab, object: nil) }   // v64 Macs widgets
                     if url.host == "car" { NotificationCenter.default.post(name: .openCarTab, object: nil) }   // car widgets   // calendar widget → Calendar tab, today
                 }
                 .sheet(isPresented: $showCloseDay) {

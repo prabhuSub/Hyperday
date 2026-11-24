@@ -1656,13 +1656,25 @@ struct MacRowItem: View {
     /// Short job names: "~/ai/ltx-2-mlx/.venv/bin/python render_s01.py" → "render_s01.py",
     /// "python3 train.py" → "train.py", "S01_run2.sh · S01.ok" → "S01_run2.sh".
     static func short(_ s: String) -> String {
-        let main = s.components(separatedBy: " · ").first ?? s
-        let words = main.split(separator: " ").map(String.init).filter { !$0.hasPrefix("-") && $0 != "2>/dev/null" }
-        let interpreters: Set<String> = ["python", "python3", "bash", "sh", "zsh", "node", "bun", "ssh", "uv", "env"]
-        func base(_ w: String) -> String { w.split(separator: "/").last.map(String.init) ?? w }
+        var main = (s.components(separatedBy: " · ").first ?? s).trimmingCharacters(in: .whitespaces)
+        var prefix = ""
+        if main.hasPrefix("watch:") {   // JobTrail watchers: "watch: ssh mini 'grep -q …'" → "watch · grep"
+            prefix = "watch · "
+            main = String(main.dropFirst(6)).trimmingCharacters(in: .whitespaces)
+            if main.hasPrefix("ssh "), let q = main.firstIndex(where: { $0 == "'" || $0 == "\"" }) {
+                main = String(main[main.index(after: q)...])
+            }
+        }
+        let words = main.split(separator: " ").map(String.init).filter { !$0.hasPrefix("-") && !$0.contains("/dev/null") }
+        func base(_ w: String) -> String {
+            w.trimmingCharacters(in: CharacterSet(charactersIn: "'\"")).split(separator: "/").last.map(String.init) ?? w
+        }
+        guard let first = words.first else { return prefix + base(main) }
+        if base(first) == "ssh", words.count > 1 { return prefix + "ssh \(words[1])" }   // "ssh mini 'until …'" → "ssh mini"
+        let interpreters: Set<String> = ["python", "python3", "bash", "sh", "zsh", "node", "bun", "uv", "env", "until", "while"]
         var i = 0
-        while i < words.count - 1, interpreters.contains(base(words[i])) || words[i].hasPrefix("python") && words[i].contains("/") { i += 1 }
-        let pick = words.isEmpty ? main : words[i]
-        return pick == "-" ? base(words.first ?? main) : base(pick)
+        while i < words.count - 1, interpreters.contains(base(words[i])) || (base(words[i]).hasPrefix("python") && words[i].contains("/")) { i += 1 }
+        let pick = base(words[i])
+        return prefix + (pick.isEmpty || pick == "-" ? base(first) : pick)
     }
 }

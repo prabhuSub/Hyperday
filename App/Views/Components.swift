@@ -700,6 +700,7 @@ struct RootView: View {
             tab = .calendar
         }
         .onReceive(NotificationCenter.default.publisher(for: .openCarTab)) { _ in if Features.car { tab = .car } }
+        .onReceive(NotificationCenter.default.publisher(for: .openJobTrailTab)) { _ in tab = .jobtrail }
         .sheet(item: $adding) { mode in
             switch mode {
             case .block: QuickAddSheet().presentationDetents([.large])
@@ -922,7 +923,8 @@ extension ToolbarContent {
 
 
 extension Notification.Name {
-    static let openCarTab = Notification.Name("hyperday.openCarTab")   // car widgets → Car tab
+    static let openCarTab = Notification.Name("hyperday.openCarTab")
+    static let openJobTrailTab = Notification.Name("hyperday.openJobTrailTab")   // Macs widgets → JobTrail tab   // car widgets → Car tab
 }
 
 

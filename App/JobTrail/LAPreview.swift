@@ -31,3 +31,39 @@ struct LAPreviewScreen: View {
     }
 }
 #endif
+
+#if DEBUG
+/// v64 debug only (`-hdWidgetPreview YES`): the Macs widgets at iPhone sizes, with live JobTrail data if
+/// the app has read it, else sample data.
+struct WidgetPreviewScreen: View {
+    @State private var snap = JTStore.load().flatMap { $0.macs.isEmpty ? nil : $0 } ?? .sample
+    private func card<V: View>(_ w: CGFloat, _ h: CGFloat, @ViewBuilder _ v: () -> V) -> some View {
+        v().padding(16).frame(width: w, height: h, alignment: .topLeading)
+            .background(InstrumentBackground())
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(HDTone.amber.opacity(0.45)))
+    }
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 14) {
+                HStack(spacing: 14) {
+                    card(170, 170) { MacsSmallView(snap: snap, now: .now) }
+                    card(170, 170) {
+                        MacsLockView(snap: snap).foregroundStyle(.white).frame(height: 60)
+                    }
+                }
+                card(364, 170) { MacsMediumView(snap: snap, now: .now) }
+                card(364, 382) { MacsLargeView(snap: snap, now: .now) }
+            }
+            .padding(12)
+        }
+        .background(Color.gray.opacity(0.35))
+        .environment(\.colorScheme, .dark)
+        .task {
+            await JobTrailLive.shared.poll()
+            try? await Task.sleep(for: .seconds(3))
+            if let s = JTStore.load(), !s.macs.isEmpty { snap = s }
+        }
+    }
+}
+#endif

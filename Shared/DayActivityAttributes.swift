@@ -24,6 +24,7 @@ struct TrackSeg: Codable, Hashable {
 
 /// v61: one Mac from JobTrail (MacBook Pro / Mac mini), as the Live Activity shows it.
 struct MacLive: Codable, Hashable {
+    var id: String? = nil     // JobTrail machine id ("local" / "remote"), v64
     var name: String          // "MacBook Pro"
     var desktop: Bool         // Mac mini → desktop glyph
     var online: Bool

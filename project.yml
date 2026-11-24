@@ -78,12 +78,18 @@ targets:
       - Shared/CarData.swift
       - Shared/HDMotion.swift
       - Shared/JTKit.swift
+      - Shared/JobTrailShared.swift
+      - Shared/MacsWidgetViews.swift
       - Shared/Fonts
     info:
       path: Widget/Info.plist
       properties:
         CFBundleDisplayName: Hyperday
         UIAppFonts: [Geist-Regular.ttf, Geist-Medium.ttf, Geist-SemiBold.ttf, Geist-Bold.ttf, GeistMono-Regular.ttf, GeistMono-Medium.ttf, GeistMono-SemiBold.ttf, GeistMono-Bold.ttf]
+        JTKey: $(JOBTRAIL_KEY)       # v64: the Macs widgets read JobTrail themselves
+        JTHosts: $(JOBTRAIL_HOSTS)
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:

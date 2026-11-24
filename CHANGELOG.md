@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### v64: Macs widgets (JobTrail on the Home Screen)
+- **Macs · JobTrail** widget, small / medium / large: each Mac with a GPU (amber) + memory (blue) graph over 6 h, running count, newest job with a live clock; large adds Running now (machine tag, live timers) and a 24 h jobs-started bar chart (done / failed / running).
+- **Macs** Lock Screen widget: both Macs, running count, GPU and MEM.
+- Shared data layer (`Shared/JobTrailShared.swift`): the widget reads JobTrail itself every ~15 min and the app pushes fresh data while open; GPU/MEM history (one reading per ~4 min, 24 h) builds up in the App Group. Tapping a Macs widget opens the JobTrail tab.
+- Clearer job names: "ssh mini", "watch · grep".
+- Debug: `-hdWidgetPreview YES` shows the widgets at iPhone sizes.
+
 ### v63: Mac usage on the Live Activity, JobTrail app icon
 - Each Mac on the card now has a second line: GPU and memory as hairline meters with numbers (red above 90%). Clock and buttons shrink slightly when the Macs are shown so everything fits 160 pt.
 - Smarter job names: the script, not the interpreter (".venv/bin/python render_s01.py" → "render_s01.py").

@@ -7,6 +7,8 @@ struct DayLiveWidgetBundle: WidgetBundle {
     var body: some Widget {
         DayLiveActivityWidget()
         HyperdayTodayWidget()
+        HyperdayMacsWidget()              // v64: JobTrail Macs
+        HyperdayMacsLockWidget()
         HyperdayNowWidget()
         HyperdayDayWidget()
         HyperdayCircleWidget()
