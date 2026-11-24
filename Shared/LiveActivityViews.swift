@@ -195,10 +195,12 @@ struct LockScreenCard: View {
     private var hasMacs: Bool { !macs.isEmpty }
 
     var body: some View {
-        if !inIsland && isEmptyDay && hasMacs {
-            JobTrailBoard(state: state, headline: state.title)   // v65: day done → the card becomes JobTrail
+        // v70: the expanded Dynamic Island shows the same JobTrail layouts as the Lock Screen
+        // (it used to keep the old "Day complete" card with Mac chips).
+        if isEmptyDay && hasMacs {
+            JobTrailBoard(state: state, headline: state.title, island: inIsland)   // v65: day done → the card becomes JobTrail
         } else if inIsland || isEmptyDay {
-            legacyBody
+            legacyBody   // the island keeps its compact day layout (it has less height than the Lock Screen)
         } else {
             jtCard   // v62: one JobTrail layout for every Lock Screen state
         }
@@ -220,10 +222,10 @@ struct LockScreenCard: View {
                 journey
             }
         }
-        if hasMacs && !inIsland {
+        if hasMacs {   // v70: the island uses the new Mac rows too (was the old chips)
             Rectangle().fill(HDTone.hover).frame(height: 1)
             MacRow(macs: macs)
-        } else if hasMacs { MacStrip(macs: macs, compact: true) }
+        }
         }
         .foregroundStyle(.white)
         .padding(.horizontal, inIsland ? 4 : 14)
@@ -322,8 +324,8 @@ struct LockScreenCard: View {
                 MacRow(macs: macs)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, hasMacs ? 7 : 14)
+        .padding(.horizontal, inIsland ? 4 : 16)
+        .padding(.vertical, inIsland ? 2 : (hasMacs ? 7 : 14))
         .frame(maxWidth: .infinity, alignment: .leading)   // v67: no border (iOS trims the card's bottom corners)
     }
 
@@ -1687,6 +1689,7 @@ struct MacRowItem: View {
 struct JobTrailBoard: View {
     let state: DayActivityAttributes.ContentState
     let headline: String
+    var island = false   // v70: expanded Dynamic Island: its own margins, 2 jobs per Mac
 
     private var macs: [MacLive] { Array((state.macs ?? []).prefix(2)) }
 
@@ -1706,12 +1709,12 @@ struct JobTrailBoard: View {
             HStack(alignment: .top, spacing: 12) {
                 ForEach(Array(macs.enumerated()), id: \.offset) { i, m in
                     if i > 0 { Rectangle().fill(HDTone.hover).frame(width: 1) }
-                    BoardColumn(mac: m)
+                    BoardColumn(mac: m, maxJobs: island ? 2 : 3)
                 }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 11)
+        .padding(.horizontal, island ? 4 : 16)
+        .padding(.vertical, island ? 2 : 11)
         .frame(maxWidth: .infinity, alignment: .leading)
         // v67: no border: iOS trims the card's bottom corners, so a drawn outline always looked cut off.
     }
@@ -1719,6 +1722,7 @@ struct JobTrailBoard: View {
 
 private struct BoardColumn: View {
     let mac: MacLive
+    var maxJobs = 3
     private var status: HDStatus {
         switch mac.statusRaw { case "running": .running; case "waiting": .waiting; case "failed": .failed; default: .idle }
     }
@@ -1767,7 +1771,7 @@ private struct BoardColumn: View {
                 if jobs.isEmpty {
                     Text("NO JOBS").font(.mono(9, .semibold)).kerning(0.6).foregroundStyle(HDTone.faintDark)
                 }
-                ForEach(Array(jobs.prefix(3).enumerated()), id: \.offset) { _, j in
+                ForEach(Array(jobs.prefix(maxJobs).enumerated()), id: \.offset) { _, j in
                     HStack(spacing: 4) {
                         Circle().fill(j.waiting ? HDTone.amber : HDTone.green).frame(width: 4, height: 4)
                         Text(j.label).font(.mono(9.5, .medium)).foregroundStyle(HDTone.soft)

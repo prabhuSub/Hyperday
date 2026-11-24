@@ -19,6 +19,8 @@ enum Theme {
 
     // JobTrail palette (amber-on-black). Dark = JobTrail's exact tokens; light is a
     // derived counterpart that keeps the amber identity and stays WCAG AA.
+    /// v70: side margin of every tab's content, the same as the bottom navigation bar's.
+    static let edge: CGFloat = 14
     static let bg = dyn(0xFFFFFF, 0x000000)         // JobTrail --bg
     static let section = dyn(0xF4F5F6, 0x000000)
     static let card = dyn(0xFFFFFF, 0x181818)       // --surface

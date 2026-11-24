@@ -39,7 +39,7 @@ struct CalendarTabView: View {
                         }
                     }
                     .scrollTargetLayout()
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, Theme.edge)
                     .padding(.top, 6)
                     .padding(.bottom, 40)
                 }
@@ -78,7 +78,7 @@ struct CalendarTabView: View {
                                         .id(selected)
                                 }
                             }
-                            .padding(.horizontal, 20)
+                            .padding(.horizontal, Theme.edge)
                             .padding(.top, 16)
                             .padding(.bottom, 40)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -133,7 +133,7 @@ struct CalendarTabView: View {
             }
             filters
         }
-        .padding(20)
+        .padding(.vertical, 20).padding(.horizontal, Theme.edge)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Theme.bg)
     }

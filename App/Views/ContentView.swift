@@ -34,7 +34,7 @@ struct TodayView: View {
                         hero(snap: snap).jtStagger(0)
                         heroButtons.jtStagger(1)   // same left/right edges as the card above
                     }
-                    .padding(.horizontal, 20)   // same margin as the title and the cards below
+                    .padding(.horizontal, Theme.edge)   // same margin as the title and the cards below
                     .padding(.top, 6)
                     .scrollTransition(.interactive, axis: .vertical) { view, phase in
                         view
@@ -52,7 +52,7 @@ struct TodayView: View {
                         JTSectionHead("Plan vs real").jtStagger(4)
                         RealityCard(blocks: snap.all, now: now).jtStagger(5)
                     }
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, Theme.edge)
                     .padding(.top, 20)
                     .padding(.bottom, 40)
                     .frame(maxWidth: .infinity, alignment: .leading)

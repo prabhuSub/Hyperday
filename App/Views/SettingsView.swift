@@ -58,7 +58,7 @@ struct SettingsView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.top, 28)
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Theme.edge)
             .padding(.top, 8)
             .padding(.bottom, 120)
         }

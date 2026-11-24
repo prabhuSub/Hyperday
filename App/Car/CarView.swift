@@ -16,7 +16,7 @@ struct CarView: View {
                 teslaHeader
                 stage
                     .clipShape(Chamfer(cut: 16))   // v55: stainless stage with cut corners
-                    .padding(.horizontal, 12)
+                    .padding(.horizontal, Theme.edge)
                 angleRow
                 alertStrips
                 statusGrid
@@ -31,7 +31,7 @@ struct CarView: View {
                         .font(.geist(size: 10))
                         .foregroundStyle(Theme.faint)
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, Theme.edge)
                 .padding(.top, 20)
             }
             .padding(.bottom, 120)
@@ -127,7 +127,7 @@ struct CarView: View {
             }
         }
         .background(HDTone.panel, in: Chamfer(cut: 10))
-        .padding(.horizontal, 12)
+        .padding(.horizontal, Theme.edge)
         .padding(.top, 8)
     }
 
@@ -163,7 +163,7 @@ struct CarView: View {
                 .font(.hdMono(size: 10.5, weight: .medium)).kerning(1.5).foregroundStyle(Theme.muted)
             }
             .accessibilityElement(children: .combine)
-            .padding(.horizontal, 24)
+            .padding(.horizontal, Theme.edge)
             .padding(.top, 14)
         }
     }
@@ -195,7 +195,7 @@ struct CarView: View {
                         .background(HDTone.panel, in: Chamfer(cut: 8))
                     }
                 }
-                .padding(.horizontal, 12)
+                .padding(.horizontal, Theme.edge)
                 .padding(.top, 12)
             }
         }

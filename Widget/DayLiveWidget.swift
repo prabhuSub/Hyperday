@@ -48,7 +48,11 @@ struct DayLiveActivityWidget: Widget {
                 // v24: long-press shows the same "day as a journey" card as the Lock Screen.
                 DynamicIslandExpandedRegion(.bottom) {
                     if st.closed == true {
-                        DayClosedCard(state: st, compact: true)
+                        if (st.macs ?? []).isEmpty {
+                            DayClosedCard(state: st, compact: true)
+                        } else {
+                            JobTrailBoard(state: st, headline: "Day closed", island: true)   // v70
+                        }
                     } else if st.driving == true {
                         DriveCard(state: st)
                     } else {

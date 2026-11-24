@@ -79,7 +79,7 @@ struct StatsView: View {
                                 .buttonStyle(SecondaryButtonStyle())
                         }
                     }
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, Theme.edge)
                     .padding(.top, 18)
                     .padding(.bottom, 40)
                 }

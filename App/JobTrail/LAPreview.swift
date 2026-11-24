@@ -38,6 +38,14 @@ struct LAPreviewScreen: View {
                     .frame(height: 160, alignment: .top)
                     .background(Color(UIColor(hd: 0x0C0C0C)).opacity(0.9))
                     .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                // v70: expanded Dynamic Island (black, its own margins, about 120 pt below the camera)
+                LockScreenCard(state: Self.doneState, inIsland: true)
+                    .frame(maxWidth: .infinity, maxHeight: 124, alignment: .top)
+                    .frame(height: 124, alignment: .top)
+                    .padding(.horizontal, 18).padding(.vertical, 10)
+                    .background(Color.black)
+                    .clipShape(RoundedRectangle(cornerRadius: 44, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 44, style: .continuous).strokeBorder(.red.opacity(0.3)))
                 ForEach(Array(LiveActivityManager.previewStates(now: .now).prefix(5).enumerated()), id: \.offset) { _, item in
                     var st = item.0
                     let _ = (st.macs = Self.macs)

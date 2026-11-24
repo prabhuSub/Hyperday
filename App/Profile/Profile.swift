@@ -17,6 +17,9 @@ final class ProfileStore: ObservableObject {
     private let d = UserDefaults.standard
     private let photoURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         .appendingPathComponent("profile-photo.jpg")
+    /// v70: the uncropped picture, kept so it can be cropped again later.
+    private let originalURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("profile-photo-original.jpg")
 
     private init() {
         name = d.string(forKey: "profileName")
@@ -39,8 +42,29 @@ final class ProfileStore: ObservableObject {
         return s.isEmpty ? "" : s.uppercased()
     }
 
+    /// v70: what the crop screen starts from: the uncropped original, or (for a photo set before v70) the
+    /// current one.
+    var cropSource: UIImage? {
+        (try? Data(contentsOf: originalURL)).flatMap(UIImage.init(data:)) ?? photo
+    }
+
+    /// v70: set a cropped photo and keep its original for re-cropping.
+    func setPhoto(cropped: UIImage, original: UIImage) {
+        let o = Self.shrink(Self.upright(original), to: 2048)
+        if let data = o.jpegData(compressionQuality: 0.88) { try? data.write(to: originalURL, options: .atomic) }
+        setPhoto(cropped)
+    }
+
+    /// Bakes in the photo's rotation so cropping math works in plain pixels.
+    static func upright(_ image: UIImage) -> UIImage {
+        guard image.imageOrientation != .up else { return image }
+        let fmt = UIGraphicsImageRendererFormat(); fmt.scale = image.scale
+        return UIGraphicsImageRenderer(size: image.size, format: fmt).image { _ in image.draw(in: CGRect(origin: .zero, size: image.size)) }
+    }
+
     func setPhoto(_ image: UIImage?) {
-        let image = image.map { Self.shrink($0, to: 256) }
+        if image == nil { try? FileManager.default.removeItem(at: originalURL) }
+        let image = image.map { Self.shrink($0, to: 512) }
         photo = image
         if let data = image?.jpegData(compressionQuality: 0.85) {
             try? data.write(to: photoURL, options: .atomic)
@@ -132,6 +156,7 @@ struct ProfileSheet: View {
     @Environment(\.colorScheme) private var scheme
     @State private var pick: PhotosPickerItem?
     @State private var error: String?
+    @State private var cropping: PhotoCropItem?
 
     var body: some View {
         NavigationStack {
@@ -159,12 +184,19 @@ struct ProfileSheet: View {
             }
             .onChange(of: pick) { _, item in
                 Task {
+                    // v70: a new photo goes to the crop screen first.
                     if let data = try? await item?.loadTransferable(type: Data.self), let img = UIImage(data: data) {
-                        profile.setPhoto(img)
+                        cropping = PhotoCropItem(image: ProfileStore.upright(img))
                     }
+                    pick = nil
                 }
             }
             .onAppear { profile.checkStillValid() }
+            .fullScreenCover(item: $cropping) { item in
+                PhotoCropSheet(image: item.image) { out in
+                    profile.setPhoto(cropped: out, original: item.image)
+                }
+            }
         }
     }
 
@@ -220,6 +252,11 @@ struct ProfileSheet: View {
             Spacer()
             if profile.photo != nil {
                 Button("Remove") { profile.setPhoto(nil) }.font(.geist(size: 14))
+                // v70: re-crop the current photo (also works for one set before cropping existed).
+                Button("Crop") {
+                    if let src = profile.cropSource { cropping = PhotoCropItem(image: ProfileStore.upright(src)) }
+                }
+                .font(.geist(size: 14))
             }
             let label = profile.photo == nil ? "Choose…" : "Change"
             PhotosPicker(selection: $pick, matching: .images) {
