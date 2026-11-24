@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### v66: Live Activity border fix
+- The JobTrail board was a few points taller than iOS's 160 pt card, so its bottom (and border) got clipped. Tighter rows (fixed 12 pt job lines, smaller graph), and the border is now drawn on the card's real bounds on every card so it always closes. Long job clocks (10 h+) get a wider column.
+
 ### v65: Day done → JobTrail board on the Live Activity
 - When the day is complete (or closed), the Lock Screen card becomes a JobTrail board: both Macs side by side with MacBook battery (red ≤ 20%, green bolt when charging), GPU graph (~1.5 h, red above 90%), GPU/MEM numbers, and up to three jobs each with live clocks. Header keeps "Day complete · 7/7" plus total running / waiting.
 - The card no longer ends after the last block while JobTrail's Macs are online; Go Live also auto-starts when jobs are running.

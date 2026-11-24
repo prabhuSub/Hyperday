@@ -323,7 +323,7 @@ struct LockScreenCard: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, hasMacs ? 7 : 14)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)   // v66: border on the card's real bounds
         .background {
             ContainerRelativeShape()
                 .strokeBorder(st == .running || st == .failed ? st.color.opacity(0.45)
@@ -1696,7 +1696,7 @@ struct JobTrailBoard: View {
 
     var body: some View {
         let run = macs.reduce(0) { $0 + $1.running }, wait = macs.reduce(0) { $0 + $1.waiting }
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 6) {
                 Image(systemName: "checkmark").font(.system(size: 9, weight: .heavy)).foregroundStyle(HDTone.green)
                 Text(headline.uppercased() + (state.totalCount.map { t in " · \(state.doneCount ?? 0)/\(t)" } ?? ""))
@@ -1715,8 +1715,9 @@ struct JobTrailBoard: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 11)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 10)
+        // v66: border on the card's real bounds (not the content's), so iOS's 160 pt cut can't clip it
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background {
             ContainerRelativeShape().strokeBorder(run > 0 ? HDTone.green.opacity(0.4) : HDTone.lineDark, lineWidth: 1)
         }
@@ -1735,7 +1736,7 @@ private struct BoardColumn: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 3) {
             // name · battery (MacBook) / status
             HStack(spacing: 5) {
                 Image(systemName: mac.desktop ? "macmini" : "laptopcomputer")
@@ -1766,7 +1767,8 @@ private struct BoardColumn: View {
                     Text("\(mac.mem ?? 0)").font(.mono(9.5, .semibold)).foregroundStyle(HDTone.blue)
                 }
                 JTSpark(values: (mac.gpuHist ?? [mac.gpu ?? 0]).map(Double.init), color: hot ? HDTone.danger : HDTone.amber)
-                    .frame(height: 16)
+                    .frame(height: 13)
+                    .padding(.bottom, 2)
                     .background(alignment: .bottom) { Rectangle().fill(HDTone.hover).frame(height: 1) }
                 // jobs
                 let jobs = mac.jobs ?? []
@@ -1774,7 +1776,7 @@ private struct BoardColumn: View {
                     Text("NO JOBS").font(.mono(9, .semibold)).kerning(0.6).foregroundStyle(HDTone.faintDark)
                 }
                 ForEach(Array(jobs.prefix(3).enumerated()), id: \.offset) { _, j in
-                    HStack(spacing: 4) {
+                    HStack(spacing: 4) {   // v66: fixed 12 pt rows
                         Circle().fill(j.waiting ? HDTone.amber : HDTone.green).frame(width: 4, height: 4)
                         Text(j.label).font(.mono(9.5, .medium)).foregroundStyle(HDTone.soft)
                             .lineLimit(1).truncationMode(.middle).layoutPriority(-1)
@@ -1784,9 +1786,11 @@ private struct BoardColumn: View {
                         } else {
                             Text(timerInterval: j.since...j.since.addingTimeInterval(7 * 86_400), countsDown: false)
                                 .font(.mono(9.5, .semibold)).foregroundStyle(HDTone.green)
-                                .monospacedDigit().multilineTextAlignment(.trailing).frame(width: 44, alignment: .trailing)
+                                .monospacedDigit().multilineTextAlignment(.trailing)
+                                .frame(width: Date.now.timeIntervalSince(j.since) >= 36_000 ? 54 : 46, alignment: .trailing)
                         }
                     }
+                    .frame(height: 12)
                 }
             }
         }
