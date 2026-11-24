@@ -142,6 +142,12 @@ enum JTStore {
             let wait = jobs.filter { ($0["state"] as? String) == "waiting" }
             let newest = { (l: [[String: Any]]) in l.max { ($0["startedAt"] as? Double ?? 0) < ($1["startedAt"] as? Double ?? 0) } }
             let top = newest(run) ?? newest(wait)
+            let byNew = { (l: [[String: Any]]) in l.sorted { ($0["startedAt"] as? Double ?? 0) > ($1["startedAt"] as? Double ?? 0) } }
+            let list = (byNew(run) + byNew(wait)).prefix(3).compactMap { j -> MacJob? in
+                guard let s = j["startedAt"] as? Double else { return nil }
+                return MacJob(label: MacRowItem.short(j["label"] as? String ?? "job"),
+                              since: Date(timeIntervalSince1970: s / 1000), waiting: (j["state"] as? String) == "waiting")
+            }
             return MacLive(
                 id: id,
                 name: m["name"] as? String ?? id,
@@ -152,7 +158,11 @@ enum JTStore {
                 mem: (m["memFree"] as? Double).map { max(0, 100 - Int($0.rounded())) },
                 top: top.flatMap { $0["label"] as? String },
                 topSince: (top?["startedAt"] as? Double).map { Date(timeIntervalSince1970: $0 / 1000) },
-                topWaiting: top.map { ($0["state"] as? String) == "waiting" })
+                topWaiting: top.map { ($0["state"] as? String) == "waiting" },
+                battery: (m["battery"] as? Double).map { Int($0.rounded()) },
+                charging: m["charging"] as? Bool,
+                gpuHist: nil,
+                jobs: list.isEmpty ? nil : Array(list))
         }
     }
 

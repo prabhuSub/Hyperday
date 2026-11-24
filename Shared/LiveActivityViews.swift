@@ -195,7 +195,9 @@ struct LockScreenCard: View {
     private var hasMacs: Bool { !macs.isEmpty }
 
     var body: some View {
-        if inIsland || isEmptyDay {
+        if !inIsland && isEmptyDay && hasMacs {
+            JobTrailBoard(state: state, headline: state.title)   // v65: day done → the card becomes JobTrail
+        } else if inIsland || isEmptyDay {
             legacyBody
         } else {
             jtCard   // v62: one JobTrail layout for every Lock Screen state
@@ -1188,7 +1190,9 @@ struct ActivityFamilyCard: View {
     var body: some View {
         let live = self.state.selfSwitched(isStale: self.isStale)
         let state = live.state, isStale = live.isStale
-        if state.closed == true {
+        if state.closed == true, family != .small, !(state.macs ?? []).isEmpty {
+            JobTrailBoard(state: state, headline: "Day closed")   // v65: closed day → JobTrail board
+        } else if state.closed == true {
             DayClosedCard(state: state, compact: family == .small)
         } else if state.driving == true && family != .small {
             DriveCard(state: state)
@@ -1676,5 +1680,116 @@ struct MacRowItem: View {
         while i < words.count - 1, interpreters.contains(base(words[i])) || (base(words[i]).hasPrefix("python") && words[i].contains("/")) { i += 1 }
         let pick = base(words[i])
         return prefix + (pick.isEmpty || pick == "-" ? base(first) : pick)
+    }
+}
+
+
+// MARK: - v65 Day done → JobTrail board
+
+/// When your day is complete (or closed), the Live Activity stops wasting space and becomes a JobTrail
+/// board: both Macs with battery, a GPU graph, memory, and up to three jobs each with live clocks.
+struct JobTrailBoard: View {
+    let state: DayActivityAttributes.ContentState
+    let headline: String
+
+    private var macs: [MacLive] { Array((state.macs ?? []).prefix(2)) }
+
+    var body: some View {
+        let run = macs.reduce(0) { $0 + $1.running }, wait = macs.reduce(0) { $0 + $1.waiting }
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark").font(.system(size: 9, weight: .heavy)).foregroundStyle(HDTone.green)
+                Text(headline.uppercased() + (state.totalCount.map { t in " · \(state.doneCount ?? 0)/\(t)" } ?? ""))
+                    .font(.mono(9.5, .semibold)).kerning(0.8).foregroundStyle(HDTone.green).lineLimit(1)
+                Spacer(minLength: 6)
+                JTECGMark().frame(width: 12, height: 12)
+                Text(run > 0 ? "\(run) RUNNING" + (wait > 0 ? " · \(wait) WAIT" : "") : "JOBTRAIL · IDLE")
+                    .font(.mono(9.5, .semibold)).kerning(0.6)
+                    .foregroundStyle(run > 0 ? HDTone.green : HDTone.faintDark).lineLimit(1)
+            }
+            HStack(alignment: .top, spacing: 12) {
+                ForEach(Array(macs.enumerated()), id: \.offset) { i, m in
+                    if i > 0 { Rectangle().fill(HDTone.hover).frame(width: 1) }
+                    BoardColumn(mac: m)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 11)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            ContainerRelativeShape().strokeBorder(run > 0 ? HDTone.green.opacity(0.4) : HDTone.lineDark, lineWidth: 1)
+        }
+    }
+}
+
+private struct BoardColumn: View {
+    let mac: MacLive
+    private var status: HDStatus {
+        switch mac.statusRaw { case "running": .running; case "waiting": .waiting; case "failed": .failed; default: .idle }
+    }
+    private var batterySymbol: String {
+        if mac.charging == true { return "battery.100.bolt" }
+        let b = mac.battery ?? 0
+        return b > 87 ? "battery.100" : b > 62 ? "battery.75" : b > 37 ? "battery.50" : b > 12 ? "battery.25" : "battery.0"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            // name · battery (MacBook) / status
+            HStack(spacing: 5) {
+                Image(systemName: mac.desktop ? "macmini" : "laptopcomputer")
+                    .font(.system(size: 10, weight: .semibold)).foregroundStyle(HDTone.dim)
+                Text(mac.desktop ? "Mac mini" : "MacBook Pro").font(.geist(size: 12.5, weight: .semibold))
+                    .foregroundStyle(HDTone.textHi).lineLimit(1)
+                Spacer(minLength: 2)
+                if let b = mac.battery {
+                    Image(systemName: batterySymbol).font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(b <= 20 && mac.charging != true ? HDTone.danger : (mac.charging == true ? HDTone.green : HDTone.soft))
+                    Text("\(b)%").font(.mono(9.5, .semibold)).monospacedDigit()
+                        .foregroundStyle(b <= 20 && mac.charging != true ? HDTone.danger : HDTone.soft)
+                } else {
+                    JTStatusDot(status: status, size: 5, animated: false)
+                }
+            }
+            if !mac.online {
+                Text("OFFLINE").font(.mono(10, .semibold)).kerning(0.8).foregroundStyle(HDTone.danger)
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 12)
+            } else {
+                // GPU graph with GPU / MEM numbers
+                let hot = (mac.gpu ?? 0) >= 90
+                HStack(spacing: 4) {
+                    Text("GPU").font(.mono(8, .semibold)).foregroundStyle(HDTone.faintDark)
+                    Text("\(mac.gpu ?? 0)").font(.mono(9.5, .semibold)).foregroundStyle(hot ? HDTone.danger : HDTone.amber)
+                    Spacer(minLength: 2)
+                    Text("MEM").font(.mono(8, .semibold)).foregroundStyle(HDTone.faintDark)
+                    Text("\(mac.mem ?? 0)").font(.mono(9.5, .semibold)).foregroundStyle(HDTone.blue)
+                }
+                JTSpark(values: (mac.gpuHist ?? [mac.gpu ?? 0]).map(Double.init), color: hot ? HDTone.danger : HDTone.amber)
+                    .frame(height: 16)
+                    .background(alignment: .bottom) { Rectangle().fill(HDTone.hover).frame(height: 1) }
+                // jobs
+                let jobs = mac.jobs ?? []
+                if jobs.isEmpty {
+                    Text("NO JOBS").font(.mono(9, .semibold)).kerning(0.6).foregroundStyle(HDTone.faintDark)
+                }
+                ForEach(Array(jobs.prefix(3).enumerated()), id: \.offset) { _, j in
+                    HStack(spacing: 4) {
+                        Circle().fill(j.waiting ? HDTone.amber : HDTone.green).frame(width: 4, height: 4)
+                        Text(j.label).font(.mono(9.5, .medium)).foregroundStyle(HDTone.soft)
+                            .lineLimit(1).truncationMode(.middle).layoutPriority(-1)
+                        Spacer(minLength: 2)
+                        if j.waiting {
+                            Text("WAIT").font(.mono(8.5, .semibold)).foregroundStyle(HDTone.amber)
+                        } else {
+                            Text(timerInterval: j.since...j.since.addingTimeInterval(7 * 86_400), countsDown: false)
+                                .font(.mono(9.5, .semibold)).foregroundStyle(HDTone.green)
+                                .monospacedDigit().multilineTextAlignment(.trailing).frame(width: 44, alignment: .trailing)
+                        }
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

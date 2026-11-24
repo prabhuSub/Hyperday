@@ -310,7 +310,9 @@ final class LiveActivityManager: ObservableObject {
         let inForeground = UIApplication.shared.applicationState == .active
 
         let closePending = DayCloseSettings.showOnLockScreen && closeAt > now
-        let dayIsOver = !closed && !closePending && !snap.all.isEmpty && !snap.hasAnythingLeft
+        // v65: with JobTrail connected, a finished day keeps the card as the JobTrail board instead of ending it.
+        let macsLive = !JobTrailLive.shared.macs.isEmpty && JobTrailLive.shared.macs.contains { $0.online }
+        let dayIsOver = !closed && !closePending && !snap.all.isEmpty && !snap.hasAnythingLeft && !macsLive
         let force = forceStart
         forceStart = false
         var outcome = "idle"
@@ -333,7 +335,7 @@ final class LiveActivityManager: ObservableObject {
                 lastError = nil
                 outcome = "updated"
             }
-        } else if force || (autoStart && inForeground && (snap.hasAnythingLeft || closed)) {
+        } else if force || (autoStart && inForeground && (snap.hasAnythingLeft || closed || JobTrailLive.shared.runningTotal > 0)) {
             // (A background request always fails, so only auto-start while the app is open.)
             // Auto-start only when there's something to show; "Go Live" always starts.
             await Self.endAll()

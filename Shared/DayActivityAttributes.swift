@@ -22,6 +22,13 @@ struct TrackSeg: Codable, Hashable {
     var hex: String
 }
 
+/// v65: one live job on a Mac, for the Live Activity board.
+struct MacJob: Codable, Hashable {
+    var label: String
+    var since: Date
+    var waiting: Bool
+}
+
 /// v61: one Mac from JobTrail (MacBook Pro / Mac mini), as the Live Activity shows it.
 struct MacLive: Codable, Hashable {
     var id: String? = nil     // JobTrail machine id ("local" / "remote"), v64
@@ -35,6 +42,11 @@ struct MacLive: Codable, Hashable {
     var top: String?          // label of the newest running (else waiting) job
     var topSince: Date?       // when it started: the card counts up from here by itself
     var topWaiting: Bool?
+    // v65: the "day done" board
+    var battery: Int?         // % (MacBook only)
+    var charging: Bool?
+    var gpuHist: [Int]?       // last ~20 GPU readings, oldest first
+    var jobs: [MacJob]?       // up to 3 live jobs, running first
 
     /// Green running, amber waiting, red offline, grey idle.
     var statusRaw: String { !online ? "failed" : running > 0 ? "running" : waiting > 0 ? "waiting" : "idle" }

@@ -84,7 +84,14 @@ final class JobTrailLive: ObservableObject {
 
     private func apply(_ json: [String: Any]) {
         // v64: one parser for the app and the widgets (JTStore); the snapshot is saved for the Macs widgets.
-        macs = JTStore.macs(from: json)
+        // GPU history for the Live Activity graph: saved readings (≈4 min apart) + now, ~20 points.
+        let saved = JTStore.load() ?? .empty
+        macs = JTStore.macs(from: json).map { m in
+            var m = m
+            let hist = saved.series(m.id, gpu: true, hours: 1.5).map { Int($0) }.suffix(19)
+            m.gpuHist = Array(hist) + [m.gpu ?? 0]
+            return m
+        }
         runningTotal = macs.reduce(0) { $0 + $1.running }
         lastUpdate = .now
         let prev = JTStore.load() ?? .empty
@@ -109,7 +116,7 @@ final class JobTrailLive: ObservableObject {
 
     /// Refresh the Live Activity only when something you'd see changed (not on every GPU tick).
     private func changed() {
-        let sig = macs.map { "\($0.name)|\($0.online)|\($0.running)|\($0.waiting)|\($0.top ?? "")|\(($0.gpu ?? 0) / 10)|\(($0.mem ?? 0) / 10)" }.joined(separator: ",")
+        let sig = macs.map { "\($0.name)|\($0.online)|\($0.running)|\($0.waiting)|\($0.top ?? "")|\(($0.gpu ?? 0) / 10)|\(($0.mem ?? 0) / 10)|\(($0.battery ?? 0) / 5)|\($0.charging ?? false)|\(($0.jobs ?? []).map(\.label))" }.joined(separator: ",")
         guard sig != lastSignature else { return }
         lastSignature = sig
         Task { await LiveActivityManager.shared.refresh() }

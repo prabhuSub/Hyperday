@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### v65: Day done → JobTrail board on the Live Activity
+- When the day is complete (or closed), the Lock Screen card becomes a JobTrail board: both Macs side by side with MacBook battery (red ≤ 20%, green bolt when charging), GPU graph (~1.5 h, red above 90%), GPU/MEM numbers, and up to three jobs each with live clocks. Header keeps "Day complete · 7/7" plus total running / waiting.
+- The card no longer ends after the last block while JobTrail's Macs are online; Go Live also auto-starts when jobs are running.
+- Battery comes from JobTrail's `/api/state` (`battery`, `charging`), added server-side; the JobTrail page is unchanged.
+
 ### v64: Macs widgets (JobTrail on the Home Screen)
 - **Macs · JobTrail** widget, small / medium / large: each Mac with a GPU (amber) + memory (blue) graph over 6 h, running count, newest job with a live clock; large adds Running now (machine tag, live timers) and a 24 h jobs-started bar chart (done / failed / running).
 - **Macs** Lock Screen widget: both Macs, running count, GPU and MEM.
