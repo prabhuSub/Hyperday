@@ -338,27 +338,42 @@ struct JTPulseLine: View {
     }
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / 30, paused: !live)) { ctx in
+        // v71: the wave is sampled on a fixed grid that moves with it (the grid step divides the beat), then the
+        // whole path slides by the sub-step remainder. Before, the samples were re-taken at shifted positions every
+        // frame, so each spike's top and bottom landed between samples differently and the peaks flickered.
+        TimelineView(.animation(minimumInterval: 1 / 60, paused: !live)) { ctx in
             Canvas { c, size in
                 let t = live ? ctx.date.timeIntervalSinceReferenceDate : 0
                 let off = t * (status == .waiting ? 7 : 20)
+                let step = 46.0 / 30                       // 30 samples per beat: every beat is drawn identically
+                let base = (off / step).rounded(.down), frac = CGFloat(off - base * step)
+                let inset: CGFloat = 2                      // keeps the stroke's round caps off the top and bottom edges
+                func y(_ v: Double) -> CGFloat { size.height - inset - CGFloat(v) * (size.height - inset * 2) }
                 var line = Path()
-                var x: CGFloat = 0
-                while x <= size.width {
-                    let y = size.height - CGFloat(value(Double(x) + off)) * (size.height - 2) - 1
-                    if x == 0 { line.move(to: CGPoint(x: x, y: y)) } else { line.addLine(to: CGPoint(x: x, y: y)) }
-                    x += 1.5
+                let n = Int((Double(size.width) + Double(frac)) / step) + 2
+                var head = CGPoint(x: size.width, y: y(value(off + Double(size.width))))
+                var prev: CGPoint?
+                for i in 0...n {
+                    let u = (base + Double(i)) * step
+                    let pt = CGPoint(x: CGFloat(Double(i) * step) - frac, y: y(value(u)))
+                    if i == 0 { line.move(to: pt) } else { line.addLine(to: pt) }
+                    // the head sits on the drawn line at the right edge (interpolated), so it glides instead of hopping
+                    if let a = prev, a.x <= size.width, pt.x > size.width {
+                        let k = (size.width - a.x) / max(pt.x - a.x, 0.001)
+                        head = CGPoint(x: size.width, y: a.y + (pt.y - a.y) * k)
+                    }
+                    prev = pt
                 }
                 var fill = line
-                fill.addLine(to: CGPoint(x: size.width, y: size.height))
-                fill.addLine(to: CGPoint(x: 0, y: size.height))
+                fill.addLine(to: CGPoint(x: CGFloat(Double(n) * step) - frac, y: size.height))
+                fill.addLine(to: CGPoint(x: -frac, y: size.height))
                 fill.closeSubpath()
+                c.clip(to: Path(CGRect(origin: .zero, size: size)))
                 c.fill(fill, with: .linearGradient(Gradient(colors: [color.opacity(0.28), color.opacity(0)]),
                                                    startPoint: .zero, endPoint: CGPoint(x: 0, y: size.height)))
                 c.stroke(line, with: .color(color), style: StrokeStyle(lineWidth: 1.2, lineCap: .round, lineJoin: .round))
-                // the "now" head of the trace glows
-                let hy = size.height - CGFloat(value(Double(size.width) + off)) * (size.height - 2) - 1
-                c.fill(Path(ellipseIn: CGRect(x: size.width - 2.5, y: hy - 2.5, width: 5, height: 5)), with: .color(color))
+                // the "now" head of the trace glows: it rides the line on a fixed sample (no jumping)
+                c.fill(Path(ellipseIn: CGRect(x: head.x - 5, y: head.y - 2.5, width: 5, height: 5)), with: .color(color))
             }
             .mask(LinearGradient(colors: [.clear, .black, .black], startPoint: .leading, endPoint: .trailing))
         }
