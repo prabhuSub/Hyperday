@@ -1475,23 +1475,33 @@ struct IslandTimer: View {
         return h == 0 ? "\(d)d+" : "\(d)d \(h)h+"
     }
 
-    /// v71: hours:minutes:seconds when an hour or more (2:57:05, not 177:05), minutes:seconds under an hour
-    /// (iOS drops the hour by itself once it reaches 0), and a day or more as "1d 4h+".
-    /// The box is sized with a hidden sample so the Island never jumps.
+    /// v71: the Island reads like a person would say it: "2h 30m", "42m" (no seconds, the Lock Screen card has
+    /// those), a day or more as "1d 4h+". iOS updates it by itself every minute. Minutes round up, so it never
+    /// claims less time than there is. The box is sized with a hidden sample so the Island never jumps.
     @ViewBuilder
     private func sized(_ range: ClosedRange<Date>, down: Bool) -> some View {
         let now = Date.now
-        let shown = down ? range.upperBound.timeIntervalSince(now) : now.timeIntervalSince(range.lowerBound)
-        if down, shown >= 86_400, let c = Self.coarse(until: range.upperBound, now: now) {
+        let target = down ? range.upperBound : range.lowerBound
+        let shown = abs(target.timeIntervalSince(now))
+        if down, shown >= 86_400, let c = Self.coarse(until: target, now: now) {
             Self.bigSmall(c)
         } else {
-            let sample = shown >= 3_000 ? "8:88:88" : "88:88"   // up-counts switch to h:mm:ss at 1 h
-            Text(sample).hidden()
-                .overlay(alignment: .trailing) {
-                    Text(timerInterval: range, pauseTime: nil, countsDown: down, showsHours: true)
-                        .multilineTextAlignment(.trailing)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
+            // Live Activities only render Apple's own live formats. Duration units give "2h 30m", but counting toward a
+            // future time they read "-2h 30m"; the text starts one character to the left and the box clips that minus.
+            // (Geist Mono: every character is 0.6 em wide.)
+            // the box fits today's text ("5m" → "8m"); counting down it only gets shorter, so it never clips digits
+            let fmt = Duration.UnitsFormatStyle(allowedUnits: [.hours, .minutes], width: .narrow, maximumUnitCount: 2,
+                                                fractionalPart: .hide(rounded: .up))
+            let sample = String(fmt.format(.seconds(Int(shown.rounded(.up)))).map { $0.isNumber ? "8" : $0 })
+            Text(down ? sample : (shown >= 3_000 ? "8h 88m" : "88m")).hidden()
+                .overlay(alignment: .leading) {
+                    Text(TimeDataSource<Date>.durationOffset(to: target),
+                         format: .units(allowed: [.hours, .minutes], width: .narrow, maximumUnitCount: 2,
+                                        fractionalPart: .hide(rounded: .down)))
+                        .fixedSize()
+                        .offset(x: down ? -14 * 0.6 : 0)
                 }
+                .clipped()
         }
     }
 }
