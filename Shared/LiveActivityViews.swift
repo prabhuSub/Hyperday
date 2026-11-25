@@ -1475,20 +1475,26 @@ struct IslandTimer: View {
         return h == 0 ? "\(d)d+" : "\(d)d \(h)h+"
     }
 
-    /// Minutes:seconds only (1:18:20 shows as 78:20), so the Island stays as narrow as Apple's own timers.
-    /// The box is sized with a hidden "88:88" (or "888:88" past 100 minutes) so it never jumps.
+    /// v71: hours:minutes:seconds when an hour or more (2:57:05, not 177:05), minutes:seconds under an hour
+    /// (iOS drops the hour by itself once it reaches 0), and a day or more as "1d 4h+".
+    /// The box is sized with a hidden sample so the Island never jumps.
+    @ViewBuilder
     private func sized(_ range: ClosedRange<Date>, down: Bool) -> some View {
-        let span = range.upperBound.timeIntervalSince(range.lowerBound)
-        let sample = down && span >= 6000 ? "888:88" : "88:88"   // overtime is capped at 1h, so "88:88" fits
-        return Text(sample).hidden()
-            .overlay(alignment: .trailing) {
-                Text(timerInterval: range, pauseTime: nil, countsDown: down, showsHours: false)
-                    .multilineTextAlignment(.trailing)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-            }
+        let now = Date.now
+        let shown = down ? range.upperBound.timeIntervalSince(now) : now.timeIntervalSince(range.lowerBound)
+        if down, shown >= 86_400, let c = Self.coarse(until: range.upperBound, now: now) {
+            Self.bigSmall(c)
+        } else {
+            let sample = shown >= 3_000 ? "8:88:88" : "88:88"   // up-counts switch to h:mm:ss at 1 h
+            Text(sample).hidden()
+                .overlay(alignment: .trailing) {
+                    Text(timerInterval: range, pauseTime: nil, countsDown: down, showsHours: true)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
+        }
     }
 }
-
 
 // MARK: - v61 Macs from JobTrail
 

@@ -4,6 +4,7 @@
 
 ### v71: smooth pulse graphs
 - The tops and bottoms of the heartbeat spikes no longer flicker as the graph scrolls (every pulse graph in the app: hero card, schedule rows, meters, pop-ups). The wave is now sampled on a grid that moves with it, the line scrolls at 60 fps, the glowing head glides along the line, and the stroke no longer touches the box edges.
+- Dynamic Island timer shows hours: 2:57:05 instead of 177:05; minutes:seconds under an hour; "1d 4h+" past a day.
 
 ### v69: JobTrail legend no longer hidden
 - On phone widths JobTrail puts its map legend (running · waiting · done · failed · instructions) at the top, where the chat cards cover it. Inside Hyperday it now sits on one line in the free strip at the bottom of the map. JobTrail itself is unchanged (its own phone page has the same bug).
