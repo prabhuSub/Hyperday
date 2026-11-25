@@ -1492,13 +1492,16 @@ struct IslandTimer: View {
             // the box fits today's text ("5m" → "8m"); counting down it only gets shorter, so it never clips digits
             let fmt = Duration.UnitsFormatStyle(allowedUnits: [.hours, .minutes], width: .narrow, maximumUnitCount: 2,
                                                 fractionalPart: .hide(rounded: .up))
-            let sample = String(fmt.format(.seconds(Int(shown.rounded(.up)))).map { $0.isNumber ? "8" : $0 })
-            Text(down ? sample : (shown >= 3_000 ? "8h 88m" : "88m")).hidden()
+            let downSample = String(fmt.format(.seconds(Int(shown.rounded(.up)))).map { $0.isNumber ? "8" : $0 })
+            let sample = down ? downSample : (shown >= 3_000 ? "8h 88m" : "88m")
+            Text(sample).hidden()
                 .overlay(alignment: .leading) {
                     Text(TimeDataSource<Date>.durationOffset(to: target),
                          format: .units(allowed: [.hours, .minutes], width: .narrow, maximumUnitCount: 2,
                                         fractionalPart: .hide(rounded: .down)))
-                        .fixedSize()
+                        .lineLimit(1)
+                        // explicit width, never .fixedSize(): .fixedSize() on live text blanks the Island
+                        .frame(width: CGFloat(sample.count + 2) * 14 * 0.6, alignment: .leading)
                         .offset(x: down ? -14 * 0.6 : 0)
                 }
                 .clipped()
