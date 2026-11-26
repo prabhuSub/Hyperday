@@ -41,10 +41,14 @@ build() {
     -allowProvisioningUpdates -allowProvisioningDeviceRegistration \
     DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM" CODE_SIGN_STYLE=Automatic TESLA_CLIENT_ID="${TESLA_CLIENT_ID:-}" \
     JOBTRAIL_KEY="${JOBTRAIL_KEY:-}" JOBTRAIL_HOSTS="${JOBTRAIL_HOSTS:-}" \
+    CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
     "$@" -quiet build
 }
 
-echo "› Building…"
+# A new build number every deploy: iOS keeps the old app icon on notifications (and some other places)
+# until the build number changes; it was always "1", so notifications kept showing the old icon.
+BUILD_NUMBER=$(date +%Y%m%d%H%M)
+echo "› Building… (build $BUILD_NUMBER)"
 LOG=$(mktemp)
 try_build() {
   build "$@" 2>&1 | tee "$LOG" && return 0

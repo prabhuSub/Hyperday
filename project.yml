@@ -27,6 +27,7 @@ targets:
       path: App/Info.plist
       properties:
         CFBundleDisplayName: Hyperday
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)   # deploy.sh sets a new build number each time (fresh icon on notifications)
         UIAppFonts: [Geist-Regular.ttf, Geist-Medium.ttf, Geist-SemiBold.ttf, Geist-Bold.ttf, GeistMono-Regular.ttf, GeistMono-Medium.ttf, GeistMono-SemiBold.ttf, GeistMono-Bold.ttf]   # v57: JobTrail type (Geist, OFL)
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
@@ -85,6 +86,7 @@ targets:
       path: Widget/Info.plist
       properties:
         CFBundleDisplayName: Hyperday
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)   # deploy.sh sets a new build number each time (fresh icon on notifications)
         UIAppFonts: [Geist-Regular.ttf, Geist-Medium.ttf, Geist-SemiBold.ttf, Geist-Bold.ttf, GeistMono-Regular.ttf, GeistMono-Medium.ttf, GeistMono-SemiBold.ttf, GeistMono-Bold.ttf]
         JTKey: $(JOBTRAIL_KEY)       # v64: the Macs widgets read JobTrail themselves
         JTHosts: $(JOBTRAIL_HOSTS)
