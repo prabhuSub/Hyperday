@@ -45,8 +45,14 @@ final class JobTrailLive: ObservableObject {
     func stop() { loop?.cancel(); loop = nil }
 
     /// One read. Also used by background refresh.
+    private var polling = false
+
     func poll() async {
-        guard JobTrailConfig.isConfigured else { return }
+        // v73: one read at a time (the loop, the Today card and the Live Activity preview all ask); overlapping
+        // reads tripled the traffic and all timed out together on a slow network.
+        guard JobTrailConfig.isConfigured, !polling else { return }
+        polling = true
+        defer { polling = false }
         // v72: with a single address there's nothing to choose: skip the /health round trip.
         if host == nil { if JobTrailConfig.hosts.count == 1 { host = JobTrailConfig.hosts[0] } else { await findHost() } }
         guard let h = host, let url = URL(string: "http://\(h):\(JobTrailConfig.port)/api/state") else { return }
@@ -59,10 +65,12 @@ final class JobTrailLive: ObservableObject {
                   let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw URLError(.badServerResponse) }
             apply(json)
             reachable = true
-            if let u = pageURL { JobTrailWeb.shared.prepare(u) }   // v72: page ready before the tab is opened
+            if let u = pageURL { JobTrailWeb.shared.prepare(u); JobTrailWeb.shared.networkOK() }   // v72: page ready before the tab is opened
         } catch {
             reachable = false
-            host = nil   // try every host again next time
+            // v73: with several addresses, try them all again next time. With one there's nothing to switch to, and
+            // clearing it took the page off screen (the tab showed LOADING) on every slow read.
+            if JobTrailConfig.hosts.count > 1 { host = nil }
             if !macs.isEmpty {
                 macs = macs.map { var m = $0; m.online = false; m.running = 0; m.waiting = 0; m.top = nil; m.topSince = nil; return m }
                 changed()

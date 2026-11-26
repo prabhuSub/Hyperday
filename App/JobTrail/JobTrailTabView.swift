@@ -28,12 +28,13 @@ struct JobTrailTabView: View {
             header
             ZStack {
                 Color.black
-                if let url = live.pageURL {
+                // v73: once the page is up it stays up through a failed read or a network switch.
+                if let url = live.pageURL ?? web.url {
                     JobTrailWebView(url: url)
                         .opacity(web.loaded ? 1 : 0)
                         .animation(HDEase.entry(0.6), value: web.loaded)
                 }
-                if live.pageURL == nil || !web.loaded {
+                if !web.loaded {
                     connecting
                 }
             }
@@ -154,29 +155,23 @@ final class JobTrailWeb: NSObject, ObservableObject, WKNavigationDelegate {
     /// first opened, so switching to the tab shows the page right away instead of loading it from scratch.
     static let shared = JobTrailWeb()
 
+    /// True once the page has painted at least once. A later failed reload keeps the old page on screen (WebKit
+    /// leaves it there), so the loading screen only ever shows before the first paint.
     @Published var loaded = false
     private(set) var view: WKWebView?
-    private var url: URL?
-    private var backgroundedAt: Date?
-    private var tokens: [NSObjectProtocol] = []
+    private(set) var url: URL?
+    private var loadStarted: Date?
+    private var retryTask: Task<Void, Never>?
+    private var attempts = 0
 
-    /// v70: iOS freezes the page while Hyperday is in the background, so its map animations came back stalled
-    /// (opening from the Live Activity or a widget showed the frozen map until a pull-to-refresh). Coming back
-    /// after more than a few seconds now reloads the page fresh, the same as pull-to-refresh.
-    private override init() {
-        super.init()
-        let nc = NotificationCenter.default
-        tokens.append(nc.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.backgroundedAt = Date() }
-        })
-        tokens.append(nc.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated {
-                guard let self, let t = self.backgroundedAt else { return }
-                self.backgroundedAt = nil
-                if Date().timeIntervalSince(t) > 3 { self.refresh() }
-            }
-        })
-    }
+    /// v73: no reload when Hyperday comes back from the background any more. The page itself reconnects its live
+    /// stream when it becomes visible (and reloads only if nothing arrives), which keeps what's on screen instead of
+    /// blanking it for seconds, and a reload that fails while the phone's network wakes up is retried (see below).
+    private override init() { super.init() }
+
+    /// A page request that takes longer than this is given up and retried (WebKit's default waits 60 s, which on a
+    /// Wi-Fi ↔ 5G switch left the loading screen up for a minute or for good).
+    private static let loadTimeout: TimeInterval = 12
 
     /// Only inside Hyperday: hide JobTrail's own bottom bar (Hyperday has its switcher there) and leave room
     /// above Hyperday's tab bar. v69: on phone widths JobTrail draws its legend at the top of the map, where the
@@ -198,7 +193,7 @@ final class JobTrailWeb: NSObject, ObservableObject, WKNavigationDelegate {
     @discardableResult
     func prepare(_ url: URL) -> WKWebView {
         if let w = view {
-            if self.url != url { self.url = url; w.load(URLRequest(url: url)) }
+            if self.url != url { self.url = url; load() }
             return w
         }
         let cfg = WKWebViewConfiguration()
@@ -222,26 +217,65 @@ final class JobTrailWeb: NSObject, ObservableObject, WKNavigationDelegate {
         w.scrollView.refreshControl = rc
         self.url = url
         view = w
-        w.load(URLRequest(url: url))
+        load()
         return w
     }
 
     func run(_ js: String) { view?.evaluateJavaScript(js, completionHandler: nil) }
     func refresh() {
         guard let w = view else { return }
-        w.evaluateJavaScript("hardReload()") { _, err in if err != nil { w.reload() } }
+        w.evaluateJavaScript("hardReload()") { [weak self] _, err in if err != nil { self?.load() } }
+    }
+
+    /// (Re)load the page now, with a short timeout.
+    private func load() {
+        guard let w = view, let url else { return }
+        retryTask?.cancel(); retryTask = nil
+        loadStarted = Date()
+        w.load(URLRequest(url: url, cachePolicy: .useProtocolCachePolicy, timeoutInterval: Self.loadTimeout))
+    }
+
+    /// After a failed load: try again in 1, 2, 4, 8, then every 10 s, until a load succeeds.
+    private func retrySoon() {
+        guard retryTask == nil else { return }
+        let delay = min(10.0, pow(2.0, Double(attempts)))
+        attempts += 1
+        retryTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(delay))
+            guard !Task.isCancelled, let self else { return }
+            self.retryTask = nil
+            self.load()
+        }
+    }
+
+    /// Called whenever JobTrail answered a poll (so the network works): reload a page that never painted and isn't
+    /// loading, or one stuck loading past the timeout.
+    func networkOK() {
+        guard let w = view else { return }
+        if w.isLoading, let t = loadStarted, Date().timeIntervalSince(t) > Self.loadTimeout + 3 {
+            w.stopLoading(); load()
+        } else if !loaded && !w.isLoading && retryTask == nil {
+            load()
+        }
     }
 
     // MARK: WKNavigationDelegate
 
+    func webView(_ w: WKWebView, didStartProvisionalNavigation n: WKNavigation!) { loadStarted = Date() }
     /// Show the page as soon as it has painted (commit), not after every font and script finished loading.
-    func webView(_ w: WKWebView, didCommit n: WKNavigation!) { loaded = true }
-    func webView(_ w: WKWebView, didFinish n: WKNavigation!) { loaded = true }
+    func webView(_ w: WKWebView, didCommit n: WKNavigation!) { loaded = true; attempts = 0 }
+    func webView(_ w: WKWebView, didFinish n: WKNavigation!) { loaded = true; loadStarted = nil }
     func webView(_ w: WKWebView, didFailProvisionalNavigation n: WKNavigation!, withError e: Error) {
-        loaded = false
-        Task { await JobTrailLive.shared.poll() }
+        loadStarted = nil
+        if (e as NSError).code == NSURLErrorCancelled { return }   // replaced by a newer load
+        retrySoon()
     }
-    func webViewWebContentProcessDidTerminate(_ w: WKWebView) { w.reload() }
+    func webView(_ w: WKWebView, didFail n: WKNavigation!, withError e: Error) {
+        loadStarted = nil
+        if (e as NSError).code == NSURLErrorCancelled { return }
+        if !loaded { retrySoon() }
+    }
+    func webViewWebContentProcessDidTerminate(_ w: WKWebView) { load() }
     /// Links that leave JobTrail open in Safari.
     func webView(_ w: WKWebView, decidePolicyFor a: WKNavigationAction, decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void) {
         if a.navigationType == .linkActivated, let u = a.request.url, u.host != url?.host {
