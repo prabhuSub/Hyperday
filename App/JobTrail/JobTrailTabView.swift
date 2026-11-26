@@ -7,7 +7,7 @@ import WebKit
 /// The web app itself (Mac, browser, Home Screen) is not touched.
 struct JobTrailTabView: View {
     @ObservedObject private var live = JobTrailLive.shared
-    @StateObject private var web = JobTrailWeb()
+    @ObservedObject private var web = JobTrailWeb.shared
     @State private var section: Section = .map
     @Namespace private var ns
 
@@ -29,7 +29,7 @@ struct JobTrailTabView: View {
             ZStack {
                 Color.black
                 if let url = live.pageURL {
-                    JobTrailWebView(url: url, web: web)
+                    JobTrailWebView(url: url)
                         .opacity(web.loaded ? 1 : 0)
                         .animation(HDEase.entry(0.6), value: web.loaded)
                 }
@@ -149,16 +149,22 @@ struct JTECGShape: Shape {
 // MARK: - Web view
 
 @MainActor
-final class JobTrailWeb: ObservableObject {
+final class JobTrailWeb: NSObject, ObservableObject, WKNavigationDelegate {
+    /// v72: one web view for the whole app, started as soon as JobTrail answers (at launch), not when the tab is
+    /// first opened, so switching to the tab shows the page right away instead of loading it from scratch.
+    static let shared = JobTrailWeb()
+
     @Published var loaded = false
-    weak var view: WKWebView?
+    private(set) var view: WKWebView?
+    private var url: URL?
     private var backgroundedAt: Date?
     private var tokens: [NSObjectProtocol] = []
 
     /// v70: iOS freezes the page while Hyperday is in the background, so its map animations came back stalled
     /// (opening from the Live Activity or a widget showed the frozen map until a pull-to-refresh). Coming back
     /// after more than a few seconds now reloads the page fresh, the same as pull-to-refresh.
-    init() {
+    private override init() {
+        super.init()
         let nc = NotificationCenter.default
         tokens.append(nc.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.backgroundedAt = Date() }
@@ -171,17 +177,6 @@ final class JobTrailWeb: ObservableObject {
             }
         })
     }
-
-    func run(_ js: String) { view?.evaluateJavaScript(js, completionHandler: nil) }
-    func refresh() {
-        guard let w = view else { return }
-        w.evaluateJavaScript("hardReload()") { _, err in if err != nil { w.reload() } }
-    }
-}
-
-struct JobTrailWebView: UIViewRepresentable {
-    let url: URL
-    let web: JobTrailWeb
 
     /// Only inside Hyperday: hide JobTrail's own bottom bar (Hyperday has its switcher there) and leave room
     /// above Hyperday's tab bar. v69: on phone widths JobTrail draws its legend at the top of the map, where the
@@ -199,59 +194,66 @@ struct JobTrailWebView: UIViewRepresentable {
     }
     """
 
-    func makeCoordinator() -> Coord { Coord(web: web) }
-
-    func makeUIView(context: Context) -> WKWebView {
+    /// The shared web view, created and loading `url` on first call; a new address (Tailscale host) reloads it.
+    @discardableResult
+    func prepare(_ url: URL) -> WKWebView {
+        if let w = view {
+            if self.url != url { self.url = url; w.load(URLRequest(url: url)) }
+            return w
+        }
         let cfg = WKWebViewConfiguration()
         cfg.allowsInlineMediaPlayback = true
         cfg.mediaTypesRequiringUserActionForPlayback = []
         let js = "var s=document.createElement('style');s.textContent=`\(Self.css)`;document.documentElement.appendChild(s);"
         cfg.userContentController.addUserScript(WKUserScript(source: js, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
-        let w = WKWebView(frame: .zero, configuration: cfg)
+        let w = WKWebView(frame: CGRect(x: 0, y: 0, width: 440, height: 900), configuration: cfg)
         w.isOpaque = false
         w.backgroundColor = .black
         w.scrollView.backgroundColor = .black
         w.scrollView.contentInsetAdjustmentBehavior = .never
         w.allowsBackForwardNavigationGestures = false
-        w.navigationDelegate = context.coordinator
+        w.navigationDelegate = self
         let rc = UIRefreshControl()
         rc.tintColor = UIColor(hd: 0xE9A23B)
-        rc.addAction(UIAction { _ in
-            w.evaluateJavaScript("hardReload()") { _, err in if err != nil { w.reload() } }
+        rc.addAction(UIAction { [weak w] _ in
+            w?.evaluateJavaScript("hardReload()") { _, err in if err != nil { w?.reload() } }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { rc.endRefreshing() }
         }, for: .valueChanged)
         w.scrollView.refreshControl = rc
+        self.url = url
+        view = w
         w.load(URLRequest(url: url))
-        context.coordinator.url = url
-        web.view = w
         return w
     }
 
-    func updateUIView(_ w: WKWebView, context: Context) {
-        if context.coordinator.url != url {   // host changed (Tailscale address), reload
-            context.coordinator.url = url
-            w.load(URLRequest(url: url))
-        }
+    func run(_ js: String) { view?.evaluateJavaScript(js, completionHandler: nil) }
+    func refresh() {
+        guard let w = view else { return }
+        w.evaluateJavaScript("hardReload()") { _, err in if err != nil { w.reload() } }
     }
 
-    final class Coord: NSObject, WKNavigationDelegate {
-        let web: JobTrailWeb
-        var url: URL?
-        init(web: JobTrailWeb) { self.web = web }
-        func webView(_ w: WKWebView, didFinish n: WKNavigation!) { Task { @MainActor in web.loaded = true } }
-        func webView(_ w: WKWebView, didFailProvisionalNavigation n: WKNavigation!, withError e: Error) {
-            Task { @MainActor in
-                web.loaded = false
-                await JobTrailLive.shared.poll()
-            }
-        }
-        func webViewWebContentProcessDidTerminate(_ w: WKWebView) { w.reload() }
-        /// Links that leave JobTrail open in Safari.
-        func webView(_ w: WKWebView, decidePolicyFor a: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-            if a.navigationType == .linkActivated, let u = a.request.url, u.host != url?.host {
-                UIApplication.shared.open(u); decisionHandler(.cancel); return
-            }
-            decisionHandler(.allow)
-        }
+    // MARK: WKNavigationDelegate
+
+    /// Show the page as soon as it has painted (commit), not after every font and script finished loading.
+    func webView(_ w: WKWebView, didCommit n: WKNavigation!) { loaded = true }
+    func webView(_ w: WKWebView, didFinish n: WKNavigation!) { loaded = true }
+    func webView(_ w: WKWebView, didFailProvisionalNavigation n: WKNavigation!, withError e: Error) {
+        loaded = false
+        Task { await JobTrailLive.shared.poll() }
     }
+    func webViewWebContentProcessDidTerminate(_ w: WKWebView) { w.reload() }
+    /// Links that leave JobTrail open in Safari.
+    func webView(_ w: WKWebView, decidePolicyFor a: WKNavigationAction, decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void) {
+        if a.navigationType == .linkActivated, let u = a.request.url, u.host != url?.host {
+            UIApplication.shared.open(u); decisionHandler(.cancel); return
+        }
+        decisionHandler(.allow)
+    }
+}
+
+struct JobTrailWebView: UIViewRepresentable {
+    let url: URL
+
+    func makeUIView(context: Context) -> WKWebView { JobTrailWeb.shared.prepare(url) }
+    func updateUIView(_ w: WKWebView, context: Context) { JobTrailWeb.shared.prepare(url) }
 }

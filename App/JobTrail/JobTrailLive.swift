@@ -47,7 +47,8 @@ final class JobTrailLive: ObservableObject {
     /// One read. Also used by background refresh.
     func poll() async {
         guard JobTrailConfig.isConfigured else { return }
-        if host == nil { await findHost() }
+        // v72: with a single address there's nothing to choose: skip the /health round trip.
+        if host == nil { if JobTrailConfig.hosts.count == 1 { host = JobTrailConfig.hosts[0] } else { await findHost() } }
         guard let h = host, let url = URL(string: "http://\(h):\(JobTrailConfig.port)/api/state") else { return }
         var req = URLRequest(url: url)
         req.timeoutInterval = 4
@@ -58,6 +59,7 @@ final class JobTrailLive: ObservableObject {
                   let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw URLError(.badServerResponse) }
             apply(json)
             reachable = true
+            if let u = pageURL { JobTrailWeb.shared.prepare(u) }   // v72: page ready before the tab is opened
         } catch {
             reachable = false
             host = nil   // try every host again next time
