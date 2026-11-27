@@ -48,7 +48,9 @@ struct HyperdayCalendarWidget: Widget {
 }
 
 struct CalendarWidgetView: View {
-    @Environment(\.widgetFamily) private var family
+    @Environment(\.widgetFamily) private var envFamily
+    var familyOverride: WidgetFamily? = nil   // v78: lets the debug preview draw a Lock Screen size
+    private var family: WidgetFamily { familyOverride ?? envFamily }
     let entry: CalEntry
 
     private var big: Bool { family == .systemSmall }
@@ -74,9 +76,9 @@ struct CalendarWidgetView: View {
             HStack(spacing: 1) {
                 ForEach(Array(["M", "T", "W", "T", "F", "S", "S"].enumerated()), id: \.offset) { _, s in
                     Text(s)
-                        .font(.mono(big ? 10 : 7.5, .semibold))
-                        .kerning(0.6)
-                        .opacity(0.6)
+                        .font(.mono(big ? 10 : 8, .semibold))   // v78: header type of the shared Lock Screen look
+                        .kerning(0.5)
+                        .opacity(0.75)
                         .frame(maxWidth: .infinity)
                 }
             }

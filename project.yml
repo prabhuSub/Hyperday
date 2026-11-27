@@ -23,6 +23,11 @@ targets:
     sources:
       - App
       - Shared
+      # v78: the Lock Screen widget views, so the debug preview can draw them (the widgets themselves live in the extension)
+      - path: Widget/LockStyle.swift
+      - path: Widget/CarWidgets.swift
+      - path: Widget/CarSmallWidgets.swift
+      - path: Widget/CalendarWidget.swift
     info:
       path: App/Info.plist
       properties:

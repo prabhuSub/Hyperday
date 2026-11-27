@@ -82,41 +82,38 @@ struct CarGlyph: View {
 
 struct CarBatteryView: View {
     let entry: CarEntry
-    @Environment(\.widgetFamily) private var family
+    @Environment(\.widgetFamily) private var envFamily
+    var familyOverride: WidgetFamily? = nil   // v78: lets the debug preview draw a Lock Screen size
+    private var family: WidgetFamily { familyOverride ?? envFamily }
 
     var body: some View {
         let c = entry.car
         switch family {
         case .accessoryRectangular:
-            // v41: more detail: battery · range / lock + inside temp / Leave-by (or place · last read), smaller car.
+            // v78: Lock Screen look shared with HomeDeck — header with lock state, battery · range, drawn bar, sub-line;
+            // the car picture stays on the right.
             HStack(spacing: 4) {
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: 2) {
                     if let c {
-                        Label { Text("\(c.battery)% · \(c.rangeMiles) mi").font(.geist(size: 14, weight: .bold)) }
-                            icon: { Image("hd-car").renderingMode(.template) }
-                        HStack(spacing: 4) {
-                            Image(systemName: c.locked == false ? "lock.open.fill" : "lock.fill")
-                            if let f = c.insideF { Text("\(f)° inside") } else { Text(c.locked == false ? "Unlocked" : "Locked") }
+                        LKHead(label: c.charging ? "Charging" : (c.place ?? "Car"), right: c.locked == false ? "Unlocked" : "Locked") {
+                            Image(systemName: c.charging ? "bolt.fill" : (c.locked == false ? "lock.open.fill" : "lock.fill"))
                         }
-                        .font(.geist(size: 12, weight: .semibold))
-                        Group {
-                            if let leave = c.leaveBy {
-                                Label("Leave \(leave.formatted(date: .omitted, time: .shortened))", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
-                            } else {
-                                Text([c.place, Self.ago(c.updatedAt, entry.date)].compactMap { $0 }.joined(separator: " · "))
-                            }
-                        }
-                        .font(.geist(size: 12, weight: .semibold))
+                        Text("\(c.battery)% · \(c.rangeMiles) mi").font(.geist(size: 16, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.6)
+                        LKBar(value: Double(c.battery) / 100).padding(.vertical, 1)
+                        Text((c.leaveBy.map { "Leave \($0.formatted(date: .omitted, time: .shortened))" }
+                              ?? c.insideF.map { "\($0)° inside · \(Self.ago(c.updatedAt, entry.date))" }
+                              ?? Self.ago(c.updatedAt, entry.date)).uppercased())
+                            .font(.mono(9, .medium)).lineLimit(1).minimumScaleFactor(0.7).opacity(0.75)
                     } else {
-                        Text("Car").font(.geist(size: 14, weight: .bold))
-                        Text("Open Hyperday").font(.geist(size: 12, weight: .semibold))
+                        LKHead(label: "Car") { Image("hd-car").renderingMode(.template) }
+                        Text("—").font(.geist(size: 16, weight: .semibold))
+                        Text("OPEN HYPERDAY").font(.mono(9, .medium)).opacity(0.75)
                     }
                 }
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
                 Spacer(minLength: 0)
-                Image("CarFront").resizable().scaledToFit().frame(maxWidth: 50)
+                Image("CarFront").resizable().scaledToFit().frame(maxWidth: 46)
             }
+            .padding(.horizontal, 2)
         case .accessoryInline:
             if let c {
                 if c.charging, let full = c.fullAt {
@@ -139,26 +136,13 @@ struct CarBatteryView: View {
 
     @ViewBuilder
     private func gauge(_ c: CarSnapshot?) -> some View {
-        if let c, c.charging {
-            Gauge(value: Double(c.battery), in: 0...100) {
-                EmptyView()
-            } currentValueLabel: {
-                VStack(spacing: 0) {
-                    Image(systemName: "bolt.fill").font(.geist(size: 11, weight: .bold))
-                    Text("\(c.battery)").font(.geist(size: 15, weight: .bold))
-                }
+        // v78: drawn ring (shared Lock Screen look); the car's front view stays in the middle
+        LKRing(value: Double(c?.battery ?? 0) / 100) {
+            VStack(spacing: 0) {
+                if c?.charging == true { Image(systemName: "bolt.fill").font(.system(size: 10, weight: .bold)) }
+                else { Image("CarFront").resizable().scaledToFit().frame(width: 26) }
+                Text(c.map { "\($0.battery)" } ?? "–").font(.mono(13, .semibold)).lineLimit(1).minimumScaleFactor(0.6)
             }
-            .gaugeStyle(.accessoryCircularCapacity)
-        } else {
-            Gauge(value: Double(c?.battery ?? 0), in: 0...100) {
-                EmptyView()
-            } currentValueLabel: {
-                VStack(spacing: 0) {
-                    Image("CarFront").resizable().scaledToFit().frame(width: 30)   // v40: front view
-                    Text(c.map { "\($0.battery)" } ?? "–").font(.geist(size: 14, weight: .bold))
-                }
-            }
-            .gaugeStyle(.accessoryCircular)
         }
     }
 }
@@ -196,7 +180,9 @@ private func lockIcon(_ c: CarSnapshot, size: CGFloat = 12) -> some View {
 
 struct CarListView: View {
     let entry: CarEntry
-    @Environment(\.widgetFamily) private var family
+    @Environment(\.widgetFamily) private var envFamily
+    var familyOverride: WidgetFamily? = nil   // v78: lets the debug preview draw a Lock Screen size
+    private var family: WidgetFamily { familyOverride ?? envFamily }
 
     var body: some View {
         if let c = entry.car {

@@ -147,7 +147,9 @@ private let Theme_blue = HDTone.amber
 
 struct CarChargeView: View {
     let entry: CarEntry
-    @Environment(\.widgetFamily) private var family
+    @Environment(\.widgetFamily) private var envFamily
+    var familyOverride: WidgetFamily? = nil   // v78: lets the debug preview draw a Lock Screen size
+    private var family: WidgetFamily { familyOverride ?? envFamily }
 
     var body: some View {
         if let c = entry.car {
@@ -246,32 +248,32 @@ struct CarHubView: View {
 
 struct CarLockView: View {
     let entry: CarEntry
-    @Environment(\.widgetFamily) private var family
+    @Environment(\.widgetFamily) private var envFamily
+    var familyOverride: WidgetFamily? = nil   // v78: lets the debug preview draw a Lock Screen size
+    private var family: WidgetFamily { familyOverride ?? envFamily }
 
     var body: some View {
         let c = entry.car
         switch family {
         case .accessoryCircular:
-            Gauge(value: Double(c?.battery ?? 0), in: 0...100) {
-                HDIcon("car", size: 14)
-            } currentValueLabel: {
-                Text(c.map { "\($0.battery)" } ?? "–")
+            LKRing(value: Double(c?.battery ?? 0) / 100) {   // v78 shared Lock Screen look
+                VStack(spacing: 0) {
+                    HDIcon("car", size: 12).opacity(0.75)
+                    Text(c.map { "\($0.battery)" } ?? "–").font(.mono(13, .semibold))
+                }
             }
-            .gaugeStyle(.accessoryCircular)
         case .accessoryInline:
             Text(c.map { "Car \($0.battery)%" + ($0.leaveBy.map { " · Leave \($0.formatted(date: .omitted, time: .shortened))" } ?? " · \($0.rangeMiles) mi") } ?? "Car · connect in Hyperday")
         default:
-            VStack(alignment: .leading, spacing: 1) {
-                HStack(spacing: 5) { HDIcon("car", size: 16); Text(c.map { "\($0.battery)% · \($0.rangeMiles) mi" } ?? "Car").font(.geist(size: 14, weight: .heavy)) }
-                if let c {
-                    Text(((c.locked == false) ? "Unlocked" : "Locked") + (c.insideF.map { " · \($0)°F" } ?? ""))
-                        .font(.geist(size: 12, weight: .semibold))
-                    if let leave = c.leaveBy {
-                        Text("Leave \(leave.formatted(date: .omitted, time: .shortened))").font(.geist(size: 12, weight: .semibold))
-                    }
-                }
+            VStack(alignment: .leading, spacing: 2) {
+                LKHead(label: c?.place ?? "Car", right: c.map { $0.locked == false ? "Unlocked" : "Locked" }) { HDIcon("car", size: 10) }
+                Text(c.map { "\($0.battery)% · \($0.rangeMiles) mi" } ?? "—").font(.geist(size: 16, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.6)
+                LKBar(value: Double(c?.battery ?? 0) / 100).padding(.vertical, 1)
+                Text((c.flatMap { car in car.leaveBy.map { "Leave \($0.formatted(date: .omitted, time: .shortened))" } ?? car.insideF.map { "\($0)°F inside" } } ?? "connect in Hyperday").uppercased())
+                    .font(.mono(9, .medium)).lineLimit(1).minimumScaleFactor(0.7).opacity(0.75)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 2)
         }
     }
 }
@@ -280,15 +282,13 @@ struct CarLockReadyView: View {
     let entry: CarEntry
     var body: some View {
         let c = entry.car
-        Gauge(value: Double(c?.todayMiles ?? 0), in: 0...Double(max(c?.rangeMiles ?? 1, 1))) {
-            Text("mi")
-        } currentValueLabel: {
+        // v78: drawn ring = today's miles against the range; check / ! on top
+        LKRing(value: Double(c?.todayMiles ?? 0) / Double(max(c?.rangeMiles ?? 1, 1))) {
             VStack(spacing: 0) {
-                Image(systemName: (c?.enoughForToday ?? true) ? "checkmark" : "exclamationmark").font(.geist(size: 12, weight: .heavy))
-                Text(c?.todayMiles.map { "\($0)mi" } ?? "–").font(.geist(size: 9, weight: .bold))
+                Image(systemName: (c?.enoughForToday ?? true) ? "checkmark" : "exclamationmark").font(.system(size: 11, weight: .heavy))
+                Text(c?.todayMiles.map { "\($0)mi" } ?? "–").font(.mono(11, .semibold)).lineLimit(1).minimumScaleFactor(0.6)
             }
         }
-        .gaugeStyle(.accessoryCircular)
     }
 }
 

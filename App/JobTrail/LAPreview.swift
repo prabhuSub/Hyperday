@@ -88,6 +88,8 @@ struct WidgetPreviewScreen: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 14) {
+                // v78: Lock Screen widgets (Tesla + Calendar), white on a dark wallpaper the way iOS tints them
+                LockPreviewSheet()
                 HStack(spacing: 14) {
                     card(170, 170) { MacsSmallView(snap: snap, now: .now) }
                     card(170, 170) {
@@ -106,6 +108,25 @@ struct WidgetPreviewScreen: View {
             try? await Task.sleep(for: .seconds(3))
             if let s = JTStore.load(), !s.macs.isEmpty { snap = s }
         }
+    }
+}
+#endif
+
+#if DEBUG
+struct LockPreviewSheet: View {
+    private func lock<V: View>(_ v: V, _ w: CGFloat, _ h: CGFloat, round: Bool = false) -> some View {
+        v.foregroundStyle(.white).frame(width: w, height: h).background(Color.white.opacity(0.14))
+            .clipShape(round ? AnyShape(Circle()) : AnyShape(RoundedRectangle(cornerRadius: 14, style: .continuous)))
+    }
+    var body: some View {
+        let car = CarEntry(date: .now, car: .sample()), chg = CarEntry(date: .now, car: .sampleCharging())
+        let cal = CalEntry(date: .now, counts: [HeatData.key(.now): 3, HeatData.key(.now.addingTimeInterval(86400)): 1, HeatData.key(.now.addingTimeInterval(-86400 * 2)): 5])
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) { lock(CarBatteryView(entry: car, familyOverride: .accessoryRectangular), 172, 76); lock(CarBatteryView(entry: car, familyOverride: .accessoryCircular), 76, 76, round: true) }
+            HStack(spacing: 12) { lock(CarLockView(entry: car, familyOverride: .accessoryRectangular), 172, 76); lock(CarBatteryView(entry: chg, familyOverride: .accessoryCircular), 76, 76, round: true) }
+            HStack(spacing: 12) { lock(CalendarWidgetView(familyOverride: .accessoryRectangular, entry: cal), 172, 76); lock(CarLockReadyView(entry: car), 76, 76, round: true); lock(CarBatteryLockView(entry: car), 76, 76, round: true) }
+        }
+        .padding(14).background(Color(red: 0.16, green: 0.18, blue: 0.22)).environment(\.colorScheme, .dark)
     }
 }
 #endif
