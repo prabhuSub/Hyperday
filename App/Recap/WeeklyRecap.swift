@@ -124,6 +124,10 @@ final class RecapCenter: NSObject, ObservableObject, UNUserNotificationCenterDel
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
                                             didReceive response: UNNotificationResponse) async {
+        if response.notification.request.identifier.hasPrefix("macalert.") {   // v75: Mac alert → JobTrail tab
+            await MainActor.run { NotificationCenter.default.post(name: .openJobTrailTab, object: nil) }
+            return
+        }
         guard response.notification.request.identifier == Self.id else { return }
         await MainActor.run { self.showing = true }
     }

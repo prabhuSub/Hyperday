@@ -47,9 +47,27 @@ struct MacLive: Codable, Hashable {
     var charging: Bool?
     var gpuHist: [Int]?       // last ~20 GPU readings, oldest first
     var jobs: [MacJob]?       // up to 3 live jobs, running first
+    // v75 vitals (JobTrail's jtvitals): CPU %, chip °C (average), fastest fan rpm, when it went offline
+    var cpu: Int? = nil
+    var temp: Int? = nil
+    var fan: Int? = nil
+    var downSince: Date? = nil
 
     /// Green running, amber waiting, red offline, grey idle.
     var statusRaw: String { !online ? "failed" : running > 0 ? "running" : waiting > 0 ? "waiting" : "idle" }
+
+    /// v75: something you should act on — battery under 20% and not charging, or the Mac mini gone for 3+ minutes
+    /// (it has no battery, so that means power or network loss). nil when all is well.
+    func alert(now: Date = .now) -> String? {
+        if online, let b = battery, b < 20, charging != true { return "\(desktop ? "Mac mini" : "MacBook") battery \(b)% · plug it in" }
+        if !online, desktop, let d = downSince, now.timeIntervalSince(d) >= 180 { return "Mac mini lost power or network · \(Int(now.timeIntervalSince(d) / 60)) min" }
+        return nil
+    }
+}
+
+extension Array where Element == MacLive {
+    /// v75: the first alert across the Macs (for the warning row on the Live Activity).
+    func alert(now: Date = .now) -> String? { lazy.compactMap { $0.alert(now: now) }.first }
 }
 
 struct DayActivityAttributes: ActivityAttributes {

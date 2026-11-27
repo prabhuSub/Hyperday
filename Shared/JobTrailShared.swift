@@ -148,6 +148,7 @@ enum JTStore {
                 return MacJob(label: MacRowItem.short(j["label"] as? String ?? "job"),
                               since: Date(timeIntervalSince1970: s / 1000), waiting: (j["state"] as? String) == "waiting")
             }
+            let vit = m["vitals"] as? [String: Any] ?? [:]
             return MacLive(
                 id: id,
                 name: m["name"] as? String ?? id,
@@ -162,7 +163,9 @@ enum JTStore {
                 battery: (m["battery"] as? Double).map { Int($0.rounded()) },
                 charging: m["charging"] as? Bool,
                 gpuHist: nil,
-                jobs: list.isEmpty ? nil : Array(list))
+                jobs: list.isEmpty ? nil : Array(list),
+                cpu: vit["cpu"] as? Int, temp: vit["cpuT"] as? Int, fan: (vit["fans"] as? [Int])?.max(),
+                downSince: (m["online"] as? Bool ?? false) ? nil : (m["lastOk"] as? Double).map { Date(timeIntervalSince1970: $0 / 1000) })
         }
     }
 

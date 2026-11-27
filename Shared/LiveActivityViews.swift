@@ -1186,6 +1186,13 @@ struct ActivityFamilyCard: View {
     var isStale: Bool = false
 
     var body: some View {
+        // v75: a Mac needs you (battery < 20 %, or the mini lost power) → a red line on top, only while it lasts
+        if family != .small, let a = (state.macs ?? []).alert() {
+            VStack(spacing: 0) { MacAlertRow(text: a); card }
+        } else { card }
+    }
+
+    @ViewBuilder private var card: some View {
         let live = self.state.selfSwitched(isStale: self.isStale)
         let state = live.state, isStale = live.isStale
         if state.closed == true, family != .small, !(state.macs ?? []).isEmpty {
@@ -1200,6 +1207,22 @@ struct ActivityFamilyCard: View {
             default: LockScreenCard(state: state, isStale: isStale)
             }
         }
+    }
+}
+
+/// v75: one red line for a Mac alert. Tapping the card opens JobTrail (its widgetURL).
+struct MacAlertRow: View {
+    let text: String
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: text.contains("battery") ? "battery.25" : "bolt.slash.fill").font(.system(size: 10, weight: .bold))
+            Text(text.uppercased()).font(.mono(9.5, .semibold)).kerning(0.5).lineLimit(1).minimumScaleFactor(0.7)
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(HDTone.danger)
+        .padding(.horizontal, 16).padding(.vertical, 5)
+        .frame(maxWidth: .infinity)
+        .background(HDTone.danger.opacity(0.14))
     }
 }
 
@@ -1785,6 +1808,22 @@ private struct BoardColumn: View {
                 JTSpark(values: (mac.gpuHist ?? [mac.gpu ?? 0]).map(Double.init), color: hot ? HDTone.danger : HDTone.amber)
                     .frame(height: 16)
                     .background(alignment: .bottom) { Rectangle().fill(HDTone.hover).frame(height: 1) }
+                // v75 vitals: CPU · chip temperature · fan
+                if mac.cpu != nil || mac.temp != nil {
+                    HStack(spacing: 4) {
+                        Text("CPU").font(.mono(8, .semibold)).foregroundStyle(HDTone.faintDark)
+                        Text("\(mac.cpu ?? 0)").font(.mono(9.5, .semibold)).foregroundStyle(HDTone.soft)
+                        Spacer(minLength: 2)
+                        if let t = mac.temp {
+                            Text("\(t)°").font(.mono(9.5, .semibold)).foregroundStyle(t >= 95 ? HDTone.danger : t >= 80 ? HDTone.amber : HDTone.green)
+                        }
+                        if let f = mac.fan {
+                            Spacer(minLength: 2)
+                            Image(systemName: "fan").font(.system(size: 8, weight: .semibold)).foregroundStyle(HDTone.faintDark)
+                            Text(f > 0 ? String(format: "%.1fk", Double(f) / 1000) : "off").font(.mono(9.5, .semibold)).foregroundStyle(HDTone.soft)
+                        }
+                    }
+                }
                 // jobs
                 let jobs = mac.jobs ?? []
                 if jobs.isEmpty {

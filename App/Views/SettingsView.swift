@@ -254,11 +254,19 @@ struct RulesSettings: View {
 
 struct LiveActivitySettings: View {
     @EnvironmentObject private var activity: LiveActivityManager
+    @AppStorage(MacAlerts.key) private var macAlerts = false
     var body: some View {
         Form {
             Section {
                 Toggle("Start automatically", isOn: $activity.autoStart)
             } footer: { Text("Starts when the day has blocks. \(activity.statusText)") }
+            // v75
+            Section {
+                Toggle("Mac alerts", isOn: $macAlerts)
+                    .onChange(of: macAlerts) { _, on in if on { Task { _ = await MacAlerts.requestPermission() } } }
+            } footer: {
+                Text("A notification when the MacBook is under 20 % and not charging, or the Mac mini loses power or network for 3 minutes. While it lasts, a red line shows on the Live Activity. Hyperday checks while open and when iOS wakes it in the background, so an alert can come late.")
+            }
             Section {
                 Button("Preview all styles") { Task { await activity.previewStyles() } }
                 Button("Open iOS Settings") {

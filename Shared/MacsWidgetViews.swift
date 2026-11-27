@@ -133,6 +133,29 @@ struct DualGraph: View {
     }
 }
 
+/// v75: chip temperature (green / amber ≥ 80° / red ≥ 95°), battery when low, fan speed — small, on one line.
+struct MacVitalsInline: View {
+    let mac: MacLive
+    var body: some View {
+        HStack(spacing: 5) {
+            if let b = mac.battery, b < 20, mac.charging != true {
+                Text("\(b)%").font(.mono(9.5, .bold)).foregroundStyle(HDTone.danger)
+            }
+            if let t = mac.temp {
+                Text("\(t)°").font(.mono(9.5, .semibold)).monospacedDigit()
+                    .foregroundStyle(t >= 95 ? HDTone.danger : t >= 80 ? HDTone.amber : HDTone.green)
+            }
+            if let f = mac.fan, f > 0 {
+                HStack(spacing: 2) {
+                    Image(systemName: "fan").font(.system(size: 8, weight: .semibold))
+                    Text(String(format: "%.1fk", Double(f) / 1000)).font(.mono(9.5, .medium))
+                }.foregroundStyle(HDTone.faintDark)
+            }
+        }
+        .lineLimit(1)
+    }
+}
+
 /// One Mac: header, GPU + MEM graphs, newest job with a live clock.
 struct MacPanel: View {
     let mac: MacLive
@@ -147,6 +170,7 @@ struct MacPanel: View {
                     .font(.system(size: 11, weight: .semibold)).foregroundStyle(HDTone.dim)
                 Text(mac.name).font(.geist(size: 12.5, weight: .semibold)).foregroundStyle(HDTone.textHi).lineLimit(1)
                 Spacer(minLength: 2)
+                if mac.online { MacVitalsInline(mac: mac) }
                 JTStatusDot(status: st, size: 5, animated: false)
             }
             if mac.online {
@@ -369,7 +393,7 @@ struct MacsLockView: View {
                     } else {
                         Text("\(m.running) run").font(.mono(11, .bold)).fixedSize()
                         Spacer(minLength: 2)
-                        Text("GPU \(m.gpu ?? 0)  MEM \(m.mem ?? 0)").font(.mono(10.5, .medium)).monospacedDigit()
+                        Text("GPU \(m.gpu ?? 0)  MEM \(m.mem ?? 0)" + (m.temp.map { "  \($0)°" } ?? "")).font(.mono(10.5, .medium)).monospacedDigit()
                             .lineLimit(1).minimumScaleFactor(0.8)
                     }
                 }
