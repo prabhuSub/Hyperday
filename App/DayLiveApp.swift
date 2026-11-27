@@ -90,6 +90,12 @@ struct DayLiveApp: App {
             if phase == .active { JobTrailLive.shared.start() } else if phase == .background { JobTrailLive.shared.stop() }   // v61
             if phase == .active {
                 HDLog.event("foreground")
+                // v77: Prabhu asked for Mac alerts on (26 Nov) — once; after that the switch is his
+                if !UserDefaults.standard.bool(forKey: "hdMacAlertsOnceOn") {
+                    UserDefaults.standard.set(true, forKey: "hdMacAlertsOnceOn")
+                    UserDefaults.standard.set(true, forKey: MacAlerts.key)
+                    Task { _ = await MacAlerts.requestPermission() }
+                }
                 // A save file that was locked at launch (after a reboot) can be read now.
                 BlockStore.shared.retryLoadIfNeeded()
                 HistoryStore.shared.retryLoadIfNeeded()
