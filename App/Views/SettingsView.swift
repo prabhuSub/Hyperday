@@ -255,8 +255,6 @@ struct RulesSettings: View {
 struct LiveActivitySettings: View {
     @EnvironmentObject private var activity: LiveActivityManager
     @AppStorage(MacAlerts.key) private var macAlerts = false
-    @State private var syncing = false
-    @State private var piError = false
     var body: some View {
         Form {
             Section {
@@ -265,12 +263,10 @@ struct LiveActivitySettings: View {
             // v75
             Section {
                 Toggle("Mac alerts", isOn: $macAlerts)
-                    .onChange(of: macAlerts) { _, on in if !syncing { Task { if !(await MacAlerts.setRemote(on)) { piError = true } } } }
+                    .onChange(of: macAlerts) { _, on in if on { Task { _ = await MacAlerts.requestPermission() } } }
             } footer: {
-                Text(piError ? "Couldn't reach the Pi, so the switch didn't save. Is Tailscale on?" :
-                    "Your Pi sends these to the ntfy app within a minute, even with Hyperday closed: MacBook under 20 % and not charging, or the Mac mini not answering for 3 minutes. Same switch as in HomeDeck › Settings › Alerts. While it lasts, a red line shows on the Live Activity.")
+                Text("A notification when the MacBook is under 20 % and not charging, or the Mac mini loses power or network for 3 minutes. While it lasts, a red line shows on the Live Activity. Hyperday checks while open and when iOS wakes it in the background, so an alert can come late.")
             }
-            .task { syncing = true; if let on = await MacAlerts.remote() { macAlerts = on }; try? await Task.sleep(for: .milliseconds(100)); syncing = false }
             Section {
                 Button("Preview all styles") { Task { await activity.previewStyles() } }
                 Button("Open iOS Settings") {

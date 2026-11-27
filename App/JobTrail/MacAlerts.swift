@@ -1,29 +1,41 @@
 import Foundation
+import UserNotifications
 
-/// v76: Mac alerts are sent by the Pi with ntfy (within a minute, even with Hyperday closed). This switch is the same
-/// one as HomeDeck › Settings › Alerts › Macs: it's stored on the Pi. Off until you turn it on.
-/// The red line on the Live Activity comes from the Macs' own data (MacLive.alert) and needs no switch.
+/// v75: a notification when a Mac needs you — MacBook battery under 20 % and not charging, or the Mac mini gone for
+/// 3+ minutes (power or network loss). Off until you turn it on (Settings › Live Activity › Mac alerts).
+/// Checked whenever Hyperday reads JobTrail: while open, and when iOS wakes it in the background (iOS decides how
+/// often — roughly every 15–60 min — so a background alert can be late). One notification per problem; it re-arms
+/// once the problem clears.
 enum MacAlerts {
     static let key = "hdMacAlerts"
-    private static let bases = ["http://100.110.37.100:4545", "http://192.168.1.184:4545", "http://prabhu-pi.local:4545"].compactMap(URL.init(string:))
+    static var enabled: Bool { UserDefaults.standard.bool(forKey: key) }
+    private static let sentKey = "hdMacAlertsSent"
 
-    /// The Pi's current setting (nil if it can't be reached).
-    static func remote() async -> Bool? {
-        for b in bases {
-            var r = URLRequest(url: b.appendingPathComponent("api/alerts")); r.timeoutInterval = 4
-            if let (d, resp) = try? await URLSession.shared.data(for: r), (resp as? HTTPURLResponse)?.statusCode == 200,
-               let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any] { return j["macs"] as? Bool ?? false }
+    static func check(_ macs: [MacLive], now: Date = .now) {
+        let d = UserDefaults.standard
+        var sent = Set(d.stringArray(forKey: sentKey) ?? [])
+        var active = Set<String>()
+        for m in macs {
+            guard let text = m.alert(now: now) else { continue }
+            let id = "macalert.\(m.id ?? m.name).\(text.contains("battery") ? "battery" : "power")"
+            active.insert(id)
+            if enabled && !sent.contains(id) { post(id: id, text: text); sent.insert(id) }
         }
-        return nil
+        sent.formIntersection(active)   // cleared problems can alert again next time
+        d.set(Array(sent), forKey: sentKey)
     }
-    @discardableResult
-    static func setRemote(_ on: Bool) async -> Bool {
-        for b in bases {
-            var r = URLRequest(url: b.appendingPathComponent("api/alerts")); r.httpMethod = "POST"; r.timeoutInterval = 6
-            r.setValue("application/json", forHTTPHeaderField: "Content-Type"); r.setValue("1", forHTTPHeaderField: "x-homedeck")
-            r.httpBody = try? JSONSerialization.data(withJSONObject: ["macs": on])
-            if let (_, resp) = try? await URLSession.shared.data(for: r), (resp as? HTTPURLResponse)?.statusCode == 200 { return true }
-        }
-        return false
+
+    private static func post(id: String, text: String) {
+        let c = UNMutableNotificationContent()
+        let parts = text.components(separatedBy: " · ")
+        c.title = parts.first ?? text
+        c.body = parts.dropFirst().joined(separator: " · ")
+        c.sound = .default
+        c.interruptionLevel = .active
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: id, content: c, trigger: nil))
+    }
+
+    static func requestPermission() async -> Bool {
+        (try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])) ?? false
     }
 }

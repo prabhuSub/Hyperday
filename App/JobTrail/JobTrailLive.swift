@@ -103,6 +103,7 @@ final class JobTrailLive: ObservableObject {
             return m
         }
         runningTotal = macs.reduce(0) { $0 + $1.running }
+        MacAlerts.check(macs)   // v75: low battery / mini lost power → notification (if turned on)
         lastUpdate = .now
         let prev = JTStore.load() ?? .empty
         let needHistory = Date.now.timeIntervalSince(lastHistoryAt) > 60
