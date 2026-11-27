@@ -28,6 +28,7 @@ struct TodayView: View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
+                    Color.clear.frame(height: 0).id("today.top").background(JTScrollProbe(tab: "today"))   // v74: tapping Today scrolls this page all the way up
                     // Card + buttons move as one block: TV-app style, they lift and fade together
                     // as they scroll up under the title. The round + covers adding once they're gone.
                     VStack(alignment: .leading, spacing: 12) {
@@ -51,6 +52,7 @@ struct TodayView: View {
                         timeline(snap: snap).jtStagger(3)
                         JTSectionHead("Plan vs real").jtStagger(4)
                         RealityCard(blocks: snap.all, now: now).jtStagger(5)
+                        Color.clear.frame(height: 0).id("today.top.bottom")
                     }
                     .padding(.horizontal, Theme.edge)
                     .padding(.top, 20)
@@ -58,7 +60,7 @@ struct TodayView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            .jtScrollsToTop("today")   // v60: tapping Today scrolls up
+            .jtScrollsToTop("today", anchor: "today.top")   // v60/v74: tapping Today scrolls all the way up
             .background(DotPage())
             .refreshable {                       // v59: pull to refresh the day + Live Activity
                 now = .now

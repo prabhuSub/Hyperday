@@ -554,7 +554,64 @@ private struct ScrollTop: ViewModifier {
     }
 }
 
+#if canImport(UIKit)
+import UIKit
+/// Finds the UIScrollView behind a SwiftUI ScrollView (a zero-size probe placed inside its content) so a tab tap can run
+/// iOS's own scroll-to-top.
+enum JTScrollFinder {
+    static var views: [String: WeakBox] = [:]
+    final class WeakBox { weak var v: UIScrollView?; init(_ v: UIScrollView?) { self.v = v } }
+    static func scrollToTop(_ tab: String) -> Bool {
+        guard let sv = views[tab]?.v, sv.window != nil else { return false }
+        let sel = NSSelectorFromString("_scrollToTopIfPossible:")
+        if sv.responds(to: sel) { sv.perform(sel, with: true); return true }
+        sv.setContentOffset(CGPoint(x: 0, y: -sv.adjustedContentInset.top), animated: true); return true
+    }
+}
+struct JTScrollProbe: UIViewRepresentable {
+    let tab: String
+    func makeUIView(context: Context) -> UIView { let v = Probe(); v.tab = tab; v.isUserInteractionEnabled = false; return v }
+    func updateUIView(_ uiView: UIView, context: Context) {}
+    final class Probe: UIView {
+        var tab = ""
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            var p = superview; while let x = p, !(x is UIScrollView) { p = x.superview }
+            if let sv = p as? UIScrollView { JTScrollFinder.views[tab] = .init(sv) }
+        }
+    }
+}
+#endif
+
+/// v74: scroll to a marker view at the very top of the page. ScrollPosition.scrollTo(edge: .top) did nothing on
+/// Today: the position still read "top" after a hand scroll (no ids to track), so asking for "top" was no change.
+/// A ScrollViewReader jump to an id works every time.
+private struct ScrollTopAnchor: ViewModifier {
+    let tab: String; let anchor: String
+    func body(content: Content) -> some View {
+        ScrollViewReader { proxy in
+            content
+                .onReceive(NotificationCenter.default.publisher(for: .jtScrollTop)) { note in
+                    guard (note.object as? String) == tab else { return }
+                    // iOS's own scroll-to-top (the status-bar tap) — it also opens the large title, which a SwiftUI
+                    // scrollTo can't (it stops under the collapsed bar). Falls back to the marker jump.
+                    if !JTScrollFinder.scrollToTop(tab) { withAnimation(HDEase.standard(0.6)) { proxy.scrollTo(anchor, anchor: .top) } }
+                }
+                #if DEBUG
+                // `-hdScrollTest YES`: scroll to the bottom marker, then fire the tab tap (simulator check)
+                .task {
+                    guard UserDefaults.standard.bool(forKey: "hdScrollTest") else { return }
+                    try? await Task.sleep(for: .seconds(6)); proxy.scrollTo(anchor + ".bottom", anchor: .bottom)
+                    try? await Task.sleep(for: .seconds(5)); NotificationCenter.default.post(name: .jtScrollTop, object: tab)
+                }
+                #endif
+        }
+    }
+}
+
 extension View {
     /// Put on a tab's main ScrollView.
     func jtScrollsToTop(_ tab: String) -> some View { modifier(ScrollTop(tab: tab)) }
+    /// Same, but jumps to the view marked `.id(anchor)` at the top of the page (reliable on every tap).
+    func jtScrollsToTop(_ tab: String, anchor: String) -> some View { modifier(ScrollTopAnchor(tab: tab, anchor: anchor)) }
 }
