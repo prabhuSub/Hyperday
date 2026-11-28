@@ -96,6 +96,10 @@ struct DayLiveApp: App {
                     UserDefaults.standard.set(true, forKey: MacAlerts.key)
                     Task { _ = await MacAlerts.requestPermission() }
                 }
+                #if DEBUG
+                // v82: `-hdNotifTest YES` fires one of each notification 8 s apart (for checking the icons).
+                if UserDefaults.standard.bool(forKey: "hdNotifTest") { NotifIcon.test() }
+                #endif
                 // A save file that was locked at launch (after a reboot) can be read now.
                 BlockStore.shared.retryLoadIfNeeded()
                 HistoryStore.shared.retryLoadIfNeeded()

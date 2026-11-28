@@ -675,7 +675,9 @@ enum MeetingAlerts {
             c.interruptionLevel = .active
             let comps = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second],
                                                         from: b.start.addingTimeInterval(-300))
-            return UNNotificationRequest(identifier: prefix + b.id, content: c,
+            let cats = CategoryStore.shared
+            let look = NotifIcon.meeting(cats.category(for: b).id, hex: cats.displayColorHex(for: b), calendar: b.calendarName)
+            return UNNotificationRequest(identifier: prefix + b.id, content: NotifIcon.apply(look, to: c, thread: "meet-" + b.id),
                                          trigger: UNCalendarNotificationTrigger(dateMatching: comps, repeats: false))
         }
         Task { @MainActor in

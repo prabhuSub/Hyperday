@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### v82: a picture for every notification
+- Mac alerts: red battery / no-power bolt. Meeting reminders: the meeting's kind (people, briefcase, run…) in its calendar colour. Weekly recap: green chart.
+- Shown as the notification's picture on the right. Replacing the big app icon on the left needs Communication Notifications, which Apple doesn't allow on free (personal) developer teams (tried; signing refused).
+- Debug: `-hdNotifTest YES` fires one of each.
+
 ### v81: nothing cut off on the Live Activity
 - Mac alerts replace the card's header line (short red text) instead of adding a row that pushed the card past iOS's 160 pt cap.
 - JobTrail board: 2 jobs per Mac on the Lock Screen, 1 in the Dynamic Island (more never fit).

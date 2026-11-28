@@ -103,13 +103,12 @@ final class RecapCenter: NSObject, ObservableObject, UNUserNotificationCenterDel
             ? "Your weekly recap is ready. Tap to see it."
             : "Your week: \(hoursText(recap.focusedHours)) focused, \(recap.streak)-day streak. Tap to see your recap."
         content.sound = .default
-        if let check = Self.checkAttachment() { content.attachments = [check] }
 
         let trigger = UNCalendarNotificationTrigger(
             dateMatching: Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: fire),
             repeats: false)
         center.removePendingNotificationRequests(withIdentifiers: [Self.id])
-        try? await center.add(UNNotificationRequest(identifier: Self.id, content: content, trigger: trigger))
+        try? await center.add(UNNotificationRequest(identifier: Self.id, content: NotifIcon.apply(NotifIcon.recap(), to: content, thread: "recap"), trigger: trigger))
     }
 
     /// Small green round check shown as the notification's thumbnail.
