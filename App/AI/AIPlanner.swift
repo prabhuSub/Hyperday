@@ -28,7 +28,7 @@ enum AIPlanner {
         "Needs Apple Intelligence on iOS 26 or later. Turn it on in Settings › Apple Intelligence & Siri."
     }
 
-    /// Turn "gym after work, call mom at lunch, finish the ORBIT doc (90 min)" into blocks in today's free time.
+    /// Turn "gym after work, call mom at lunch, finish the project doc (90 min)" into blocks in today's free time.
     @MainActor
     static func plan(_ text: String, now: Date = .now) async throws -> [PlanProposal] {
         #if canImport(FoundationModels)
@@ -110,7 +110,7 @@ enum AIPlanner {
 @available(iOS 26.0, *)
 @Generable
 struct DraftItem {
-    @Guide(description: "Short task title, like 'Call Mom' or 'Finish ORBIT doc'")
+    @Guide(description: "Short task title, like 'Call Mom' or 'Finish project doc'")
     var title: String
     @Guide(description: "How long it takes in minutes, between 10 and 240. Use 30 if not said.")
     var minutes: Int

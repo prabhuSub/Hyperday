@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### v80: README brought up to date
+- New icon and fresh screenshots from the current build (Live Activity, Today, Calendar, Stats, Settings, widgets), sample data only.
+- README covers the JobTrail tab, Car tab, Mac vitals and alerts, and the new widgets.
+- Sample data made generic (no real project or car names); demo mode shows a sample car.
+
+### v79: app icon set renamed so notifications pick up the new icon
+
 ### v71: smooth pulse graphs
 - The tops and bottoms of the heartbeat spikes no longer flicker as the graph scrolls (every pulse graph in the app: hero card, schedule rows, meters, pop-ups). The wave is now sampled on a grid that moves with it, the line scrolls at 60 fps, the glowing head glides along the line, and the stroke no longer touches the box edges.
 - Dynamic Island timer reads like a person says it: "2h 30m", "42m" (no seconds; the Lock Screen card keeps them), "1d 4h+" past a day. Minutes round up, so it never shows less time than is left.

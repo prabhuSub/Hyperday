@@ -13,9 +13,9 @@ struct LAPreviewScreen: View {
     }
     private static let boardMacs: [MacLive] = [
         MacLive(id: "local", name: "MacBook Pro", desktop: false, online: true, running: 3, waiting: 2, gpu: 0, mem: 42,
-                top: "S01_run2.sh", topSince: .now.addingTimeInterval(-33600), topWaiting: false, battery: 71, charging: false,
+                top: "build.sh", topSince: .now.addingTimeInterval(-33600), topWaiting: false, battery: 71, charging: false,
                 gpuHist: [3, 5, 2, 8, 12, 6, 4, 2, 0, 1, 3, 0, 0, 2, 5, 3, 1, 0, 0, 0],
-                jobs: [MacJob(label: "S01_run2.sh", since: .now.addingTimeInterval(-33600), waiting: false),
+                jobs: [MacJob(label: "build.sh", since: .now.addingTimeInterval(-33600), waiting: false),
                        MacJob(label: "ssh mini", since: .now.addingTimeInterval(-30100), waiting: false),
                        MacJob(label: "watch · grep", since: .now.addingTimeInterval(-9000), waiting: true)],
                 cpu: 47, temp: 58, fan: 2800),
@@ -23,14 +23,14 @@ struct LAPreviewScreen: View {
                 top: "rsync", topSince: .now.addingTimeInterval(-2064), topWaiting: false,
                 gpuHist: [60, 72, 88, 95, 97, 98, 96, 99, 97, 94, 98, 99, 97, 96, 98, 99, 97, 98, 97, 97],
                 jobs: [MacJob(label: "rsync", since: .now.addingTimeInterval(-2064), waiting: false),
-                       MacJob(label: "render_s01.py", since: .now.addingTimeInterval(-5400), waiting: false)],
+                       MacJob(label: "train.py", since: .now.addingTimeInterval(-5400), waiting: false)],
                 cpu: 15, temp: 91, fan: 1200),
     ]
     private static let macs = [
         MacLive(name: "MacBook Pro", desktop: false, online: true, running: 3, waiting: 1, gpu: 0, mem: 42,
-                top: "S01_run2.sh --scene 4", topSince: .now.addingTimeInterval(-2843), topWaiting: false),
+                top: "build.sh --release", topSince: .now.addingTimeInterval(-2843), topWaiting: false),
         MacLive(name: "Mac mini", desktop: true, online: true, running: 1, waiting: 0, gpu: 98, mem: 37,
-                top: "~/ai/ltx-2-mlx/.venv/bin/python render_s01.py", topSince: .now.addingTimeInterval(-1290), topWaiting: false),
+                top: "python train.py", topSince: .now.addingTimeInterval(-1290), topWaiting: false),
     ]
     var body: some View {
         ScrollView {

@@ -341,11 +341,11 @@ enum DemoData {
             } else {
                 add("commute", "Commute", "personal", .plan, 8, 30, 9, 15)
                 let n = 4 + Int(rng.next() * 3)
-                add("deep", "Deep Work — ORBIT AI", "deepwork", .plan, 9, 30, 11, 30, steps: n, doneChance: 0.85)
+                add("deep", "Deep Work — Launch plan", "deepwork", .plan, 9, 30, 11, 30, steps: n, doneChance: 0.85)
                 add("standup", "Standup", "meetings", .calendar, 10, 0, 10, 15)
                 let o = rng.next()
                 if o < 0.7 { add("oneonone", "1:1 / Review", "meetings", .calendar, 13, 0, 14, 0) }
-                add("work", "ORBIT delivery", "work", .calendar, 14, 0, 16, 30)
+                add("work", "Project review", "work", .calendar, 14, 0, 16, 30)
                 let extraGym = rng.next()
                 if [2, 4, 6].contains(weekday) || extraGym < 0.3 {
                     add("gym", "Gym — Legs", "fitness", .plan, 18, 30, 19, 30, steps: 4, doneChance: 0.8)
@@ -366,14 +366,14 @@ enum DemoData {
         let p = BlockStore.demoPrefix
         let blocks = [
             Block(id: p + "commute", title: "Commute", start: t(-180), end: t(-135), source: .plan),
-            Block(id: p + "deep", title: "Deep Work — ORBIT AI", start: t(-60), end: t(60), source: .plan),
+            Block(id: p + "deep", title: "Deep Work — Launch plan", start: t(-60), end: t(60), source: .plan),
             Block(id: p + "standup", title: "Standup", start: t(75), end: t(90), source: .plan),
             Block(id: p + "lunch", title: "Lunch", start: t(120), end: t(165), source: .plan),
             Block(id: p + "gym", title: "Gym — Legs", start: t(300), end: t(360), source: .plan),
         ].filter { cal.isDate($0.start, inSameDayAs: now) || $0.start > now }
         let steps: [String: [Step]] = [
             p + "deep": [
-                Step(title: "Review Ziplabs API", done: true), Step(title: "Design map layer", done: true),
+                Step(title: "Review API docs", done: true), Step(title: "Design map layer", done: true),
                 Step(title: "Hook up data feed", done: true), Step(title: "Add clustering", done: true),
                 Step(title: "Wire up map layer"), Step(title: "Write test plan"),
             ],

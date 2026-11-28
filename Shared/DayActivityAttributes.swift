@@ -75,7 +75,7 @@ struct DayActivityAttributes: ActivityAttributes {
     /// Kept small: ActivityKit caps the payload at 4 KB.
     struct ContentState: Codable, Hashable {
         var label: String            // "Next · Lunch at 12:30 PM"
-        var title: String            // "Deep Work — ORBIT AI" / "Free until 12:30 PM"
+        var title: String            // "Deep Work — Launch plan" / "Free until 12:30 PM"
         var also: String?            // "also: Standup · 10:00 AM–10:15 AM"
         var source: BlockSource
         var segments: [Double]       // 0...1 fill per block in the day bar

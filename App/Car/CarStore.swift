@@ -37,7 +37,17 @@ final class CarStore: ObservableObject {
     init() {
         car = CarShared.load()
         signedIn = TeslaAuth.shared.isSignedIn
+        #if DEBUG
+        // README screenshots (`-hdDemo YES`): a sample car, no Tesla calls.
+        if Self.demo { car = .sample(); signedIn = true }
+        #endif
     }
+
+    #if DEBUG
+    static let demo = UserDefaults.standard.bool(forKey: "hdDemo")
+    #else
+    static let demo = false
+    #endif
 
     var hasClientID: Bool { TeslaAuth.shared.clientID != nil }
 
@@ -66,7 +76,7 @@ final class CarStore: ObservableObject {
 
     /// Cheap check first (vehicle list); full data only when the car is already awake.
     func refresh(force: Bool = false, wake: Bool = false) async {
-        guard signedIn, !busy else { return }
+        guard signedIn, !busy, !Self.demo else { return }
         if !force, let last = lastRefresh, Date.now.timeIntervalSince(last) < 600 { return }
         busy = true
         defer { busy = false; lastRefresh = .now }

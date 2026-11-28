@@ -30,53 +30,43 @@ Hyperday turns your calendar and your own plan into one live card on your iPhone
 ## See it
 
 ### Your day on the Lock Screen
-<img src="docs/images/screens/lock.png" width="260" align="right" alt="Lock Screen card">
+<img src="docs/images/screens/live-activity.png" width="360" alt="Live Activity on the Lock Screen">
 
 The Hyperday card sits on your Lock Screen and in the Dynamic Island all day.
 
-- **Top:** time left in what you're doing, and what's next.
-- **Middle:** the block you're in, and your next step.
-- **Bar:** fills in as you check off steps.
-- **Yellow button:** tap **Step 5/6** to check off a step without unlocking your phone. It turns into **Done** when you finish.
+- **Top:** what you're doing now, when it ends, and how many blocks are done.
+- **Middle:** a big countdown, with **Pause** and **Done** buttons you can tap without unlocking.
+- **Bar:** fills in as the block goes on; **Next** shows what's coming.
+- **Bottom:** your Macs at a glance (running jobs, GPU and memory) when JobTrail is connected.
+- **Alerts:** a red line appears only while something needs you, like a Mac below 20 % battery or a Mac that lost power.
 
-The card takes the color of what you're doing: green for Deep Work, orange for Fitness, red for your work calendar.
+When your day is done, the card turns into a board of your Macs. Tap it to open the JobTrail tab.
 
 **How to start:** open Hyperday and tap **Go Live**, then lock your phone.
-
-<br clear="right">
 
 ### Today
 <img src="docs/images/screens/today.png" width="260" align="right" alt="Today screen">
 
 Your day at a glance.
 
-- The big title is what you're doing **right now**.
+- The big card is what you're doing **right now**, with a strip of your whole day and a marker at now.
 - **Focused · Steps · Meetings left** show how the day is going.
-- Below is your timeline: meetings from your calendar and blocks you planned, each in its color. The red **NOW** marks where you are.
+- Below is your schedule: meetings from your calendar and blocks you planned, each in its color, with what's done, running and waiting.
 
-**How to use it:** tap **Add block** to plan something (a name, a start time and a length take about 5 seconds). Tap any item to add steps or change it. Tap **LIVE NOW** to jump to what's on your Lock Screen.
+**How to use it:** tap **Add block** to plan something. Tap any item to add steps or change it. Tap **Today** in the tab bar to jump back to the top.
 
 <br clear="right">
 
 ### Calendar
 <img src="docs/images/screens/calendar.png" width="260" align="right" alt="Calendar agenda">
 
-All your calendars in one place (work, personal, family) together with your own plans.
+All your calendars in one place together with your own plans.
 
 - **Agenda:** your week, day by day.
-- **Week:** hours side by side, so you can see how busy each day is.
+- **Week:** hours side by side. Long-press and drag a block you planned to move it (it snaps to 15 minutes), or pull its bottom edge to change its length.
 - **Month:** the big picture, with colored dots for what's on each day.
 
-**How to use it:** tap a date to jump to it; tap it again to come back to today. Use the **Tasks** and **Declined** chips to show or hide items.
-
-<br clear="right">
-
-### Week view
-<img src="docs/images/screens/week.png" width="260" align="right" alt="Week view">
-
-A classic time grid for the whole week. Overlapping meetings sit side by side, and the red line shows the current time.
-
-**How to use it:** tap any block to see it or add steps. **Long-press and drag** a block you planned to move it (it snaps to 15 minutes, even to another day), or pull the small bar on its bottom edge to change its length. Calendar events stay put.
+**How to use it:** tap a date to jump to it. Use the **Tasks** and **Declined** chips to show or hide items.
 
 <br clear="right">
 
@@ -85,20 +75,11 @@ A classic time grid for the whole week. Overlapping meetings sit side by side, a
 
 See where your time actually goes.
 
-- **Focused hours, steps done** and your **streak** (days you finished everything you planned).
-- **Hours by category:** how much went to work, meetings, fitness and family.
-- **Meeting load:** meetings compared with time you planned yourself.
+- **Focused hours, steps done** and your **streak**.
+- **Focus this week:** a dot grid of focused time per day, compared with last week.
+- **Ahead / behind plan:** every day of the last 30, done as planned or missed.
 
-**How to use it:** switch between **Week, Month and Year**. Every **Sunday at 7 PM** you get a weekly recap you can share or save as an image; tap **See weekly recap** to open it any time. New to Hyperday? Go to **Settings › Load sample data** to see it filled in.
-
-<br clear="right">
-
-### Plan with steps
-<img src="docs/images/screens/edit.png" width="260" align="right" alt="Edit a block">
-
-Break any block into small steps. While that block is live, each step is one segment of the bar on your Lock Screen.
-
-**How to use it:** tap a block, type a step and press return, then type the next. Pick a **category** to change its color, or leave it on **Auto**.
+**How to use it:** switch between **Week, Month and Year**. Every Sunday evening you get a weekly recap you can share.
 
 <br clear="right">
 
@@ -106,25 +87,31 @@ Break any block into small steps. While that block is live, each step is one seg
 <img src="docs/images/screens/settings.png" width="260" align="right" alt="Settings">
 
 - **Light, Dark or System** appearance.
-- **Categories:** rename them, recolor them, or add your own.
-- **Auto rules:** for example, anything with "gym" in the title is Fitness.
-- **Calendar colors:** give each calendar its own color, like red for work.
+- **Categories** and **Auto rules:** for example, anything with "gym" in the title is Fitness.
+- **Calendars:** pick which ones show and give each its own color.
+- **Live Activity:** turn it on or off, and switch **Mac alerts** on if you want them.
 
 <br clear="right">
 
-<p align="center">
-  <img src="docs/images/screens/today-dark.png" width="260" alt="Today in dark mode">
-  <br><sub>Dark mode</sub>
-</p>
+### JobTrail and your car
+
+- **JobTrail tab:** if you run [JobTrail](https://github.com/prabhuSub/jobtrail) on your Macs, Hyperday shows its live map, jobs and each Mac's vitals (CPU, chip temperature, fans, battery) over Tailscale.
+- **Car tab:** sign in with Tesla once to see battery, range, lock and Sentry state, and whether you have enough range for today's trips. Your login stays in your iPhone's Keychain.
+
+### Widgets
+<img src="docs/images/screens/widgets.png" width="300" align="right" alt="Widgets">
+
+- **Lock Screen:** car battery and range, lock state, charging ring, and a month calendar with a dot for each finished day.
+- **Home Screen:** your Macs (small, medium and large) with GPU and memory graphs and what's running now.
+- **Day widgets:** the current block, your day strip, and a blocks-done heatmap.
+
+<br clear="right">
 
 ## Also works with
 
-- **Widgets:** small, medium and large on the Home Screen, and the small one in StandBy.
-- **Lock Screen widgets:** **Now** (current block, time left, step bar, next step), **Day strip** (your whole day with a marker at now), and **Circles** you can set to time left, steps done, next start or blocks left.
-- **Apple Watch:** while a block is live, it shows up in the Smart Stack with the time left and a Step / Done button. No separate Watch app needed.
-- **Blocks-done heatmap:** a GitHub-style grid of what you finished each day, on Stats and as Home Screen and Lock Screen widgets.
+- **Apple Watch:** while a block is live, it shows up in the Smart Stack with the time left and a Done button. No separate Watch app needed.
 - **Siri & Shortcuts:** "What's next in Hyperday", "Start my day in Hyperday", "I'm done in Hyperday", "Add a block in Hyperday" and **Start Deep Work**.
-- **Focus:** add a Hyperday filter to a Focus (Settings › Focus › Work › Add Filter) to see only work, only personal, or nothing.
+- **Focus:** add a Hyperday filter to a Focus to see only work, only personal, or nothing.
 - **Dynamic Island:** your countdown and progress while you use other apps.
 
 ## Privacy
@@ -134,6 +121,7 @@ Your day stays on your iPhone.
 - No account, no sign-up, no ads, no tracking.
 - Hyperday **reads** your calendars to show them. It never changes them.
 - Everything you create is stored only on your phone. Delete the app and it's gone.
+- JobTrail and Tesla are optional. JobTrail talks only to your own Macs over Tailscale; Tesla data comes straight from Tesla to your phone.
 
 Read the full [privacy policy](docs/PRIVACY.md).
 
@@ -152,7 +140,7 @@ Developers can build it themselves: see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.m
 
 **Does Hyperday change my calendar?** No. It only reads it. Blocks and steps you create live in Hyperday.
 
-**Does it need internet?** No. Everything works offline.
+**Does it need internet?** No. Your day works offline. JobTrail and the Car tab need a connection.
 
 **Why does the card sometimes lag behind the clock?** iOS decides when apps can refresh in the background. Opening Hyperday or tapping the card's button updates it right away. On-time switching is on the roadmap.
 
@@ -160,4 +148,4 @@ Developers can build it themselves: see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.m
 
 ---
 
-<sub>Screens shown are design previews and may differ slightly from the current build. Hyperday is an independent project, not affiliated with Apple Inc. or Tesla, Inc. Copyright © 2026 Prabhu Subramanian. All rights reserved.</sub>
+<sub>Screens show sample data, captured from the current build (v79). Hyperday is an independent project, not affiliated with Apple Inc. or Tesla, Inc. Copyright © 2026 Prabhu Subramanian. All rights reserved.</sub>

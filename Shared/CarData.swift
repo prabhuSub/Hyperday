@@ -27,7 +27,7 @@ struct CarSnapshot: Codable, Equatable {
     var enoughForToday: Bool? { todayMiles.map { rangeMiles >= $0 + 15 } }
 
     static func sample(now: Date = .now) -> CarSnapshot {
-        CarSnapshot(name: "Quick Silver", battery: 78, rangeMiles: 241, chargeLimit: 80, charging: false,
+        CarSnapshot(name: "Model Y", battery: 78, rangeMiles: 241, chargeLimit: 80, charging: false,
                     chargeKW: nil, fullAt: nil, locked: true, sentry: true, insideF: 64, place: "Home",
                     updatedAt: now.addingTimeInterval(-12 * 60), isSample: true,
                     todayMiles: 64, nextTripTitle: "Office", leaveBy: now.addingTimeInterval(42 * 60), drivesToday: 2)

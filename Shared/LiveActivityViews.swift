@@ -234,7 +234,7 @@ struct LockScreenCard: View {
 
     // MARK: v62 JobTrail Lock Screen card
     //  ● NOW · ENDS 11:02 AM                     3/7 DONE
-    //  [icon] Deep work — ORBIT AI
+    //  [icon] Deep work — Launch plan
     //  39:34 LEFT                           [⏸] [✓ Done]
     //  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ (moves by itself)
     //  NEXT  Standup · 11:05 AM

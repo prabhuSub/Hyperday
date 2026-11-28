@@ -11,15 +11,15 @@ extension JTSnapshot {
         func t(_ m: Double) -> Date { now.addingTimeInterval(-m * 60) }
         let macs = [
             MacLive(id: "local", name: "MacBook Pro", desktop: false, online: true, running: 3, waiting: 2, gpu: 12, mem: 42,
-                    top: "S01_run2.sh · S01.ok", topSince: t(48), topWaiting: false),
+                    top: "build.sh · tests", topSince: t(48), topWaiting: false),
             MacLive(id: "remote", name: "Mac mini", desktop: true, online: true, running: 1, waiting: 0, gpu: 98, mem: 37,
-                    top: "~/ai/ltx-2-mlx/.venv/bin/python render_s01.py", topSince: t(22), topWaiting: false),
+                    top: "python train.py", topSince: t(22), topWaiting: false),
         ]
         let live = [
-            JTJob(id: "a", label: "render_s01.py", machine: "remote", state: "running", startedAt: t(22)),
-            JTJob(id: "b", label: "S01_run2.sh · S01.ok", machine: "local", state: "running", startedAt: t(48)),
-            JTJob(id: "c", label: "python3 - 2>/dev/null", machine: "local", state: "running", startedAt: t(95)),
-            JTJob(id: "d", label: "watch: ssh mini 'grep -q fini'", machine: "local", state: "waiting", startedAt: t(130)),
+            JTJob(id: "a", label: "train.py", machine: "remote", state: "running", startedAt: t(22)),
+            JTJob(id: "b", label: "build.sh · tests", machine: "local", state: "running", startedAt: t(48)),
+            JTJob(id: "c", label: "export_report.py", machine: "local", state: "running", startedAt: t(95)),
+            JTJob(id: "d", label: "wait: deploy check", machine: "local", state: "waiting", startedAt: t(130)),
         ]
         var recent: [JTJob] = []
         for i in 0..<60 {

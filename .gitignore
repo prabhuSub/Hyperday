@@ -36,3 +36,4 @@ tesla-site/
 
 # v52: personal usage data pulled from the iPhone, never commit
 audit/
+build-sim/

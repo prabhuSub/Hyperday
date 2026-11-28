@@ -13,7 +13,7 @@ struct PlanWithWordsSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("gym after work, call mom at lunch, finish the ORBIT doc (90 min)", text: $text, axis: .vertical)
+                    TextField("gym after work, call mom at lunch, finish the project doc (90 min)", text: $text, axis: .vertical)
                         .lineLimit(3...6)
                         .focused($focused)
                         .hdShimmer(working)   // v57: what's being written shimmers
