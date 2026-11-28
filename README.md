@@ -37,8 +37,8 @@ The Hyperday card sits on your Lock Screen and in the Dynamic Island all day.
 - **Top:** what you're doing now, when it ends, and how many blocks are done.
 - **Middle:** a big countdown, with **Pause** and **Done** buttons you can tap without unlocking.
 - **Bar:** fills in as the block goes on; **Next** shows what's coming.
-- **Bottom:** your Macs at a glance (running jobs, GPU and memory) when JobTrail is connected.
-- **Alerts:** a red line appears only while something needs you, like a Mac below 20 % battery or a Mac that lost power.
+- **Bottom:** what each Mac is running, when JobTrail is connected.
+- **Alerts:** the top line turns red only while something needs you, like a Mac below 20 % battery or a Mac that lost power.
 
 When your day is done, the card turns into a board of your Macs. Tap it to open the JobTrail tab.
 

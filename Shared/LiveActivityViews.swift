@@ -284,11 +284,15 @@ struct LockScreenCard: View {
         return VStack(alignment: .leading, spacing: hasMacs ? 5 : 6) {
             // header: status · when ······ score
             HStack(spacing: 6) {
-                JTStatusDot(status: st, size: 6, animated: false)
-                Text(jtHeader.uppercased())
-                    .font(.mono(10, .semibold)).kerning(0.8)
-                    .foregroundStyle(st == .idle ? HDTone.dim : st.color)
-                    .lineLimit(1)
+                if let a = macs.alertShort() {
+                    MacAlertLabel(text: a)
+                } else {
+                    JTStatusDot(status: st, size: 6, animated: false)
+                    Text(jtHeader.uppercased())
+                        .font(.mono(10, .semibold)).kerning(0.8)
+                        .foregroundStyle(st == .idle ? HDTone.dim : st.color)
+                        .lineLimit(1)
+                }
                 Spacer(minLength: 6)
                 if let d = state.doneCount, let t = state.totalCount, t > 0 {
                     Text("\(d)/\(t) DONE").font(.mono(10, .medium)).kerning(0.6).foregroundStyle(HDTone.faintDark)
@@ -321,7 +325,7 @@ struct LockScreenCard: View {
             }
             if hasMacs {
                 Rectangle().fill(HDTone.hover).frame(height: 1)
-                MacRow(macs: macs)
+                MacRow(macs: macs, meters: false)   // v81: one line per Mac; the GPU/MEM meters ran past 160 pt
             }
         }
         .padding(.horizontal, inIsland ? 4 : 16)
@@ -1186,10 +1190,9 @@ struct ActivityFamilyCard: View {
     var isStale: Bool = false
 
     var body: some View {
-        // v75: a Mac needs you (battery < 20 %, or the mini lost power) → a red line on top, only while it lasts
-        if family != .small, let a = (state.macs ?? []).alert() {
-            VStack(spacing: 0) { MacAlertRow(text: a); card }
-        } else { card }
+        // v81: the Mac alert now replaces the card's header line (MacAlertLabel). A row stacked on top
+        // pushed the card past iOS's 160 pt cap and both ends got cut off.
+        card
     }
 
     @ViewBuilder private var card: some View {
@@ -1210,19 +1213,17 @@ struct ActivityFamilyCard: View {
     }
 }
 
-/// v75: one red line for a Mac alert. Tapping the card opens JobTrail (its widgetURL).
-struct MacAlertRow: View {
+/// v81: a Mac alert in the card's header line (in place of the status), red, one line.
+struct MacAlertLabel: View {
     let text: String
+    var size: CGFloat = 10
     var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: text.contains("battery") ? "battery.25" : "bolt.slash.fill").font(.system(size: 10, weight: .bold))
-            Text(text.uppercased()).font(.mono(9.5, .semibold)).kerning(0.5).lineLimit(1).minimumScaleFactor(0.7)
-            Spacer(minLength: 0)
+        HStack(spacing: 5) {
+            Image(systemName: text.contains("%") ? "battery.25" : "bolt.slash.fill").font(.system(size: size - 1, weight: .bold))
+            Text(text.uppercased()).font(.mono(size, .semibold)).kerning(0.6).lineLimit(1).minimumScaleFactor(0.75)
         }
         .foregroundStyle(HDTone.danger)
-        .padding(.horizontal, 16).padding(.vertical, 5)
-        .frame(maxWidth: .infinity)
-        .background(HDTone.danger.opacity(0.14))
+        .layoutPriority(1)
     }
 }
 
@@ -1620,11 +1621,12 @@ struct MacChip: View {
 /// v62: the Macs as one quiet JobTrail row (no boxes): glyph · status · count · job · live clock, split by a hairline.
 struct MacRow: View {
     let macs: [MacLive]
+    var meters = true
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             ForEach(Array(macs.prefix(2).enumerated()), id: \.offset) { i, m in
-                if i > 0 { Rectangle().fill(HDTone.hover).frame(width: 1, height: 24) }
-                MacRowItem(mac: m)
+                if i > 0 { Rectangle().fill(HDTone.hover).frame(width: 1, height: meters ? 24 : 12) }
+                MacRowItem(mac: m, meters: meters)
             }
         }
     }
@@ -1634,6 +1636,7 @@ struct MacRow: View {
 /// Line 2: GPU and memory as hairline meters with their numbers (JobTrail's machine meters).
 struct MacRowItem: View {
     let mac: MacLive
+    var meters = true
     private var status: HDStatus {
         switch mac.statusRaw { case "running": .running; case "waiting": .waiting; case "failed": .failed; default: .idle }
     }
@@ -1669,7 +1672,7 @@ struct MacRowItem: View {
                     Spacer(minLength: 0)
                 }
             }
-            if mac.online {
+            if mac.online && meters {
                 HStack(spacing: 8) {
                     meter("GPU", mac.gpu, HDTone.amber)
                     meter("MEM", mac.mem, HDTone.blue)
@@ -1739,9 +1742,13 @@ struct JobTrailBoard: View {
         let run = macs.reduce(0) { $0 + $1.running }, wait = macs.reduce(0) { $0 + $1.waiting }
         VStack(alignment: .leading, spacing: 7) {
             HStack(spacing: 6) {
-                Image(systemName: "checkmark").font(.system(size: 9, weight: .heavy)).foregroundStyle(HDTone.green)
-                Text(headline.uppercased() + (state.totalCount.map { t in " · \(state.doneCount ?? 0)/\(t)" } ?? ""))
-                    .font(.mono(9.5, .semibold)).kerning(0.8).foregroundStyle(HDTone.green).lineLimit(1)
+                if let a = (state.macs ?? []).alertShort() {
+                    MacAlertLabel(text: a, size: 9.5)
+                } else {
+                    Image(systemName: "checkmark").font(.system(size: 9, weight: .heavy)).foregroundStyle(HDTone.green)
+                    Text(headline.uppercased() + (state.totalCount.map { t in " · \(state.doneCount ?? 0)/\(t)" } ?? ""))
+                        .font(.mono(9.5, .semibold)).kerning(0.8).foregroundStyle(HDTone.green).lineLimit(1)
+                }
                 Spacer(minLength: 6)
                 Text(run > 0 ? "\(run) RUN" + (wait > 0 ? " · \(wait) WAIT" : "") : "IDLE")
                     .font(.mono(9.5, .semibold)).kerning(0.6)
@@ -1751,7 +1758,7 @@ struct JobTrailBoard: View {
             HStack(alignment: .top, spacing: 12) {
                 ForEach(Array(macs.enumerated()), id: \.offset) { i, m in
                     if i > 0 { Rectangle().fill(HDTone.hover).frame(width: 1) }
-                    BoardColumn(mac: m, maxJobs: island ? 2 : 3)
+                    BoardColumn(mac: m, maxJobs: island ? 1 : 2)   // v81: more rows never fit (160 pt card, ~124 pt island)
                 }
             }
         }

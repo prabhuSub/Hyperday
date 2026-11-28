@@ -63,11 +63,19 @@ struct MacLive: Codable, Hashable {
         if !online, desktop, let d = downSince, now.timeIntervalSince(d) >= 180 { return "Mac mini lost power or network · \(Int(now.timeIntervalSince(d) / 60)) min" }
         return nil
     }
+
+    /// v81: short form for the card's header line (it shares the line with the run count and refresh).
+    func alertShort(now: Date = .now) -> String? {
+        if online, let b = battery, b < 20, charging != true { return "\(desktop ? "Mini" : "MacBook") \(b)% · plug in" }
+        if !online, desktop, let d = downSince, now.timeIntervalSince(d) >= 180 { return "Mini offline · \(Int(now.timeIntervalSince(d) / 60))m" }
+        return nil
+    }
 }
 
 extension Array where Element == MacLive {
     /// v75: the first alert across the Macs (for the warning row on the Live Activity).
     func alert(now: Date = .now) -> String? { lazy.compactMap { $0.alert(now: now) }.first }
+    func alertShort(now: Date = .now) -> String? { lazy.compactMap { $0.alertShort(now: now) }.first }
 }
 
 struct DayActivityAttributes: ActivityAttributes {

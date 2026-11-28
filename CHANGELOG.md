@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### v81: nothing cut off on the Live Activity
+- Mac alerts replace the card's header line (short red text) instead of adding a row that pushed the card past iOS's 160 pt cap.
+- JobTrail board: 2 jobs per Mac on the Lock Screen, 1 in the Dynamic Island (more never fit).
+- Block card: one line per Mac (the GPU/MEM meters ran off the bottom).
+- Mac alert notifications carry a picture of the problem (red battery / no-power bolt).
+- Every state checked at the real cap in the -hdLAPreview screen; README image redone.
+
 ### v80: README brought up to date
 - New icon and fresh screenshots from the current build (Live Activity, Today, Calendar, Stats, Settings, widgets), sample data only.
 - README covers the JobTrail tab, Car tab, Mac vitals and alerts, and the new widgets.

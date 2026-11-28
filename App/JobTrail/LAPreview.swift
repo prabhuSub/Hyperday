@@ -35,8 +35,20 @@ struct LAPreviewScreen: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 14) {
-                // v75: alert row (MacBook at 14 %, not charging) on the real Lock Screen wrapper
+                // v81: alerts in the header line, on the real Lock Screen wrapper: MacBook 14 % (board), mini offline (board), MacBook 14 % (block card)
                 ActivityFamilyCard(state: { var d = Self.doneState; d.macs?[0].battery = 14; return d }())
+                    .frame(maxWidth: .infinity, maxHeight: 160, alignment: .top)
+                    .frame(height: 160, alignment: .top)
+                    .background(Color(UIColor(hd: 0x0C0C0C)).opacity(0.9))
+                    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(.red.opacity(0.3)))
+                ActivityFamilyCard(state: { var d = Self.doneState; d.macs?[1].online = false; d.macs?[1].downSince = .now.addingTimeInterval(-600); return d }())
+                    .frame(maxWidth: .infinity, maxHeight: 160, alignment: .top)
+                    .frame(height: 160, alignment: .top)
+                    .background(Color(UIColor(hd: 0x0C0C0C)).opacity(0.9))
+                    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(.red.opacity(0.3)))
+                ActivityFamilyCard(state: { var d = LiveActivityManager.previewStates(now: .now)[0].0; d.macs = Self.macs; d.macs?[0].battery = 14; d.macs?[0].charging = false; return d }())
                     .frame(maxWidth: .infinity, maxHeight: 160, alignment: .top)
                     .frame(height: 160, alignment: .top)
                     .background(Color(UIColor(hd: 0x0C0C0C)).opacity(0.9))
