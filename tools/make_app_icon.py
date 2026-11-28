@@ -72,7 +72,7 @@ def mark_svg(v: str, size: int) -> str:
 if __name__ == "__main__":
     v = (sys.argv[1] if len(sys.argv) > 1 else "G").upper()   # G = v27 (iOS 26/27 rules)
     root = Path(__file__).resolve().parent.parent
-    icon = root / "App/Assets.xcassets/AppIcon.appiconset"
+    icon = root / "App/Assets.xcassets/AppIconJT.appiconset"
     for variant in ("light", "dark", "tinted"):
         cairosvg.svg2png(bytestring=svg(v, variant, 1024).encode(), write_to=str(icon / f"AppIcon-{variant}.png"))
     for cat in ("App", "Widget"):

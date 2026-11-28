@@ -65,7 +65,7 @@ def mark_svg(size: int) -> str:
 
 if __name__ == "__main__":
     root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parent.parent
-    icon = root / "App/Assets.xcassets/AppIcon.appiconset"
+    icon = root / "App/Assets.xcassets/AppIconJT.appiconset"
     icon.mkdir(parents=True, exist_ok=True)
     for variant in ("light", "dark", "tinted"):
         cairosvg.svg2png(bytestring=svg(variant, 1024).encode(), write_to=str(icon / f"AppIcon-{variant}.png"))
