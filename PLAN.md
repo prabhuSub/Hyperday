@@ -39,7 +39,7 @@ links: [push]
   from: roadmap
 
 ## Switch the card on time from the Raspberry Pi {#push}
-tech: Python push server on prabhu-pi behind Tailscale, APNs
+tech: Python push server on your-pi behind Tailscale, APNs
 files: [server/**]
 needs: [live]
 - [x] Accept the day's card schedule and send it at each block boundary {#push-server}

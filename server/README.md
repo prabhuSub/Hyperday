@@ -7,8 +7,8 @@ The iPhone does all the planning: whenever your day changes, it sends the Pi the
 ## Install on the Pi
 
 ```bash
-scp -r server prabhu-pi:~/hyperday-server
-ssh prabhu-pi 'cd ~/hyperday-server && sudo ./install.sh'
+scp -r server your-pi:~/hyperday-server
+ssh your-pi 'cd ~/hyperday-server && sudo ./install.sh'
 ```
 
 `install.sh` creates a service user, a virtualenv in `/opt/hyperday-push`, the settings file `/etc/hyperday-push.env` (with a random app token), a systemd service on `127.0.0.1:8787`, and publishes it to your tailnet with `tailscale serve` (HTTPS, only your devices can reach it). Run it again to update.
@@ -18,9 +18,9 @@ ssh prabhu-pi 'cd ~/hyperday-server && sudo ./install.sh'
 Until an APNs key is set, the server runs in **dry-run** mode: it accepts schedules and logs what it would send.
 
 1. developer.apple.com › Certificates, IDs & Profiles › **Keys** › **+** › enable **Apple Push Notifications service (APNs)** › download `AuthKey_XXXXXXXXXX.p8` (you can download it only once).
-2. Copy it to the Pi: `scp AuthKey_*.p8 prabhu-pi:/tmp/ && ssh prabhu-pi 'sudo install -o hyperday -m 600 /tmp/AuthKey_*.p8 /var/lib/hyperday-push/AuthKey.p8'`
+2. Copy it to the Pi: `scp AuthKey_*.p8 your-pi:/tmp/ && ssh your-pi 'sudo install -o hyperday -m 600 /tmp/AuthKey_*.p8 /var/lib/hyperday-push/AuthKey.p8'`
 3. In `/etc/hyperday-push.env` set `APNS_TEAM_ID` and `APNS_KEY_ID`, then `sudo systemctl restart hyperday-push`.
-4. `curl https://prabhu-pi.<your-tailnet>.ts.net/health` shows `"dry_run": false`.
+4. `curl https://your-pi.<your-tailnet>.ts.net/health` shows `"dry_run": false`.
 
 `APNS_ENV=sandbox` is right for builds from `deploy.sh`. Use `production` for TestFlight or App Store builds.
 
